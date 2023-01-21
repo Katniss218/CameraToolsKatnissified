@@ -215,11 +215,11 @@ namespace CameraToolsKatnissified
 
             if( Input.GetKeyDown( KeyCode.Home ) )
             {
-                if( _behaviour != null && _behaviour is PathCameraBehaviour )
-                {
-                    ((PathCameraBehaviour)_behaviour).StartPlayingPathCamera();
-                }
                 StartCamera();
+                if( _behaviour != null && _behaviour is PathCameraBehaviour behaviour )
+                {
+                    behaviour.StartPlayingPathCamera();
+                }
             }
             if( Input.GetKeyDown( KeyCode.End ) )
             {
