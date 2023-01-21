@@ -3,11 +3,11 @@
 namespace CameraToolsKatnissified
 {
     [AttributeUsage( AttributeTargets.Field )]
-    public class CTPersistantField : Attribute
+    public class CTPersistentField : Attribute
     {
         public static string settingsURL = "GameData/CameraTools/settings.cfg";
 
-        public CTPersistantField()
+        public CTPersistentField()
         {
 
         }
@@ -20,7 +20,7 @@ namespace CameraToolsKatnissified
 
             foreach( var field in typeof( CamTools ).GetFields() )
             {
-                if( !field.IsDefined( typeof( CTPersistantField ), false ) ) continue;
+                if( !field.IsDefined( typeof( CTPersistentField ), false ) ) continue;
 
                 settings.SetValue( field.Name, field.GetValue( CamTools.fetch ).ToString(), true );
             }
@@ -35,7 +35,7 @@ namespace CameraToolsKatnissified
 
             foreach( var field in typeof( CamTools ).GetFields() )
             {
-                if( !field.IsDefined( typeof( CTPersistantField ), false ) ) continue;
+                if( !field.IsDefined( typeof( CTPersistentField ), false ) ) continue;
 
                 if( settings.HasValue( field.Name ) )
                 {
@@ -67,11 +67,6 @@ namespace CameraToolsKatnissified
             {
                 return float.Parse( value );
             }
-            else if( type == typeof( Single ) )
-            {
-                return Single.Parse( value );
-            }
-
 
             UnityEngine.Debug.LogError( "CameraTools failed to parse settings field of type " + type.ToString() + " and value " + value );
 

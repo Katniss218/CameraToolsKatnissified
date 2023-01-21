@@ -40,7 +40,7 @@
     <Compile Include="CCInputUtils.cs" />
     <Compile Include="CTAtmosphericAudioController.cs" />
     <Compile Include="CTPartAudioController.cs" />
-    <Compile Include="CTPersistantFIeld.cs" />
+    <Compile Include="CTPersistentField.cs" />
     <Compile Include="Curve3D.cs" />
     <Compile Include="CameraTransformation.cs" />
     <Compile Include="CameraPath.cs" />

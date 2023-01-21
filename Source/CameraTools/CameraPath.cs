@@ -7,18 +7,8 @@ namespace CameraToolsKatnissified
     public class CameraPath
     {
         public string pathName;
-        int keyCount = 0;
-        public int keyframeCount
-        {
-            get
-            {
-                return keyCount;
-            }
-            private set
-            {
-                keyCount = value;
-            }
-        }
+        public int keyframeCount { get; set; }
+
         public List<Vector3> points;
         public List<Quaternion> rotations;
         public List<float> times;
@@ -27,9 +17,9 @@ namespace CameraToolsKatnissified
         public float lerpRate = 15;
         public float timeScale = 1;
 
-        Vector3Animation pointCurve;
-        RotationAnimation rotationCurve;
-        AnimationCurve zoomCurve;
+        Vector3Animation _pointCurve;
+        RotationAnimation _rotationCurve;
+        AnimationCurve _zoomCurve;
 
         public CameraPath()
         {
@@ -200,21 +190,21 @@ namespace CameraToolsKatnissified
 
         public void UpdateCurves()
         {
-            pointCurve = new Vector3Animation( points.ToArray(), times.ToArray() );
-            rotationCurve = new RotationAnimation( rotations.ToArray(), times.ToArray() );
-            zoomCurve = new AnimationCurve();
+            _pointCurve = new Vector3Animation( points.ToArray(), times.ToArray() );
+            _rotationCurve = new RotationAnimation( rotations.ToArray(), times.ToArray() );
+            _zoomCurve = new AnimationCurve();
             for( int i = 0; i < zooms.Count; i++ )
             {
-                zoomCurve.AddKey( new Keyframe( times[i], zooms[i] ) );
+                _zoomCurve.AddKey( new Keyframe( times[i], zooms[i] ) );
             }
         }
 
         public CameraTransformation Evaulate( float time )
         {
             CameraTransformation tf = new CameraTransformation();
-            tf.position = pointCurve.Evaluate( time );
-            tf.rotation = rotationCurve.Evaluate( time );
-            tf.zoom = zoomCurve.Evaluate( time );
+            tf.position = _pointCurve.Evaluate( time );
+            tf.rotation = _rotationCurve.Evaluate( time );
+            tf.zoom = _zoomCurve.Evaluate( time );
 
             return tf;
         }

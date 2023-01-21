@@ -25,7 +25,7 @@ namespace CameraToolsKatnissified
 
         Part camTarget = null;
 
-        [CTPersistantField]
+        [CTPersistentField]
         public ReferenceModes referenceMode = ReferenceModes.Surface;
         Vector3 cameraUp = Vector3.up;
 
@@ -54,7 +54,7 @@ namespace CameraToolsKatnissified
         float leftIndent = 12;
         float entryHeight = 20;
 
-        [CTPersistantField]
+        [CTPersistentField]
         public ToolModes toolMode = ToolModes.StationaryCamera;
 
         Rect windowRect = new Rect( 0, 0, 0, 0 );
@@ -62,39 +62,53 @@ namespace CameraToolsKatnissified
         float incrButtonWidth = 26;
 
         //stationary camera vars
-        [CTPersistantField]
+        [CTPersistentField]
         public bool autoFlybyPosition = false;
-        [CTPersistantField]
+
+        [CTPersistentField]
         public bool autoFOV = false;
+
         float manualFOV = 60;
         float currentFOV = 60;
         Vector3 manualPosition = Vector3.zero;
-        [CTPersistantField]
+
+        [CTPersistentField]
         public float freeMoveSpeed = 10;
+
         string guiFreeMoveSpeed = "10";
-        [CTPersistantField]
+
+        [CTPersistentField]
         public float keyZoomSpeed = 1;
+
         string guiKeyZoomSpeed = "1";
         float zoomFactor = 1;
-        [CTPersistantField]
+
+        [CTPersistentField]
         public float zoomExp = 1;
-        [CTPersistantField]
+
+        [CTPersistentField]
         public bool enableKeypad = false;
-        [CTPersistantField]
+
+        [CTPersistentField]
         public float maxRelV = 2500;
 
         bool setPresetOffset = false;
         Vector3 presetOffset = Vector3.zero;
         bool hasSavedRotation = false;
         Quaternion savedRotation;
-        [CTPersistantField]
+
+        [CTPersistentField]
         public bool manualOffset = false;
-        [CTPersistantField]
+
+        [CTPersistentField]
         public float manualOffsetForward = 500;
-        [CTPersistantField]
+
+        [CTPersistentField]
         public float manualOffsetRight = 50;
-        [CTPersistantField]
+
+        [CTPersistentField]
         public float manualOffsetUp = 5;
+
         string guiOffsetForward = "500";
         string guiOffsetRight = "50";
         string guiOffsetUp = "5";
@@ -103,10 +117,10 @@ namespace CameraToolsKatnissified
         Vector3 lastTargetPosition = Vector3.zero;
         bool hasTarget = false;
 
-        [CTPersistantField]
+        [CTPersistentField]
         public bool useOrbital = false;
 
-        [CTPersistantField]
+        [CTPersistentField]
         public bool targetCoM = false;
 
         bool hasDied = false;
@@ -129,9 +143,9 @@ namespace CameraToolsKatnissified
         bool mouseUp = false;
 
         //Keys
-        [CTPersistantField]
+        [CTPersistentField]
         public string cameraKey = "home";
-        [CTPersistantField]
+        [CTPersistentField]
         public string revertKey = "end";
 
         //recording input for key binding
@@ -148,13 +162,13 @@ namespace CameraToolsKatnissified
         float[] originalAudioSourceDoppler;
         bool hasSetDoppler = false;
 
-        [CTPersistantField]
+        [CTPersistentField]
         public bool useAudioEffects = true;
 
         //camera shake
         Vector3 shakeOffset = Vector3.zero;
         float shakeMagnitude = 0;
-        [CTPersistantField]
+        [CTPersistentField]
         public float shakeMultiplier = 1;
 
         public delegate void ResetCTools();
@@ -164,15 +178,15 @@ namespace CameraToolsKatnissified
         //dogfight cam
         Vessel dogfightPrevTarget;
         Vessel dogfightTarget;
-        [CTPersistantField]
+        [CTPersistentField]
         float dogfightDistance = 30;
-        [CTPersistantField]
+        [CTPersistentField]
         float dogfightOffsetX = 10;
-        [CTPersistantField]
+        [CTPersistentField]
         float dogfightOffsetY = 4;
         float dogfightMaxOffset = 50;
         float dogfightLerp = 20;
-        [CTPersistantField]
+        [CTPersistentField]
         float autoZoomMargin = 20;
         List<Vessel> loadedVessels;
         bool showingVesselList = false;
@@ -182,7 +196,7 @@ namespace CameraToolsKatnissified
         bool dogfightVelocityChase = false;
         //bdarmory
         bool hasBDAI = false;
-        [CTPersistantField]
+        [CTPersistentField]
         public bool useBDAutoTarget = false;
         object aiComponent = null;
         FieldInfo bdAiTargetField;
@@ -1699,7 +1713,7 @@ namespace CameraToolsKatnissified
         public static string pathSaveURL = "GameData/CameraTools/paths.cfg";
         void Save()
         {
-            CTPersistantField.Save();
+            CTPersistentField.Save();
 
             ConfigNode pathFileNode = ConfigNode.Load( pathSaveURL );
             ConfigNode pathsNode = pathFileNode.GetNode( "CAMERAPATHS" );
@@ -1714,7 +1728,7 @@ namespace CameraToolsKatnissified
 
         void Load()
         {
-            CTPersistantField.Load();
+            CTPersistentField.Load();
             guiOffsetForward = manualOffsetForward.ToString();
             guiOffsetRight = manualOffsetRight.ToString();
             guiOffsetUp = manualOffsetUp.ToString();

@@ -10,7 +10,7 @@
 using System;
 using UnityEngine;
 
-namespace CameraTools
+namespace CameraToolsKatnissified
 {
     public class CCInputUtils
     {
@@ -160,8 +160,5 @@ namespace CameraTools
 
             return string.Empty;
         }
-
-
     }
 }
-
