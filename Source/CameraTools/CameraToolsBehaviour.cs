@@ -1,7 +1,7 @@
 using CameraToolsKatnissified.Animation;
+using CameraToolsKatnissified.Cameras;
 using KSP.UI.Screens;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,7 +11,7 @@ namespace CameraToolsKatnissified
     /// The main class controlling the camera.
     /// </summary>
     [KSPAddon( KSPAddon.Startup.Flight, false )]
-    public partial class CameraToolsBehaviour : MonoBehaviour
+    public sealed partial class CameraToolsBehaviour : MonoBehaviour
     {
         public const string DIRECTORY_NAME = "CameraToolsKatnissified";
 
@@ -50,7 +50,7 @@ namespace CameraToolsKatnissified
         /// Zoom level when using auto zoom.
         /// </summary>
         [field: PersistentField]
-        float AutoZoomMargin { get; set; } = 20.0f;
+        public float AutoZoomMargin { get; set; } = 20.0f;
 
         /// <summary>
         /// Maximum velocity of the target relative to the camera. Can be negative to reverse the camera direction.
@@ -62,7 +62,7 @@ namespace CameraToolsKatnissified
         /// Whether or not to use orbital velocity as reference. True - uses orbital velocity, False - uses surface velocity.
         /// </summary>
         [field: PersistentField]
-        public bool UseOrbital { get; set; } = false;
+        public bool UseOrbitalInitialVelocity { get; set; } = false;
 
         [field: PersistentField]
         public float ShakeMultiplier { get; set; } = 0.0f;
@@ -70,15 +70,18 @@ namespace CameraToolsKatnissified
         /// <summary>
         /// Pivot used as a parent for the camera.
         /// </summary>
-        GameObject _cameraPivot;
+        public GameObject CameraPivot { get; set; }
 
+        public FlightCamera FlightCamera { get; set; }
+
+        private CameraBehaviour _behaviour;
         /// <summary>
         /// True if the CameraTools camera is active.
         /// </summary>
-        bool _cameraToolsActive = false;
+        bool CameraToolsActive => _behaviour != null;
 
         float _startCameraTimestamp;
-        float _timeSinceStart
+        public float TimeSinceStart
         {
             get
             {
@@ -86,37 +89,36 @@ namespace CameraToolsKatnissified
             }
         }
 
-        Vessel _activeVessel;
+        public Vessel ActiveVessel { get; set; }
+
         Vector3 _originalCameraPosition;
         Quaternion _originalCameraRotation;
         Transform _originalCameraParent;
         float _originalCameraNearClip;
 
-        FlightCamera _flightCamera;
+        public Vector3 UpDirection { get; set; } = Vector3.up;
 
-        Vector3 _upDirection = Vector3.up;
+        public float ManualFov { get; set; } = 60;
+        public float CurrentFov { get; set; } = 60;
 
-        float _manualFov = 60;
-        float _currentFov = 60;
+        public Vector3 ManualPosition { get; set; } = Vector3.zero; // offset from moving the camera manually.
 
-        Vector3 _manualPosition = Vector3.zero; // offset from moving the camera manually.
-
-        float zoomFactor = 1;
+        public float ZoomFactor = 1;
 
         bool _hasDied = false;
         float _diedTime = 0;
 
-        const float SCROLL_MULTIPLIER = 50.0f;
+        public const float SCROLL_MULTIPLIER = 10.0f;
 
 #warning TODO - maybe use separate components and add/remove them to 'this.gameObject' as needed? This would declutter this class.
         // Used for the Initial Velocity camera mode.
-        Vector3 _initialVelocity;
-        Vector3 _initialPosition;
-        Orbit _initialOrbit;
+        public Vector3 InitialVelocity { get; set; }
+        public Vector3 InitialPosition { get; set; }
+        public Orbit InitialOrbit { get; set; }
 
         // retaining position and rotation after vessel destruction
-        Vector3 _lastCameraPosition;
-        Quaternion _lastCameraRotation;
+        public Vector3 LastCameraPosition { get; set; }
+        public Quaternion LastCameraRotation { get; set; }
 
         /// <summary>
         /// This is set to false to prevent the selector triggering immediately after the gui button is pressed.
@@ -126,10 +128,10 @@ namespace CameraToolsKatnissified
         float _cameraShakeMagnitude = 0.0f;
 
         //pathing
-        int _currentCameraPathIndex = -1;
-        List<CameraPath> _availableCameraPaths;
+        public int _currentCameraPathIndex = -1;
+        public List<CameraPath> _availableCameraPaths;
 
-        CameraPath CurrentCameraPath
+        public CameraPath CurrentCameraPath
         {
             get
             {
@@ -143,22 +145,12 @@ namespace CameraToolsKatnissified
         }
 
 #warning TODO - probably better to edit the reference inside the list in-place.
-        int _currentKeyframeIndex = -1; // setting/editing the path keyframe?
-        float _currentKeyframeTime;
-        string _currKeyTimeString;
-
-        bool _isPlayingPath = false;
+        public int _currentKeyframeIndex = -1; // setting/editing the path keyframe?
+        public float _currentKeyframeTime;
+        public string _currKeyTimeString;
 
         bool _pathWindowVisible = false;
         bool _pathKeyframeWindowVisible = false;
-
-        Vector2 _pathSelectScrollPos;
-
-        Vector3? _stationaryCameraPosition = null;
-        bool _hasPosition => _stationaryCameraPosition != null;
-
-        Part _stationaryCameraTarget = null;
-        bool _hasTarget => _stationaryCameraTarget != null;
 
         bool _settingPositionEnabled;
         bool _settingTargetEnabled;
@@ -179,8 +171,8 @@ namespace CameraToolsKatnissified
         void Start()
         {
             _windowRect = new Rect( Screen.width - WINDOW_WIDTH - 40, 0, WINDOW_WIDTH, _windowHeight );
-            _flightCamera = FlightCamera.fetch;
-            _cameraToolsActive = false;
+            FlightCamera = FlightCamera.fetch;
+
             SaveOriginalCamera();
 
             AddToolbarButton();
@@ -191,13 +183,15 @@ namespace CameraToolsKatnissified
             GameEvents.onGameSceneLoadRequested.Add( PostDeathRevert );
             //GameEvents.onFloatingOriginShift.Add( OnFloatingOriginShift );
 
-            _cameraPivot = new GameObject( "StationaryCameraParent" );
+            CameraPivot = new GameObject( "StationaryCameraParent" );
 
             if( FlightGlobals.ActiveVessel != null )
             {
-                _activeVessel = FlightGlobals.ActiveVessel;
-                _cameraPivot.transform.position = FlightGlobals.ActiveVessel.transform.position;
+                ActiveVessel = FlightGlobals.ActiveVessel;
+                CameraPivot.transform.position = FlightGlobals.ActiveVessel.transform.position;
             }
+
+            AddBehaviour();
 
             GameEvents.onVesselChange.Add( SwitchToVessel );
         }
@@ -228,27 +222,30 @@ namespace CameraToolsKatnissified
                 _wasMouseUp = true;
             }
 
-            // Set target from a mouse raycast.
-            if( _settingTargetEnabled && _wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
+            if( _behaviour != null && _behaviour is StationaryCameraBehaviour )
             {
-                _settingTargetEnabled = false;
-
-                Part newTarget = Utils.GetPartFromMouse();
-                if( newTarget != null )
+                // Set target from a mouse raycast.
+                if( _settingTargetEnabled && _wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
                 {
-                    _stationaryCameraTarget = newTarget;
+                    _settingTargetEnabled = false;
+
+                    Part newTarget = Utils.GetPartFromMouse();
+                    if( newTarget != null )
+                    {
+                        ((StationaryCameraBehaviour)_behaviour).StationaryCameraTarget = newTarget;
+                    }
                 }
-            }
 
-            // Set position from a mouse raycast
-            if( _settingPositionEnabled && _wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
-            {
-                _settingPositionEnabled = false;
-
-                Vector3? newPosition = Utils.GetPosFromMouse();
-                if( newPosition != null )
+                // Set position from a mouse raycast
+                if( _settingPositionEnabled && _wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
                 {
-                    _stationaryCameraPosition = newPosition;
+                    _settingPositionEnabled = false;
+
+                    Vector3? newPosition = Utils.GetPosFromMouse();
+                    if( newPosition != null )
+                    {
+                        ((StationaryCameraBehaviour)_behaviour).StationaryCameraPosition = newPosition;
+                    }
                 }
             }
         }
@@ -256,12 +253,12 @@ namespace CameraToolsKatnissified
         void LateUpdate()
         {
             //retain pos and rot after vessel destruction
-            if( _cameraToolsActive && _flightCamera.transform.parent != _cameraPivot.transform )
+            if( CameraToolsActive && FlightCamera.transform.parent != CameraPivot.transform )
             {
-                _flightCamera.SetTargetNone();
-                _flightCamera.transform.parent = null;
-                _flightCamera.transform.position = _lastCameraPosition;
-                _flightCamera.transform.rotation = _lastCameraRotation;
+                FlightCamera.SetTargetNone();
+                FlightCamera.transform.parent = null;
+                FlightCamera.transform.position = LastCameraPosition;
+                FlightCamera.transform.rotation = LastCameraRotation;
                 _hasDied = true;
                 _diedTime = Time.time;
             }
@@ -274,28 +271,14 @@ namespace CameraToolsKatnissified
                 return;
             }
 
-            if( FlightGlobals.ActiveVessel != null && (_activeVessel == null || _activeVessel != FlightGlobals.ActiveVessel) )
+            if( FlightGlobals.ActiveVessel != null && (ActiveVessel == null || ActiveVessel != FlightGlobals.ActiveVessel) )
             {
-                _activeVessel = FlightGlobals.ActiveVessel;
+                ActiveVessel = FlightGlobals.ActiveVessel;
             }
 
-            if( _cameraToolsActive )
+            if( !CameraToolsActive && !UseAutoZoom )
             {
-                if( CurrentCameraMode == CameraMode.StationaryCamera )
-                {
-                    UpdateStationaryCamera();
-                }
-                else if( CurrentCameraMode == CameraMode.Pathing )
-                {
-                    UpdatePathingCamera();
-                }
-            }
-            else
-            {
-                if( !UseAutoZoom )
-                {
-                    zoomFactor = Mathf.Exp( Zoom ) / Mathf.Exp( 1 );
-                }
+                ZoomFactor = Mathf.Exp( Zoom ) / Mathf.Exp( 1 );
             }
 
             if( _hasDied && Time.time - _diedTime > 2 )
@@ -311,7 +294,7 @@ namespace CameraToolsKatnissified
         {
             _startCameraTimestamp = Time.time;
 
-            if( !_cameraToolsActive )
+            if( !CameraToolsActive )
             {
                 SaveOriginalCamera();
             }
@@ -320,311 +303,39 @@ namespace CameraToolsKatnissified
 
             if( FlightGlobals.ActiveVessel != null )
             {
-                _activeVessel = FlightGlobals.ActiveVessel;
-                _upDirection = -FlightGlobals.getGeeForceAtPosition( _activeVessel.GetWorldPos3D() ).normalized;
-                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( _activeVessel ) == FlightCamera.Modes.ORBITAL) )
+                ActiveVessel = FlightGlobals.ActiveVessel;
+                UpDirection = -FlightGlobals.getGeeForceAtPosition( ActiveVessel.GetWorldPos3D() ).normalized;
+                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( ActiveVessel ) == FlightCamera.Modes.ORBITAL) )
                 {
-                    _upDirection = Vector3.up;
+                    UpDirection = Vector3.up;
                 }
             }
 
-            if( CurrentCameraMode == CameraMode.StationaryCamera )
-            {
-                StartStationaryCamera();
-            }
-            else if( CurrentCameraMode == CameraMode.Pathing )
-            {
-                StartPathCamera();
-                StartPlayingPathCamera();
-            }
+            _behaviour?.StartPlaying();
         }
 
         /// <summary>
         /// Reverts the KSP camera to the state before the CameraTools took over the control.
         /// </summary>
-        void EndCamera()
+        public void EndCamera()
         {
             _hasDied = false;
 
             if( FlightGlobals.ActiveVessel != null && HighLogic.LoadedScene == GameScenes.FLIGHT )
             {
-                _flightCamera.SetTarget( FlightGlobals.ActiveVessel.transform, FlightCamera.TargetMode.Vessel );
+                FlightCamera.SetTarget( FlightGlobals.ActiveVessel.transform, FlightCamera.TargetMode.Vessel );
             }
-            _flightCamera.transform.parent = _originalCameraParent;
-            _flightCamera.transform.position = _originalCameraPosition;
-            _flightCamera.transform.rotation = _originalCameraRotation;
+            FlightCamera.transform.parent = _originalCameraParent;
+            FlightCamera.transform.position = _originalCameraPosition;
+            FlightCamera.transform.rotation = _originalCameraRotation;
             Camera.main.nearClipPlane = _originalCameraNearClip;
 
-            _flightCamera.SetFoV( 60 );
-            _flightCamera.ActivateUpdate();
-            _currentFov = 60;
+            FlightCamera.SetFoV( 60 );
+            FlightCamera.ActivateUpdate();
+            CurrentFov = 60;
 
-            _cameraToolsActive = false;
-
-            StopPlayingPathCamera();
-        }
-
-
-        void StartStationaryCamera()
-        {
-            Debug.Log( "flightCamera position init: " + _flightCamera.transform.position );
-
-            if( FlightGlobals.ActiveVessel != null )
-            {
-                _flightCamera.SetTargetNone();
-                _flightCamera.transform.parent = _cameraPivot.transform;
-                _flightCamera.DeactivateUpdate();
-
-                _cameraPivot.transform.position = _activeVessel.transform.position + _activeVessel.rb_velocity * Time.fixedDeltaTime;
-                _manualPosition = Vector3.zero;
-
-                if( _hasPosition )
-                {
-                    _flightCamera.transform.position = _stationaryCameraPosition.Value;
-                }
-
-                _initialVelocity = _activeVessel.srf_velocity;
-                _initialOrbit = new Orbit();
-                _initialOrbit.UpdateFromStateVectors( _activeVessel.orbit.pos, _activeVessel.orbit.vel, FlightGlobals.currentMainBody, Planetarium.GetUniversalTime() );
-                //_initialUT = Planetarium.GetUniversalTime();
-
-                _cameraToolsActive = true;
-            }
-            else
-            {
-                Debug.Log( "CameraTools: Stationary Camera failed. Active Vessel is null." );
-            }
-
-            Debug.Log( "flightCamera position post init: " + _flightCamera.transform.position );
-        }
-
-        void UpdateStationaryCamera()
-        {
-            if( _flightCamera.Target != null )
-            {
-                _flightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
-            }
-
-            if( _hasTarget )
-            {
-                Vector3 toTargetDirection = (_stationaryCameraTarget.transform.position - _flightCamera.transform.position).normalized;
-
-                _flightCamera.transform.rotation = Quaternion.LookRotation( toTargetDirection, _upDirection );
-            }
-
-            if( _activeVessel != null )
-            {
-                // Parent follows the vessel.
-                _cameraPivot.transform.position = _manualPosition + _activeVessel.transform.position;
-
-                // Camera itself accumulates the inverse of the vessel movement.
-                if( CurrentReferenceMode == CameraReference.Surface )
-                {
-                    float magnitude = Mathf.Clamp( (float)_activeVessel.srf_velocity.magnitude, 0, MaxRelativeVelocity );
-                    _flightCamera.transform.position -= Time.fixedDeltaTime * magnitude * _activeVessel.srf_velocity.normalized;
-                }
-                else if( CurrentReferenceMode == CameraReference.Orbit )
-                {
-                    float magnitude = Mathf.Clamp( (float)_activeVessel.obt_velocity.magnitude, 0, MaxRelativeVelocity );
-                    _flightCamera.transform.position -= Time.fixedDeltaTime * magnitude * _activeVessel.obt_velocity.normalized;
-                }
-                else if( CurrentReferenceMode == CameraReference.InitialVelocity )
-                {
-                    Vector3 camVelocity;
-                    if( UseOrbital && _initialOrbit != null )
-                    {
-                        camVelocity = _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - _activeVessel.GetObtVelocity();
-                    }
-                    else
-                    {
-                        camVelocity = _initialVelocity - _activeVessel.srf_velocity;
-                    }
-                    _flightCamera.transform.position += camVelocity * Time.fixedDeltaTime;
-                }
-#warning TODO - add the velocity direction mode here.
-            }
-
-            //mouse panning, moving
-            Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, _upDirection ) * _flightCamera.transform.right).normalized;
-
-            if( Input.GetKey( KeyCode.Mouse1 ) ) // right mouse
-            {
-                // No target - should turn the camera like a tripod.
-                // Has target - should orbit the target.
-                if( !_hasTarget )
-                {
-                    _flightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up );
-                    _flightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
-                    _flightCamera.transform.rotation = Quaternion.LookRotation( _flightCamera.transform.forward, _upDirection );
-                }
-                else
-                {
-                    var verticalaxis = _flightCamera.transform.TransformDirection( Vector3.up );
-                    var horizontalaxis = _flightCamera.transform.TransformDirection( Vector3.right );
-                    _flightCamera.transform.RotateAround( _stationaryCameraTarget.transform.position, verticalaxis, Input.GetAxis( "Mouse X" ) * 1.7f );
-                    _flightCamera.transform.RotateAround( _stationaryCameraTarget.transform.position, horizontalaxis, -Input.GetAxis( "Mouse Y" ) * 1.7f );
-                    _flightCamera.transform.rotation = Quaternion.LookRotation( _flightCamera.transform.forward, _upDirection );
-                }
-            }
-
-            if( Input.GetKey( KeyCode.Mouse2 ) ) // middle mouse
-            {
-                _manualPosition += _flightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
-                _manualPosition += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
-            }
-
-            _manualPosition += _upDirection * SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
-
-            // autoFov
-            if( _hasTarget && UseAutoZoom )
-            {
-                float cameraDistance = Vector3.Distance( _stationaryCameraTarget.transform.position, _flightCamera.transform.position );
-
-                float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + AutoZoomMargin, 2, 60 );
-
-                _manualFov = targetFoV;
-            }
-
-            //FOV
-            if( !UseAutoZoom )
-            {
-                zoomFactor = Mathf.Exp( Zoom ) / Mathf.Exp( 1 );
-                _manualFov = 60 / zoomFactor;
-
-                if( _currentFov != _manualFov )
-                {
-                    _currentFov = Mathf.Lerp( _currentFov, _manualFov, 0.1f );
-                    _flightCamera.SetFoV( _currentFov );
-                }
-            }
-            else
-            {
-                _currentFov = Mathf.Lerp( _currentFov, _manualFov, 0.1f );
-                _flightCamera.SetFoV( _currentFov );
-                zoomFactor = 60 / _currentFov;
-            }
-
-            _lastCameraPosition = _flightCamera.transform.position;
-            _lastCameraRotation = _flightCamera.transform.rotation;
-
-            //vessel camera shake
-            if( ShakeMultiplier > 0 )
-            {
-                foreach( var vessel in FlightGlobals.Vessels )
-                {
-                    if( !vessel || !vessel.loaded || vessel.packed )
-                    {
-                        continue;
-                    }
-
-                    DoCameraShake( vessel );
-                }
-
-                UpdateCameraShakeMagnitude();
-            }
-        }
-
-        void StartPathCamera()
-        {
-            if( FlightGlobals.ActiveVessel != null )
-            {
-                _cameraPivot.transform.position = _activeVessel.transform.position + _activeVessel.rb_velocity * Time.fixedDeltaTime;
-                _cameraPivot.transform.rotation = _activeVessel.transform.rotation;
-
-                _flightCamera.SetTargetNone();
-                _flightCamera.transform.parent = _cameraPivot.transform;
-                _flightCamera.DeactivateUpdate();
-
-                _cameraToolsActive = true;
-            }
-            else
-            {
-                Debug.Log( "CameraTools: Stationary Camera failed. Active Vessel is null." );
-            }
-        }
-
-        void StartPlayingPathCamera()
-        {
-            if( _currentCameraPathIndex < 0 || CurrentCameraPath.keyframeCount <= 0 )
-            {
-                EndCamera();
-                return;
-            }
-
-            DeselectKeyframe();
-
-            if( !_cameraToolsActive )
-            {
-                StartPathCamera();
-            }
-
-            CameraTransformation firstFrame = CurrentCameraPath.Evaulate( 0 );
-            _flightCamera.transform.localPosition = firstFrame.position;
-            _flightCamera.transform.localRotation = firstFrame.rotation;
-            Zoom = firstFrame.zoom;
-
-            _isPlayingPath = true;
-
-            // initialize the rotation on start, but don't update it so if the rocket rolls, the camera won't follow it.
-            _cameraPivot.transform.rotation = _activeVessel.transform.rotation;
-        }
-
-        void StopPlayingPathCamera()
-        {
-            _isPlayingPath = false;
-        }
-
-        void UpdatePathingCamera()
-        {
-            // Update the frame of reference's position to follow the vessel.
-            _cameraPivot.transform.position = _activeVessel.transform.position + _activeVessel.rb_velocity * Time.fixedDeltaTime;
-            //_stationaryCameraParent.transform.rotation = _activeVessel.transform.rotation; // here to follow rotation.
-
-            if( _isPlayingPath )
-            {
-                CameraTransformation tf = CurrentCameraPath.Evaulate( _timeSinceStart * CurrentCameraPath.timeScale );
-                _flightCamera.transform.localPosition = Vector3.Lerp( _flightCamera.transform.localPosition, tf.position, CurrentCameraPath.lerpRate * Time.fixedDeltaTime );
-                _flightCamera.transform.localRotation = Quaternion.Slerp( _flightCamera.transform.localRotation, tf.rotation, CurrentCameraPath.lerpRate * Time.fixedDeltaTime );
-                Zoom = Mathf.Lerp( Zoom, tf.zoom, CurrentCameraPath.lerpRate * Time.fixedDeltaTime );
-            }
-            else
-            {
-                //move
-                //mouse panning, moving
-                Vector3 forwardLevelAxis = _flightCamera.transform.forward;
-
-
-                if( Input.GetKey( KeyCode.Mouse1 ) && Input.GetKey( KeyCode.Mouse2 ) )
-                {
-                    _flightCamera.transform.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, _flightCamera.transform.forward ) * _flightCamera.transform.rotation;
-                }
-                else
-                {
-                    if( Input.GetKey( KeyCode.Mouse1 ) )
-                    {
-                        _flightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (Zoom * Zoom), Vector3.up );
-                        _flightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (Zoom * Zoom), Vector3.right );
-                        _flightCamera.transform.rotation = Quaternion.LookRotation( _flightCamera.transform.forward, _flightCamera.transform.up );
-                    }
-                    if( Input.GetKey( KeyCode.Mouse2 ) )
-                    {
-                        _flightCamera.transform.position += _flightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
-                        _flightCamera.transform.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
-                    }
-                }
-                _flightCamera.transform.position += _flightCamera.transform.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
-
-            }
-
-            //zoom
-            zoomFactor = Mathf.Exp( Zoom ) / Mathf.Exp( 1 );
-            _manualFov = 60 / zoomFactor;
-
-            if( _currentFov != _manualFov )
-            {
-                _currentFov = Mathf.Lerp( _currentFov, _manualFov, 0.1f );
-                _flightCamera.SetFoV( _currentFov );
-            }
+            GameObject.Destroy( _behaviour );
+            _behaviour = null;
         }
 
         void TogglePathList()
@@ -635,9 +346,9 @@ namespace CameraToolsKatnissified
 
         void SaveOriginalCamera()
         {
-            _originalCameraPosition = _flightCamera.transform.position;
-            _originalCameraRotation = _flightCamera.transform.localRotation;
-            _originalCameraParent = _flightCamera.transform.parent;
+            _originalCameraPosition = FlightCamera.transform.position;
+            _originalCameraRotation = FlightCamera.transform.localRotation;
+            _originalCameraParent = FlightCamera.transform.parent;
             _originalCameraNearClip = Camera.main.nearClipPlane;
         }
 
@@ -646,11 +357,11 @@ namespace CameraToolsKatnissified
             _cameraShakeMagnitude = Mathf.Max( _cameraShakeMagnitude, magnitude );
         }
 
-        void UpdateCameraShakeMagnitude()
+        public void UpdateCameraShakeMagnitude()
         {
             if( ShakeMultiplier > 0 )
             {
-                _flightCamera.transform.rotation = Quaternion.AngleAxis( (ShakeMultiplier / 2) * _cameraShakeMagnitude / 50f, Vector3.ProjectOnPlane( UnityEngine.Random.onUnitSphere, _flightCamera.transform.forward ) ) * _flightCamera.transform.rotation;
+                FlightCamera.transform.rotation = Quaternion.AngleAxis( (ShakeMultiplier / 2) * _cameraShakeMagnitude / 50f, Vector3.ProjectOnPlane( UnityEngine.Random.onUnitSphere, FlightCamera.transform.forward ) ) * FlightCamera.transform.rotation;
             }
 
             _cameraShakeMagnitude = Mathf.Lerp( _cameraShakeMagnitude, 0, 5 * Time.fixedDeltaTime );
@@ -659,10 +370,10 @@ namespace CameraToolsKatnissified
         public void DoCameraShake( Vessel vessel )
         {
             //shake
-            float camDistance = Vector3.Distance( _flightCamera.transform.position, vessel.CoM );
+            float camDistance = Vector3.Distance( FlightCamera.transform.position, vessel.CoM );
 
             float distanceFactor = 50f / camDistance;
-            float fovFactor = 2f / zoomFactor;
+            float fovFactor = 2f / ZoomFactor;
 
             float angleToCam = Vector3.Angle( vessel.srf_velocity, FlightCamera.fetch.mainCamera.transform.position - vessel.transform.position );
             angleToCam = Mathf.Clamp( angleToCam, 1, 180 );
@@ -694,7 +405,7 @@ namespace CameraToolsKatnissified
         float GetTotalThrust()
         {
             float total = 0;
-            foreach( var engine in _activeVessel.FindPartModulesImplementing<ModuleEngines>() )
+            foreach( var engine in ActiveVessel.FindPartModulesImplementing<ModuleEngines>() )
             {
                 total += engine.finalThrust;
             }
@@ -703,7 +414,7 @@ namespace CameraToolsKatnissified
 
         void PostDeathRevert( GameScenes f )
         {
-            if( _cameraToolsActive )
+            if( CameraToolsActive )
             {
                 EndCamera();
             }
@@ -711,7 +422,7 @@ namespace CameraToolsKatnissified
 
         void PostDeathRevert( Vessel v )
         {
-            if( _cameraToolsActive )
+            if( CameraToolsActive )
             {
                 EndCamera();
             }
@@ -803,6 +514,31 @@ namespace CameraToolsKatnissified
             int length = Enum.GetValues( typeof( CameraMode ) ).Length;
 
             CurrentCameraMode = (CameraMode)(((int)CurrentCameraMode + step + length) % length); // adding length unfucks negative modulo
+            AddBehaviour();
+        }
+
+        /// <summary>
+        /// Adds the camera behaviour for the corresponding selected camera mode.
+        /// </summary>
+        void AddBehaviour()
+        {
+            if( CurrentCameraMode == CameraMode.StationaryCamera )
+            {
+                if( _behaviour != null )
+                {
+                    Destroy( _behaviour );
+                }
+                _behaviour = this.gameObject.AddComponent<StationaryCameraBehaviour>();
+            }
+            else if( CurrentCameraMode == CameraMode.Pathing )
+            {
+                if( _behaviour != null )
+                {
+                    Destroy( _behaviour );
+                }
+                _behaviour = this.gameObject.AddComponent<PathCameraBehaviour>();
+                ((PathCameraBehaviour)_behaviour).IsPlayingPath = true;
+            }
         }
 
         /*OnFloatingOriginShift( Vector3d offset, Vector3d data1 )
@@ -815,19 +551,19 @@ namespace CameraToolsKatnissified
 
         }*/
 
-        void SwitchToVessel( Vessel vessel )
+        public void SwitchToVessel( Vessel vessel )
         {
-            _activeVessel = vessel;
+            ActiveVessel = vessel;
         }
 
-        void CreateNewPath()
+        public void CreateNewPath()
         {
             _pathKeyframeWindowVisible = false;
             _availableCameraPaths.Add( new CameraPath() );
             _currentCameraPathIndex = _availableCameraPaths.Count - 1;
         }
 
-        void DeletePath( int index )
+        public void DeletePath( int index )
         {
             if( index < 0 || index >= _availableCameraPaths.Count )
             {
@@ -838,16 +574,21 @@ namespace CameraToolsKatnissified
             _currentCameraPathIndex = -1;
         }
 
-        void SelectPath( int index )
+        public void SelectPath( int index )
         {
             _currentCameraPathIndex = index;
         }
 
-        void SelectKeyframe( int index )
+        public void SelectKeyframe( int index )
         {
-            if( _isPlayingPath )
+            //if( _isPlayingPath )
+            //{
+            //    StopPlayingPathCamera();
+            //}
+            if( _behaviour != null && _behaviour is PathCameraBehaviour )
             {
-                StopPlayingPathCamera();
+                PathCameraBehaviour b = (PathCameraBehaviour)_behaviour;
+                b.IsPlayingPath = false;
             }
 
             _currentKeyframeIndex = index;
@@ -856,13 +597,13 @@ namespace CameraToolsKatnissified
             ViewKeyframe( _currentKeyframeIndex );
         }
 
-        void DeselectKeyframe()
+        public void DeselectKeyframe()
         {
             _currentKeyframeIndex = -1;
             _pathKeyframeWindowVisible = false;
         }
 
-        void UpdateCurrentKeyframeValues()
+        public void UpdateCurrentKeyframeValues()
         {
             if( CurrentCameraPath == null || _currentKeyframeIndex < 0 || _currentKeyframeIndex >= CurrentCameraPath.keyframeCount )
             {
@@ -875,17 +616,22 @@ namespace CameraToolsKatnissified
             _currKeyTimeString = _currentKeyframeTime.ToString();
         }
 
-        void CreateNewKeyframe()
+        public void CreateNewKeyframe()
         {
-            if( !_cameraToolsActive )
+            //if( !CameraToolsActive )
+            //{
+            //    StartPathCamera();
+            // }
+            if( _behaviour == null )
             {
-                StartPathCamera();
+                _behaviour = this.gameObject.AddComponent<PathCameraBehaviour>();
+                ((PathCameraBehaviour)_behaviour).IsPlayingPath = false;
             }
 
             _pathWindowVisible = false;
 
             float time = CurrentCameraPath.keyframeCount > 0 ? CurrentCameraPath.GetKeyframe( CurrentCameraPath.keyframeCount - 1 ).time + 1 : 0;
-            CurrentCameraPath.AddTransform( _flightCamera.transform, Zoom, time );
+            CurrentCameraPath.AddTransform( FlightCamera.transform, Zoom, time );
             SelectKeyframe( CurrentCameraPath.keyframeCount - 1 );
 
             if( CurrentCameraPath.keyframeCount > 6 )
@@ -894,7 +640,7 @@ namespace CameraToolsKatnissified
             }
         }
 
-        void DeleteKeyframe( int index )
+        public void DeleteKeyframe( int index )
         {
             CurrentCameraPath.RemoveKeyframe( index );
             if( index == _currentKeyframeIndex )
@@ -910,16 +656,21 @@ namespace CameraToolsKatnissified
         /// <summary>
         /// Positions the camera at the keyframe.
         /// </summary>
-        void ViewKeyframe( int index )
+        public void ViewKeyframe( int index )
         {
-            if( !_cameraToolsActive )
+            //if( !CameraToolsActive )
+            //{
+            //    StartPathCamera();
+            //}
+            if( _behaviour == null )
             {
-                StartPathCamera();
+                _behaviour = this.gameObject.AddComponent<PathCameraBehaviour>();
+                ((PathCameraBehaviour)_behaviour).IsPlayingPath = false;
             }
 
             CameraKeyframe currentKey = CurrentCameraPath.GetKeyframe( index );
-            _flightCamera.transform.localPosition = currentKey.position;
-            _flightCamera.transform.localRotation = currentKey.rotation;
+            FlightCamera.transform.localPosition = currentKey.position;
+            FlightCamera.transform.localRotation = currentKey.rotation;
             Zoom = currentKey.zoom;
         }
     }

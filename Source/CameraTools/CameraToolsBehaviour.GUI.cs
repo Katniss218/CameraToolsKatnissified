@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CameraToolsKatnissified.Cameras;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,7 +8,7 @@ using UnityEngine;
 
 namespace CameraToolsKatnissified
 {
-    public partial class CameraToolsBehaviour
+    public sealed partial class CameraToolsBehaviour
     {
         const float WINDOW_WIDTH = 250;
         const float GUI_MARGIN = 12;
@@ -17,8 +18,10 @@ namespace CameraToolsKatnissified
         float _windowHeight = 400;
         float _draggableHeight = 40;
 
+
         // GUI - the location of the path scroll view.
         Vector2 _pathScrollPosition;
+        Vector2 _pathSelectScrollPos;
 
         /// <summary>
         /// Unity Message - Draws GUI
@@ -81,7 +84,7 @@ namespace CameraToolsKatnissified
             //tool mode switcher
             GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Tool: " + CurrentCameraMode.ToString(), labelLeftBoldStyle );
             line++;
-            if( !_cameraToolsActive )
+            if( !CameraToolsActive )
             {
                 if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
                 {
@@ -107,7 +110,7 @@ namespace CameraToolsKatnissified
                 GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Zoom:", labelLeftStyle );
                 line++;
                 Zoom = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + ((line) * ENTRY_HEIGHT), contentWidth - 45, ENTRY_HEIGHT ), Zoom, 1.0f, 8.0f );
-                GUI.Label( new Rect( GUI_MARGIN + contentWidth - 40, contentTop + ((line - 0.15f) * ENTRY_HEIGHT), 40, ENTRY_HEIGHT ), zoomFactor.ToString( "0.0" ) + "x", labelLeftStyle );
+                GUI.Label( new Rect( GUI_MARGIN + contentWidth - 40, contentTop + ((line - 0.15f) * ENTRY_HEIGHT), 40, ENTRY_HEIGHT ), ZoomFactor.ToString( "0.0" ) + "x", labelLeftStyle );
             }
             line++;
 
@@ -130,6 +133,8 @@ namespace CameraToolsKatnissified
 
             if( CurrentCameraMode == CameraMode.StationaryCamera )
             {
+                StationaryCameraBehaviour sb = (StationaryCameraBehaviour)_behaviour;
+
                 GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Frame of Reference: " + CurrentReferenceMode.ToString(), labelLeftStyle );
                 line++;
                 if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
@@ -150,14 +155,14 @@ namespace CameraToolsKatnissified
                 }
                 else if( CurrentReferenceMode == CameraReference.InitialVelocity )
                 {
-                    UseOrbital = GUI.Toggle( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), UseOrbital, " Orbital" );
+                    UseOrbitalInitialVelocity = GUI.Toggle( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), UseOrbitalInitialVelocity, " Orbital" );
                 }
                 line++;
                 line++;
 
                 // Draw position buttons.
 
-                string positionButtonText = _hasPosition ? _stationaryCameraPosition.Value.ToString() : "None";
+                string positionButtonText = sb.HasPosition ? sb.StationaryCameraPosition.Value.ToString() : "None";
                 GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Position: " + positionButtonText, labelLeftStyle );
                 line++;
 
@@ -169,14 +174,14 @@ namespace CameraToolsKatnissified
                 }
                 if( GUI.Button( new Rect( 2 + GUI_MARGIN + contentWidth / 2, contentTop + (line * ENTRY_HEIGHT), (contentWidth / 2) - 2, ENTRY_HEIGHT - 2 ), "Clear Position" ) )
                 {
-                    _stationaryCameraPosition = null;
+                    sb.StationaryCameraPosition = null;
                 }
                 line++;
                 line++;
 
                 // Draw target buttons.
 
-                string targetButtonText = _hasTarget ? _stationaryCameraTarget.gameObject.name : "None";
+                string targetButtonText = sb.HasTarget ? sb.StationaryCameraTarget.gameObject.name : "None";
                 GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Target: " + targetButtonText, labelLeftStyle );
                 line++;
 
@@ -188,7 +193,7 @@ namespace CameraToolsKatnissified
                 }
                 if( GUI.Button( new Rect( 2 + GUI_MARGIN + contentWidth / 2, contentTop + (line * ENTRY_HEIGHT), (contentWidth / 2) - 2, ENTRY_HEIGHT - 2 ), "Clear Target" ) )
                 {
-                    _stationaryCameraTarget = null;
+                    sb.StationaryCameraTarget = null;
                 }
             }
 
@@ -196,6 +201,8 @@ namespace CameraToolsKatnissified
 
             else if( CurrentCameraMode == CameraMode.Pathing )
             {
+                PathCameraBehaviour pb = (PathCameraBehaviour)_behaviour;
+
                 if( _currentCameraPathIndex >= 0 )
                 {
                     GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path:" );
@@ -332,7 +339,7 @@ namespace CameraToolsKatnissified
             if( GUI.Button( new Rect( 100, 65, 195, 25 ), "Apply" ) )
             {
                 Debug.Log( $"Applying keyframe at time: {_currentKeyframeTime}" );
-                CurrentCameraPath.SetTransform( _currentKeyframeIndex, _flightCamera.transform, Zoom, _currentKeyframeTime );
+                CurrentCameraPath.SetTransform( _currentKeyframeIndex, FlightCamera.transform, Zoom, _currentKeyframeTime );
                 isApplied = true;
             }
 
