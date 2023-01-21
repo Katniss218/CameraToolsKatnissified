@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31911.196
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CameraTools", "CameraTools\CameraTools.csproj", "{446E2470-00DC-4835-B62D-9DB8A7D41F4A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CameraToolsKatnissified", "CameraTools\CameraToolsKatnissified.csproj", "{446E2470-00DC-4835-B62D-9DB8A7D41F4A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,6 +24,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {51E901EC-DB38-4FD0-8946-57BA65F83C1E}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		StartupItem = CameraTools.csproj
