@@ -196,6 +196,7 @@ namespace CameraToolsKatnissified
                 CameraPivot.transform.position = FlightGlobals.ActiveVessel.transform.position;
             }
 
+#error TODO - mod doesn't work. For some reason the camera starts bugged and later refuses to disable/enable itself.
             AddBehaviour();
 
             GameEvents.onVesselChange.Add( SwitchToVessel );
