@@ -148,6 +148,7 @@
     <Content Include="Distribution\GameData\CameraTools\Textures\icon.png" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CameraToolsBehaviour.GUI.cs" />
     <None Include="Distribution\GameData\CameraTools\paths.cfg" />
     <None Include="Distribution\GameData\CameraTools\settings.cfg" />
   </ItemGroup>
