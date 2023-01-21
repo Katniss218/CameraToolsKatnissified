@@ -102,6 +102,8 @@ namespace CameraToolsKatnissified
         bool _hasDied = false;
         float _diedTime = 0;
 
+#warning TODO - maybe use separate components and add/remove them to 'this.gameObject' as needed? This would declutter this class.
+        // Used for the Initial Velocity camera mode.
         Vector3 _initialVelocity;
         Vector3 _initialPosition;
         Orbit _initialOrbit;
@@ -273,14 +275,13 @@ namespace CameraToolsKatnissified
 
             if( _cameraToolsActive )
             {
-                switch( CurrentCameraMode )
+                if( CurrentCameraMode == CameraMode.StationaryCamera )
                 {
-                    case CameraMode.StationaryCamera:
-                        UpdateStationaryCamera();
-                        break;
-                    case CameraMode.Pathing:
-                        UpdatePathingCamera();
-                        break;
+                    UpdateStationaryCamera();
+                }
+                else if( CurrentCameraMode == CameraMode.Pathing )
+                {
+                    UpdatePathingCamera();
                 }
             }
             else
@@ -306,23 +307,26 @@ namespace CameraToolsKatnissified
 
             if( _hasTarget )
             {
-                Vector3 lookDirection = (_stationaryCameraTarget.transform.position + 2 * (_stationaryCameraTarget.vessel.rb_velocity * Time.fixedDeltaTime)) - _flightCamera.transform.position;
+                Vector3 lookDirection =/* (*/_stationaryCameraTarget.transform.position /*+ 2 * (_stationaryCameraTarget.vessel.rb_velocity * Time.fixedDeltaTime))*/ - _flightCamera.transform.position;
 
                 _flightCamera.transform.rotation = Quaternion.LookRotation( lookDirection.normalized, _upDirection );
             }
 
             if( _activeVessel != null )
             {
-                // set position to the vessel's position.
-                _stationaryCameraParent.transform.position = _manualPosition + (_activeVessel.transform.position - (_activeVessel.rb_velocity * Time.fixedDeltaTime));
+                // Parent follows the vessel.
+                _stationaryCameraParent.transform.position = _manualPosition + (_activeVessel.transform.position/* - (_activeVessel.rb_velocity * Time.fixedDeltaTime)*/);
 
+                // Camera itself accumulates the inverse of the vessel movement.
                 if( CurrentReferenceMode == CameraReference.Surface )
                 {
-                    _flightCamera.transform.position -= Time.fixedDeltaTime * Mathf.Clamp( (float)_activeVessel.srf_velocity.magnitude, 0, MaxRelativeVelocity ) * _activeVessel.srf_velocity.normalized;
+                    float magnitude = Mathf.Clamp( (float)_activeVessel.srf_velocity.magnitude, 0, MaxRelativeVelocity );
+                    _flightCamera.transform.position -= Time.fixedDeltaTime * magnitude * _activeVessel.srf_velocity.normalized;
                 }
                 else if( CurrentReferenceMode == CameraReference.Orbit )
                 {
-                    _flightCamera.transform.position -= Time.fixedDeltaTime * Mathf.Clamp( (float)_activeVessel.obt_velocity.magnitude, 0, MaxRelativeVelocity ) * _activeVessel.obt_velocity.normalized;
+                    float magnitude = Mathf.Clamp( (float)_activeVessel.obt_velocity.magnitude, 0, MaxRelativeVelocity );
+                    _flightCamera.transform.position -= Time.fixedDeltaTime * magnitude * _activeVessel.obt_velocity.normalized;
                 }
                 else if( CurrentReferenceMode == CameraReference.InitialVelocity )
                 {
@@ -475,26 +479,31 @@ namespace CameraToolsKatnissified
         {
             _startCameraTimestamp = Time.time;
 
-            switch( CurrentCameraMode )
+            if( !_cameraToolsActive )
             {
-                case CameraMode.StationaryCamera:
-                    if( !_cameraToolsActive )
-                    {
-                        SaveOriginalCamera();
-                    }
+                SaveOriginalCamera();
+            }
 
-                    StartStationaryCamera();
-                    break;
+            _hasDied = false;
 
-                case CameraMode.Pathing:
-                    if( !_cameraToolsActive )
-                    {
-                        SaveOriginalCamera();
-                    }
+            if( FlightGlobals.ActiveVessel != null )
+            {
+                _activeVessel = FlightGlobals.ActiveVessel;
+                _upDirection = -FlightGlobals.getGeeForceAtPosition( _activeVessel.GetWorldPos3D() ).normalized;
+                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( _activeVessel ) == FlightCamera.Modes.ORBITAL) )
+                {
+                    _upDirection = Vector3.up;
+                }
+            }
 
-                    StartPathCamera();
-                    StartPlayingPathCamera();
-                    break;
+            if( CurrentCameraMode == CameraMode.StationaryCamera )
+            {
+                StartStationaryCamera();
+            }
+            else if( CurrentCameraMode == CameraMode.Pathing )
+            {
+                StartPathCamera();
+                StartPlayingPathCamera();
             }
         }
 
@@ -504,6 +513,7 @@ namespace CameraToolsKatnissified
         void EndCamera()
         {
             _hasDied = false;
+
             if( FlightGlobals.ActiveVessel != null && HighLogic.LoadedScene == GameScenes.FLIGHT )
             {
                 _flightCamera.SetTarget( FlightGlobals.ActiveVessel.transform, FlightCamera.TargetMode.Vessel );
@@ -529,17 +539,10 @@ namespace CameraToolsKatnissified
 
             if( FlightGlobals.ActiveVessel != null )
             {
-                _hasDied = false;
-                _activeVessel = FlightGlobals.ActiveVessel;
-                _upDirection = -FlightGlobals.getGeeForceAtPosition( _activeVessel.GetWorldPos3D() ).normalized;
-                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( _activeVessel ) == FlightCamera.Modes.ORBITAL) )
-                {
-                    _upDirection = Vector3.up;
-                }
-
                 _flightCamera.SetTargetNone();
                 _flightCamera.transform.parent = _stationaryCameraParent.transform;
                 _flightCamera.DeactivateUpdate();
+
                 _stationaryCameraParent.transform.position = _activeVessel.transform.position + _activeVessel.rb_velocity * Time.fixedDeltaTime;
                 _manualPosition = Vector3.zero;
 
@@ -565,15 +568,9 @@ namespace CameraToolsKatnissified
 
         void StartPathCamera()
         {
-            _activeVessel = FlightGlobals.ActiveVessel;
-            _upDirection = -FlightGlobals.getGeeForceAtPosition( _activeVessel.GetWorldPos3D() ).normalized;
-            if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( _activeVessel ) == FlightCamera.Modes.ORBITAL) )
-            {
-                _upDirection = Vector3.up;
-            }
-
             _stationaryCameraParent.transform.position = _activeVessel.transform.position + _activeVessel.rb_velocity * Time.fixedDeltaTime;
             _stationaryCameraParent.transform.rotation = _activeVessel.transform.rotation;
+
             _flightCamera.SetTargetNone();
             _flightCamera.transform.parent = _stationaryCameraParent.transform;
             _flightCamera.DeactivateUpdate();
