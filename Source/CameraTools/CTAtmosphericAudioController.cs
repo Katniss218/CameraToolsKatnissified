@@ -22,7 +22,7 @@ namespace CameraToolsKatnissified
             _windAudioSource.maxDistance = 10000;
             _windAudioSource.dopplerLevel = .35f;
             _windAudioSource.spatialBlend = 1;
-            AudioClip windclip = GameDatabase.Instance.GetAudioClip( "CameraTools/Sounds/windloop" );
+            AudioClip windclip = GameDatabase.Instance.GetAudioClip( $"{CamTools.DIRECTORY_NAME}/Sounds/windloop" );
             if( !windclip )
             {
                 Destroy( this );
@@ -35,7 +35,7 @@ namespace CameraToolsKatnissified
             _windHowlAudioSource.maxDistance = 7000;
             _windHowlAudioSource.dopplerLevel = .5f;
             _windHowlAudioSource.pitch = 0.25f;
-            _windHowlAudioSource.clip = GameDatabase.Instance.GetAudioClip( "CameraTools/Sounds/windhowl" );
+            _windHowlAudioSource.clip = GameDatabase.Instance.GetAudioClip( $"{CamTools.DIRECTORY_NAME}/Sounds/windhowl" );
             _windHowlAudioSource.spatialBlend = 1;
 
             _windTearAudioSource = gameObject.AddComponent<AudioSource>();
@@ -43,7 +43,7 @@ namespace CameraToolsKatnissified
             _windTearAudioSource.maxDistance = 5000;
             _windTearAudioSource.dopplerLevel = 0.45f;
             _windTearAudioSource.pitch = 0.65f;
-            _windTearAudioSource.clip = GameDatabase.Instance.GetAudioClip( "CameraTools/Sounds/windtear" );
+            _windTearAudioSource.clip = GameDatabase.Instance.GetAudioClip( $"{CamTools.DIRECTORY_NAME}/Sounds/windtear" );
             _windTearAudioSource.spatialBlend = 1;
 
             _sonicBoomSource = new GameObject().AddComponent<AudioSource>();
@@ -52,7 +52,7 @@ namespace CameraToolsKatnissified
             _sonicBoomSource.minDistance = 50;
             _sonicBoomSource.maxDistance = 20000;
             _sonicBoomSource.dopplerLevel = 0;
-            _sonicBoomSource.clip = GameDatabase.Instance.GetAudioClip( "CameraTools/Sounds/sonicBoom" );
+            _sonicBoomSource.clip = GameDatabase.Instance.GetAudioClip( $"{CamTools.DIRECTORY_NAME}/Sounds/sonicBoom" );
             _sonicBoomSource.volume = Mathf.Clamp01( _vessel.GetTotalMass() / 4f );
             _sonicBoomSource.Stop();
             _sonicBoomSource.spatialBlend = 1;

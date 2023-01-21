@@ -13,20 +13,22 @@ namespace CameraToolsKatnissified
     [KSPAddon( KSPAddon.Startup.Flight, false )]
     public class CamTools : MonoBehaviour
     {
-        public static CamTools fetch;
+        public const string DIRECTORY_NAME = "CameraToolsKatnissified";
 
-        GameObject cameraParent;
-        Vessel vessel;
-        Vector3 origPosition;
-        Quaternion origRotation;
-        Transform origParent;
-        float origNearClip;
-        FlightCamera flightCamera;
+        public static CamTools Instance { get; set; }
+
+        GameObject _cameraParent;
+        Vessel _vessel;
+        Vector3 _origPosition;
+        Quaternion _origRotation;
+        Transform _origParent;
+        float _origNearClip;
+        FlightCamera _flightCamera;
 
         Part camTarget = null;
 
         [CTPersistentField]
-        public ReferenceModes referenceMode = ReferenceModes.Surface;
+        public CameraReference referenceMode = CameraReference.Surface;
         Vector3 cameraUp = Vector3.up;
 
         string fmUpKey = "[7]";
@@ -45,21 +47,26 @@ namespace CameraToolsKatnissified
 
 
         //GUI
-        public static bool guiEnabled = false;
-        public static bool hasAddedButton = false;
-        bool updateFOV = false;
-        float windowWidth = 250;
-        float windowHeight = 400;
-        float draggableHeight = 40;
-        float leftIndent = 12;
-        float entryHeight = 20;
+        public static bool GuiEnabled { get; set; } = false;
+        public static bool HasAddedButton { get; set; } = false;
 
+        bool _updateFOV = false;
+
+        Rect _windowRect = new Rect( 0, 0, 0, 0 );
+        float _windowWidth = 250;
+        float _windowHeight = 400;
+        float _draggableHeight = 40;
+        float _leftIndent = 12;
+        float _entryHeight = 20;
+
+        bool _gameUIToggle = true;
+        float _incrButtonWidth = 26;
+
+        /// <summary>
+        /// Current mode of the CameraTools camera.
+        /// </summary>
         [CTPersistentField]
-        public ToolModes toolMode = ToolModes.StationaryCamera;
-
-        Rect windowRect = new Rect( 0, 0, 0, 0 );
-        bool gameUIToggle = true;
-        float incrButtonWidth = 26;
+        public CameraMode CurrentMode = CameraMode.StationaryCamera;
 
         //stationary camera vars
         [CTPersistentField]
@@ -67,10 +74,6 @@ namespace CameraToolsKatnissified
 
         [CTPersistentField]
         public bool autoFOV = false;
-
-        float manualFOV = 60;
-        float currentFOV = 60;
-        Vector3 manualPosition = Vector3.zero;
 
         [CTPersistentField]
         public float freeMoveSpeed = 10;
@@ -80,22 +83,14 @@ namespace CameraToolsKatnissified
         [CTPersistentField]
         public float keyZoomSpeed = 1;
 
-        string guiKeyZoomSpeed = "1";
-        float zoomFactor = 1;
-
         [CTPersistentField]
-        public float zoomExp = 1;
+        public float _zoomExp = 1;
 
         [CTPersistentField]
         public bool enableKeypad = false;
 
         [CTPersistentField]
         public float maxRelV = 2500;
-
-        bool setPresetOffset = false;
-        Vector3 presetOffset = Vector3.zero;
-        bool hasSavedRotation = false;
-        Quaternion savedRotation;
 
         [CTPersistentField]
         public bool manualOffset = false;
@@ -109,6 +104,24 @@ namespace CameraToolsKatnissified
         [CTPersistentField]
         public float manualOffsetUp = 5;
 
+        [CTPersistentField]
+        public bool useOrbital = false;
+
+        [CTPersistentField]
+        public bool targetCoM = false;
+
+        float manualFOV = 60;
+        float currentFOV = 60;
+        Vector3 manualPosition = Vector3.zero;
+
+        string guiKeyZoomSpeed = "1";
+        float zoomFactor = 1;
+
+        bool setPresetOffset = false;
+        Vector3 presetOffset = Vector3.zero;
+        bool hasSavedRotation = false;
+        Quaternion savedRotation;
+
         string guiOffsetForward = "500";
         string guiOffsetRight = "50";
         string guiOffsetUp = "5";
@@ -116,12 +129,6 @@ namespace CameraToolsKatnissified
         Vector3 lastVesselPosition = Vector3.zero;
         Vector3 lastTargetPosition = Vector3.zero;
         bool hasTarget = false;
-
-        [CTPersistentField]
-        public bool useOrbital = false;
-
-        [CTPersistentField]
-        public bool targetCoM = false;
 
         bool hasDied = false;
         float diedTime = 0;
@@ -145,6 +152,7 @@ namespace CameraToolsKatnissified
         //Keys
         [CTPersistentField]
         public string cameraKey = "home";
+
         [CTPersistentField]
         public string revertKey = "end";
 
@@ -194,37 +202,30 @@ namespace CameraToolsKatnissified
         Vector3 dogfightLastTargetPosition;
         Vector3 dogfightLastTargetVelocity;
         bool dogfightVelocityChase = false;
-        //bdarmory
-        bool hasBDAI = false;
-        [CTPersistentField]
-        public bool useBDAutoTarget = false;
-        object aiComponent = null;
-        FieldInfo bdAiTargetField;
-
 
         //pathing
-        int selectedPathIndex = -1;
-        List<CameraPath> availablePaths;
-        CameraPath currentPath
+        int _selectedPathIndex = -1;
+        List<CameraPath> _availablePaths;
+
+        CameraPath CurrentPath
         {
             get
             {
-                if( selectedPathIndex >= 0 && selectedPathIndex < availablePaths.Count )
+                if( _selectedPathIndex >= 0 && _selectedPathIndex < _availablePaths.Count )
                 {
-                    return availablePaths[selectedPathIndex];
+                    return _availablePaths[_selectedPathIndex];
                 }
-                else
-                {
-                    return null;
-                }
+
+                return null;
             }
         }
+
         int currentKeyframeIndex = -1;
         float currentKeyframeTime;
         string currKeyTimeString;
-        bool showKeyframeEditor = false;
+        bool _showKeyframeEditor = false;
         float pathStartTime;
-        bool isPlayingPath = false;
+        bool _isPlayingPath = false;
         float pathTime
         {
             get
@@ -232,16 +233,17 @@ namespace CameraToolsKatnissified
                 return Time.time - pathStartTime;
             }
         }
+
         Vector2 keysScrollPos;
 
         void Awake()
         {
-            if( fetch )
+            if( Instance )
             {
-                Destroy( fetch );
+                Destroy( Instance );
             }
 
-            fetch = this;
+            Instance = this;
 
             Load();
 
@@ -254,8 +256,8 @@ namespace CameraToolsKatnissified
 
         void Start()
         {
-            windowRect = new Rect( Screen.width - windowWidth - 40, 0, windowWidth, windowHeight );
-            flightCamera = FlightCamera.fetch;
+            _windowRect = new Rect( Screen.width - _windowWidth - 40, 0, _windowWidth, _windowHeight );
+            _flightCamera = FlightCamera.fetch;
             cameraToolActive = false;
             SaveOriginalCamera();
 
@@ -268,18 +270,16 @@ namespace CameraToolsKatnissified
             GameEvents.onFloatingOriginShift.Add( OnFloatingOriginShift );
             GameEvents.onGameSceneLoadRequested.Add( PostDeathRevert );
 
-            cameraParent = new GameObject( "StationaryCameraParent" );
+            _cameraParent = new GameObject( "StationaryCameraParent" );
             //cameraParent.SetActive(true);
             //cameraParent = (GameObject) Instantiate(cameraParent, Vector3.zero, Quaternion.identity);
 
             if( FlightGlobals.ActiveVessel != null )
             {
-                cameraParent.transform.position = FlightGlobals.ActiveVessel.transform.position;
-                vessel = FlightGlobals.ActiveVessel;
-
-                CheckForBDAI( FlightGlobals.ActiveVessel );
+                _cameraParent.transform.position = FlightGlobals.ActiveVessel.transform.position;
+                _vessel = FlightGlobals.ActiveVessel;
             }
-            bdAiTargetField = GetAITargetField();
+
             GameEvents.onVesselChange.Add( SwitchToVessel );
         }
 
@@ -294,7 +294,7 @@ namespace CameraToolsKatnissified
             {
                 if( Input.GetKeyDown( KeyCode.KeypadDivide ) )
                 {
-                    guiEnabled = !guiEnabled;
+                    GuiEnabled = !GuiEnabled;
                 }
 
                 if( Input.GetKeyDown( revertKey ) )
@@ -303,7 +303,7 @@ namespace CameraToolsKatnissified
                 }
                 else if( Input.GetKeyDown( cameraKey ) )
                 {
-                    if( toolMode == ToolModes.StationaryCamera )
+                    if( CurrentMode == CameraMode.StationaryCamera )
                     {
                         if( !cameraToolActive )
                         {
@@ -316,7 +316,7 @@ namespace CameraToolsKatnissified
                             StartStationaryCamera();
                         }
                     }
-                    else if( toolMode == ToolModes.DogfightCamera )
+                    else if( CurrentMode == CameraMode.DogfightCamera )
                     {
                         if( !cameraToolActive )
                         {
@@ -328,14 +328,14 @@ namespace CameraToolsKatnissified
                             StartDogfightCamera();
                         }
                     }
-                    else if( toolMode == ToolModes.Pathing )
+                    else if( CurrentMode == CameraMode.Pathing )
                     {
                         if( !cameraToolActive )
                         {
                             SaveOriginalCamera();
                         }
                         StartPathingCam();
-                        PlayPathingCam();
+                        StartPlayingPathingCamera();
                     }
                 }
 
@@ -402,42 +402,42 @@ namespace CameraToolsKatnissified
                 return;
             }
 
-            if( FlightGlobals.ActiveVessel != null && (vessel == null || vessel != FlightGlobals.ActiveVessel) )
+            if( FlightGlobals.ActiveVessel != null && (_vessel == null || _vessel != FlightGlobals.ActiveVessel) )
             {
-                vessel = FlightGlobals.ActiveVessel;
+                _vessel = FlightGlobals.ActiveVessel;
             }
 
-            if( vessel != null )
+            if( _vessel != null )
             {
-                lastVesselPosition = vessel.transform.position;
+                lastVesselPosition = _vessel.transform.position;
             }
 
 
             //stationary camera
             if( cameraToolActive )
             {
-                if( toolMode == ToolModes.StationaryCamera )
+                if( CurrentMode == CameraMode.StationaryCamera )
                 {
                     UpdateStationaryCamera();
                 }
-                else if( toolMode == ToolModes.DogfightCamera )
+                else if( CurrentMode == CameraMode.DogfightCamera )
                 {
                     UpdateDogfightCamera();
                 }
-                else if( toolMode == ToolModes.Pathing )
+                else if( CurrentMode == CameraMode.Pathing )
                 {
-                    UpdatePathingCam();
+                    UpdatePathingCamera();
                 }
             }
             else
             {
                 if( !autoFOV )
                 {
-                    zoomFactor = Mathf.Exp( zoomExp ) / Mathf.Exp( 1 );
+                    zoomFactor = Mathf.Exp( _zoomExp ) / Mathf.Exp( 1 );
                 }
             }
 
-            if( toolMode == ToolModes.DogfightCamera )
+            if( CurrentMode == CameraMode.DogfightCamera )
             {
                 if( dogfightTarget && dogfightTarget.isActiveVessel )
                 {
@@ -478,13 +478,13 @@ namespace CameraToolsKatnissified
             dogfightPrevTarget = dogfightTarget;
 
             hasDied = false;
-            vessel = FlightGlobals.ActiveVessel;
-            cameraUp = -FlightGlobals.getGeeForceAtPosition( vessel.CoM ).normalized;
+            _vessel = FlightGlobals.ActiveVessel;
+            cameraUp = -FlightGlobals.getGeeForceAtPosition( _vessel.CoM ).normalized;
 
-            flightCamera.SetTargetNone();
-            flightCamera.transform.parent = cameraParent.transform;
-            flightCamera.DeactivateUpdate();
-            cameraParent.transform.position = vessel.transform.position + vessel.rb_velocity * Time.fixedDeltaTime;
+            _flightCamera.SetTargetNone();
+            _flightCamera.transform.parent = _cameraParent.transform;
+            _flightCamera.DeactivateUpdate();
+            _cameraParent.transform.position = _vessel.transform.position + _vessel.rb_velocity * Time.fixedDeltaTime;
 
             cameraToolActive = true;
 
@@ -500,7 +500,7 @@ namespace CameraToolsKatnissified
 
         void UpdateDogfightCamera()
         {
-            if( !vessel || (!dogfightTarget && !dogfightLastTarget && !dogfightVelocityChase) )
+            if( !_vessel || (!dogfightTarget && !dogfightLastTarget && !dogfightVelocityChase) )
             {
                 RevertCamera();
                 return;
@@ -518,31 +518,31 @@ namespace CameraToolsKatnissified
                 dogfightLastTargetPosition += dogfightLastTargetVelocity * Time.fixedDeltaTime;
             }
 
-            cameraParent.transform.position = (vessel.CoM - (vessel.rb_velocity * Time.fixedDeltaTime));
+            _cameraParent.transform.position = (_vessel.CoM - (_vessel.rb_velocity * Time.fixedDeltaTime));
 
             if( dogfightVelocityChase )
             {
-                if( vessel.srfSpeed > 1 )
+                if( _vessel.srfSpeed > 1 )
                 {
-                    dogfightLastTargetPosition = vessel.CoM + (vessel.srf_velocity.normalized * 5000);
+                    dogfightLastTargetPosition = _vessel.CoM + (_vessel.srf_velocity.normalized * 5000);
                 }
                 else
                 {
-                    dogfightLastTargetPosition = vessel.CoM + (vessel.ReferenceTransform.up * 5000);
+                    dogfightLastTargetPosition = _vessel.CoM + (_vessel.ReferenceTransform.up * 5000);
                 }
             }
 
-            Vector3 offsetDirection = Vector3.Cross( cameraUp, dogfightLastTargetPosition - vessel.CoM ).normalized;
-            Vector3 camPos = vessel.CoM + ((vessel.CoM - dogfightLastTargetPosition).normalized * dogfightDistance) + (dogfightOffsetX * offsetDirection) + (dogfightOffsetY * cameraUp);
+            Vector3 offsetDirection = Vector3.Cross( cameraUp, dogfightLastTargetPosition - _vessel.CoM ).normalized;
+            Vector3 camPos = _vessel.CoM + ((_vessel.CoM - dogfightLastTargetPosition).normalized * dogfightDistance) + (dogfightOffsetX * offsetDirection) + (dogfightOffsetY * cameraUp);
 
-            Vector3 localCamPos = cameraParent.transform.InverseTransformPoint( camPos );
-            flightCamera.transform.localPosition = Vector3.Lerp( flightCamera.transform.localPosition, localCamPos, dogfightLerp * Time.fixedDeltaTime );
+            Vector3 localCamPos = _cameraParent.transform.InverseTransformPoint( camPos );
+            _flightCamera.transform.localPosition = Vector3.Lerp( _flightCamera.transform.localPosition, localCamPos, dogfightLerp * Time.fixedDeltaTime );
 
             //rotation
-            Quaternion vesselLook = Quaternion.LookRotation( vessel.CoM - flightCamera.transform.position, cameraUp );
-            Quaternion targetLook = Quaternion.LookRotation( dogfightLastTargetPosition - flightCamera.transform.position, cameraUp );
+            Quaternion vesselLook = Quaternion.LookRotation( _vessel.CoM - _flightCamera.transform.position, cameraUp );
+            Quaternion targetLook = Quaternion.LookRotation( dogfightLastTargetPosition - _flightCamera.transform.position, cameraUp );
             Quaternion camRot = Quaternion.Lerp( vesselLook, targetLook, 0.5f );
-            flightCamera.transform.rotation = Quaternion.Lerp( flightCamera.transform.rotation, camRot, dogfightLerp * Time.fixedDeltaTime );
+            _flightCamera.transform.rotation = Quaternion.Lerp( _flightCamera.transform.rotation, camRot, dogfightLerp * Time.fixedDeltaTime );
 
             //autoFov
             if( autoFOV )
@@ -554,7 +554,7 @@ namespace CameraToolsKatnissified
                 }
                 else
                 {
-                    float angle = Vector3.Angle( (dogfightLastTargetPosition + (dogfightLastTargetVelocity * Time.fixedDeltaTime)) - flightCamera.transform.position, (vessel.CoM + (vessel.rb_velocity * Time.fixedDeltaTime)) - flightCamera.transform.position );
+                    float angle = Vector3.Angle( (dogfightLastTargetPosition + (dogfightLastTargetVelocity * Time.fixedDeltaTime)) - _flightCamera.transform.position, (_vessel.CoM + (_vessel.rb_velocity * Time.fixedDeltaTime)) - _flightCamera.transform.position );
                     targetFoV = Mathf.Clamp( angle + autoZoomMargin, 0.1f, 60f );
                 }
                 manualFOV = targetFoV;
@@ -562,20 +562,20 @@ namespace CameraToolsKatnissified
             //FOV
             if( !autoFOV )
             {
-                zoomFactor = Mathf.Exp( zoomExp ) / Mathf.Exp( 1 );
+                zoomFactor = Mathf.Exp( _zoomExp ) / Mathf.Exp( 1 );
                 manualFOV = 60 / zoomFactor;
-                updateFOV = (currentFOV != manualFOV);
-                if( updateFOV )
+                _updateFOV = (currentFOV != manualFOV);
+                if( _updateFOV )
                 {
                     currentFOV = Mathf.Lerp( currentFOV, manualFOV, 0.1f );
-                    flightCamera.SetFoV( currentFOV );
-                    updateFOV = false;
+                    _flightCamera.SetFoV( currentFOV );
+                    _updateFOV = false;
                 }
             }
             else
             {
                 currentFOV = Mathf.Lerp( currentFOV, manualFOV, 0.1f );
-                flightCamera.SetFoV( currentFOV );
+                _flightCamera.SetFoV( currentFOV );
                 zoomFactor = 60 / currentFOV;
             }
 
@@ -618,11 +618,11 @@ namespace CameraToolsKatnissified
                 {
                     if( Input.GetKey( fmZoomInKey ) )
                     {
-                        zoomExp = Mathf.Clamp( zoomExp + (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
+                        _zoomExp = Mathf.Clamp( _zoomExp + (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
                     }
                     else if( Input.GetKey( fmZoomOutKey ) )
                     {
-                        zoomExp = Mathf.Clamp( zoomExp - (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
+                        _zoomExp = Mathf.Clamp( _zoomExp - (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
                     }
                 }
                 else
@@ -649,15 +649,6 @@ namespace CameraToolsKatnissified
             }
             UpdateCameraShake();
 
-            if( hasBDAI && useBDAutoTarget )
-            {
-                Vessel newAITarget = GetAITargetedVessel();
-                if( newAITarget )
-                {
-                    dogfightTarget = newAITarget;
-                }
-            }
-
             if( dogfightTarget != dogfightPrevTarget )
             {
                 //RevertCamera();
@@ -669,21 +660,21 @@ namespace CameraToolsKatnissified
         {
             if( useAudioEffects )
             {
-                speedOfSound = 233 * Math.Sqrt( 1 + (FlightGlobals.getExternalTemperature( vessel.GetWorldPos3D(), vessel.mainBody ) / 273.15) );
+                speedOfSound = 233 * Math.Sqrt( 1 + (FlightGlobals.getExternalTemperature( _vessel.GetWorldPos3D(), _vessel.mainBody ) / 273.15) );
                 //Debug.Log("speed of sound: " + speedOfSound);
             }
 
             if( posCounter < 3 )
             {
                 posCounter++;
-                Debug.Log( "flightCamera position: " + flightCamera.transform.position );
-                flightCamera.transform.position = resetPositionFix;
+                Debug.Log( "flightCamera position: " + _flightCamera.transform.position );
+                _flightCamera.transform.position = resetPositionFix;
                 if( hasSavedRotation )
                 {
-                    flightCamera.transform.rotation = savedRotation;
+                    _flightCamera.transform.rotation = savedRotation;
                 }
             }
-            if( flightCamera.Target != null ) flightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
+            if( _flightCamera.Target != null ) _flightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
 
             if( camTarget != null )
             {
@@ -699,46 +690,46 @@ namespace CameraToolsKatnissified
                     lookPosition += camTarget.vessel.rb_velocity * Time.fixedDeltaTime;
                 }
 
-                flightCamera.transform.rotation = Quaternion.LookRotation( lookPosition - flightCamera.transform.position, cameraUp );
+                _flightCamera.transform.rotation = Quaternion.LookRotation( lookPosition - _flightCamera.transform.position, cameraUp );
                 lastTargetPosition = lookPosition;
             }
             else if( hasTarget )
             {
-                flightCamera.transform.rotation = Quaternion.LookRotation( lastTargetPosition - flightCamera.transform.position, cameraUp );
+                _flightCamera.transform.rotation = Quaternion.LookRotation( lastTargetPosition - _flightCamera.transform.position, cameraUp );
             }
 
 
 
-            if( vessel != null )
+            if( _vessel != null )
             {
-                cameraParent.transform.position = manualPosition + (vessel.CoM - vessel.rb_velocity * Time.fixedDeltaTime);
+                _cameraParent.transform.position = manualPosition + (_vessel.CoM - _vessel.rb_velocity * Time.fixedDeltaTime);
 
-                if( referenceMode == ReferenceModes.Surface )
+                if( referenceMode == CameraReference.Surface )
                 {
-                    flightCamera.transform.position -= Time.fixedDeltaTime * Mathf.Clamp( (float)vessel.srf_velocity.magnitude, 0, maxRelV ) * vessel.srf_velocity.normalized;
+                    _flightCamera.transform.position -= Time.fixedDeltaTime * Mathf.Clamp( (float)_vessel.srf_velocity.magnitude, 0, maxRelV ) * _vessel.srf_velocity.normalized;
                 }
-                else if( referenceMode == ReferenceModes.Orbit )
+                else if( referenceMode == CameraReference.Orbit )
                 {
-                    flightCamera.transform.position -= Time.fixedDeltaTime * Mathf.Clamp( (float)vessel.obt_velocity.magnitude, 0, maxRelV ) * vessel.obt_velocity.normalized;
+                    _flightCamera.transform.position -= Time.fixedDeltaTime * Mathf.Clamp( (float)_vessel.obt_velocity.magnitude, 0, maxRelV ) * _vessel.obt_velocity.normalized;
                 }
-                else if( referenceMode == ReferenceModes.InitialVelocity )
+                else if( referenceMode == CameraReference.InitialVelocity )
                 {
                     Vector3 camVelocity = Vector3.zero;
                     if( useOrbital && initialOrbit != null )
                     {
-                        camVelocity = (initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - vessel.GetObtVelocity());
+                        camVelocity = (initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - _vessel.GetObtVelocity());
                     }
                     else
                     {
-                        camVelocity = (initialVelocity - vessel.srf_velocity);
+                        camVelocity = (initialVelocity - _vessel.srf_velocity);
                     }
-                    flightCamera.transform.position += camVelocity * Time.fixedDeltaTime;
+                    _flightCamera.transform.position += camVelocity * Time.fixedDeltaTime;
                 }
             }
 
 
             //mouse panning, moving
-            Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, cameraUp ) * flightCamera.transform.right).normalized;
+            Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, cameraUp ) * _flightCamera.transform.right).normalized;
             Vector3 rightAxis = (Quaternion.AngleAxis( 90, forwardLevelAxis ) * cameraUp).normalized;
 
             //free move
@@ -762,11 +753,11 @@ namespace CameraToolsKatnissified
                 }
                 if( Input.GetKey( fmLeftKey ) )
                 {
-                    manualPosition -= flightCamera.transform.right * freeMoveSpeed * Time.fixedDeltaTime;
+                    manualPosition -= _flightCamera.transform.right * freeMoveSpeed * Time.fixedDeltaTime;
                 }
                 else if( Input.GetKey( fmRightKey ) )
                 {
-                    manualPosition += flightCamera.transform.right * freeMoveSpeed * Time.fixedDeltaTime;
+                    manualPosition += _flightCamera.transform.right * freeMoveSpeed * Time.fixedDeltaTime;
                 }
 
                 //keyZoom
@@ -774,11 +765,11 @@ namespace CameraToolsKatnissified
                 {
                     if( Input.GetKey( fmZoomInKey ) )
                     {
-                        zoomExp = Mathf.Clamp( zoomExp + (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
+                        _zoomExp = Mathf.Clamp( _zoomExp + (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
                     }
                     else if( Input.GetKey( fmZoomOutKey ) )
                     {
-                        zoomExp = Mathf.Clamp( zoomExp - (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
+                        _zoomExp = Mathf.Clamp( _zoomExp - (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
                     }
                 }
                 else
@@ -797,13 +788,13 @@ namespace CameraToolsKatnissified
 
             if( camTarget == null && Input.GetKey( KeyCode.Mouse1 ) )
             {
-                flightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up ); //*(Mathf.Abs(Mouse.delta.x)/7)
-                flightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
-                flightCamera.transform.rotation = Quaternion.LookRotation( flightCamera.transform.forward, cameraUp );
+                _flightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up ); //*(Mathf.Abs(Mouse.delta.x)/7)
+                _flightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
+                _flightCamera.transform.rotation = Quaternion.LookRotation( _flightCamera.transform.forward, cameraUp );
             }
             if( Input.GetKey( KeyCode.Mouse2 ) )
             {
-                manualPosition += flightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
+                manualPosition += _flightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
                 manualPosition += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
             }
             manualPosition += cameraUp * 10 * Input.GetAxis( "Mouse ScrollWheel" );
@@ -811,7 +802,7 @@ namespace CameraToolsKatnissified
             //autoFov
             if( camTarget != null && autoFOV )
             {
-                float cameraDistance = Vector3.Distance( camTarget.transform.position, flightCamera.transform.position );
+                float cameraDistance = Vector3.Distance( camTarget.transform.position, _flightCamera.transform.position );
                 float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + autoZoomMargin, 2, 60 );
                 //flightCamera.SetFoV(targetFoV);	
                 manualFOV = targetFoV;
@@ -819,24 +810,24 @@ namespace CameraToolsKatnissified
             //FOV
             if( !autoFOV )
             {
-                zoomFactor = Mathf.Exp( zoomExp ) / Mathf.Exp( 1 );
+                zoomFactor = Mathf.Exp( _zoomExp ) / Mathf.Exp( 1 );
                 manualFOV = 60 / zoomFactor;
-                updateFOV = (currentFOV != manualFOV);
-                if( updateFOV )
+                _updateFOV = (currentFOV != manualFOV);
+                if( _updateFOV )
                 {
                     currentFOV = Mathf.Lerp( currentFOV, manualFOV, 0.1f );
-                    flightCamera.SetFoV( currentFOV );
-                    updateFOV = false;
+                    _flightCamera.SetFoV( currentFOV );
+                    _updateFOV = false;
                 }
             }
             else
             {
                 currentFOV = Mathf.Lerp( currentFOV, manualFOV, 0.1f );
-                flightCamera.SetFoV( currentFOV );
+                _flightCamera.SetFoV( currentFOV );
                 zoomFactor = 60 / currentFOV;
             }
-            lastPosition = flightCamera.transform.position;
-            lastRotation = flightCamera.transform.rotation;
+            lastPosition = _flightCamera.transform.position;
+            lastRotation = _flightCamera.transform.rotation;
 
 
 
@@ -857,12 +848,12 @@ namespace CameraToolsKatnissified
         {
 
             //retain pos and rot after vessel destruction
-            if( cameraToolActive && flightCamera.transform.parent != cameraParent.transform )
+            if( cameraToolActive && _flightCamera.transform.parent != _cameraParent.transform )
             {
-                flightCamera.SetTargetNone();
-                flightCamera.transform.parent = null;
-                flightCamera.transform.position = lastPosition;
-                flightCamera.transform.rotation = lastRotation;
+                _flightCamera.SetTargetNone();
+                _flightCamera.transform.parent = null;
+                _flightCamera.transform.position = lastPosition;
+                _flightCamera.transform.rotation = lastRotation;
                 hasDied = true;
                 diedTime = Time.time;
             }
@@ -880,7 +871,7 @@ namespace CameraToolsKatnissified
                 }
 
 
-                flightCamera.transform.rotation = Quaternion.AngleAxis( (shakeMultiplier / 2) * shakeMagnitude / 50f, Vector3.ProjectOnPlane( UnityEngine.Random.onUnitSphere, flightCamera.transform.forward ) ) * flightCamera.transform.rotation;
+                _flightCamera.transform.rotation = Quaternion.AngleAxis( (shakeMultiplier / 2) * shakeMagnitude / 50f, Vector3.ProjectOnPlane( UnityEngine.Random.onUnitSphere, _flightCamera.transform.forward ) ) * _flightCamera.transform.rotation;
             }
 
             shakeMagnitude = Mathf.Lerp( shakeMagnitude, 0, 5 * Time.fixedDeltaTime );
@@ -889,7 +880,7 @@ namespace CameraToolsKatnissified
         public void VesselCameraShake( Vessel vessel )
         {
             //shake
-            float camDistance = Vector3.Distance( flightCamera.transform.position, vessel.CoM );
+            float camDistance = Vector3.Distance( _flightCamera.transform.position, vessel.CoM );
 
             float distanceFactor = 50f / camDistance;
             float fovFactor = 2f / zoomFactor;
@@ -927,7 +918,7 @@ namespace CameraToolsKatnissified
         float GetTotalThrust()
         {
             float total = 0;
-            foreach( var engine in vessel.FindPartModulesImplementing<ModuleEngines>() )
+            foreach( var engine in _vessel.FindPartModulesImplementing<ModuleEngines>() )
             {
                 total += engine.finalThrust;
             }
@@ -1017,66 +1008,66 @@ namespace CameraToolsKatnissified
 
         void StartStationaryCamera()
         {
-            Debug.Log( "flightCamera position init: " + flightCamera.transform.position );
+            Debug.Log( "flightCamera position init: " + _flightCamera.transform.position );
             if( FlightGlobals.ActiveVessel != null )
             {
                 hasDied = false;
-                vessel = FlightGlobals.ActiveVessel;
-                cameraUp = -FlightGlobals.getGeeForceAtPosition( vessel.GetWorldPos3D() ).normalized;
-                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( vessel ) == FlightCamera.Modes.ORBITAL) )
+                _vessel = FlightGlobals.ActiveVessel;
+                cameraUp = -FlightGlobals.getGeeForceAtPosition( _vessel.GetWorldPos3D() ).normalized;
+                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( _vessel ) == FlightCamera.Modes.ORBITAL) )
                 {
                     cameraUp = Vector3.up;
                 }
 
-                flightCamera.SetTargetNone();
-                flightCamera.transform.parent = cameraParent.transform;
-                flightCamera.DeactivateUpdate();
-                cameraParent.transform.position = vessel.transform.position + vessel.rb_velocity * Time.fixedDeltaTime;
+                _flightCamera.SetTargetNone();
+                _flightCamera.transform.parent = _cameraParent.transform;
+                _flightCamera.DeactivateUpdate();
+                _cameraParent.transform.position = _vessel.transform.position + _vessel.rb_velocity * Time.fixedDeltaTime;
                 manualPosition = Vector3.zero;
 
 
                 hasTarget = (camTarget != null) ? true : false;
 
 
-                Vector3 rightAxis = -Vector3.Cross( vessel.srf_velocity, vessel.upAxis ).normalized;
+                Vector3 rightAxis = -Vector3.Cross( _vessel.srf_velocity, _vessel.upAxis ).normalized;
                 //Vector3 upAxis = flightCamera.transform.up;
 
 
                 if( autoFlybyPosition )
                 {
                     setPresetOffset = false;
-                    Vector3 velocity = vessel.srf_velocity;
-                    if( referenceMode == ReferenceModes.Orbit ) velocity = vessel.obt_velocity;
+                    Vector3 velocity = _vessel.srf_velocity;
+                    if( referenceMode == CameraReference.Orbit ) velocity = _vessel.obt_velocity;
 
-                    Vector3 clampedVelocity = Mathf.Clamp( (float)vessel.srfSpeed, 0, maxRelV ) * velocity.normalized;
+                    Vector3 clampedVelocity = Mathf.Clamp( (float)_vessel.srfSpeed, 0, maxRelV ) * velocity.normalized;
                     float clampedSpeed = clampedVelocity.magnitude;
                     float sideDistance = Mathf.Clamp( 20 + (clampedSpeed / 10), 20, 150 );
                     float distanceAhead = Mathf.Clamp( 4 * clampedSpeed, 30, 3500 );
 
-                    flightCamera.transform.rotation = Quaternion.LookRotation( vessel.transform.position - flightCamera.transform.position, cameraUp );
+                    _flightCamera.transform.rotation = Quaternion.LookRotation( _vessel.transform.position - _flightCamera.transform.position, cameraUp );
 
 
-                    if( referenceMode == ReferenceModes.Surface && vessel.srfSpeed > 0 )
+                    if( referenceMode == CameraReference.Surface && _vessel.srfSpeed > 0 )
                     {
-                        flightCamera.transform.position = vessel.transform.position + (distanceAhead * vessel.srf_velocity.normalized);
+                        _flightCamera.transform.position = _vessel.transform.position + (distanceAhead * _vessel.srf_velocity.normalized);
                     }
-                    else if( referenceMode == ReferenceModes.Orbit && vessel.obt_speed > 0 )
+                    else if( referenceMode == CameraReference.Orbit && _vessel.obt_speed > 0 )
                     {
-                        flightCamera.transform.position = vessel.transform.position + (distanceAhead * vessel.obt_velocity.normalized);
+                        _flightCamera.transform.position = _vessel.transform.position + (distanceAhead * _vessel.obt_velocity.normalized);
                     }
                     else
                     {
-                        flightCamera.transform.position = vessel.transform.position + (distanceAhead * vessel.vesselTransform.up);
+                        _flightCamera.transform.position = _vessel.transform.position + (distanceAhead * _vessel.vesselTransform.up);
                     }
 
 
-                    if( flightCamera.mode == FlightCamera.Modes.FREE || FlightCamera.GetAutoModeForVessel( vessel ) == FlightCamera.Modes.FREE )
+                    if( _flightCamera.mode == FlightCamera.Modes.FREE || FlightCamera.GetAutoModeForVessel( _vessel ) == FlightCamera.Modes.FREE )
                     {
-                        flightCamera.transform.position += (sideDistance * rightAxis) + (15 * cameraUp);
+                        _flightCamera.transform.position += (sideDistance * rightAxis) + (15 * cameraUp);
                     }
-                    else if( flightCamera.mode == FlightCamera.Modes.ORBITAL || FlightCamera.GetAutoModeForVessel( vessel ) == FlightCamera.Modes.ORBITAL )
+                    else if( _flightCamera.mode == FlightCamera.Modes.ORBITAL || FlightCamera.GetAutoModeForVessel( _vessel ) == FlightCamera.Modes.ORBITAL )
                     {
-                        flightCamera.transform.position += (sideDistance * FlightGlobals.getUpAxis()) + (15 * Vector3.up);
+                        _flightCamera.transform.position += (sideDistance * FlightGlobals.getUpAxis()) + (15 * Vector3.up);
                     }
 
 
@@ -1088,39 +1079,39 @@ namespace CameraToolsKatnissified
                     float distanceAhead = manualOffsetForward;
 
 
-                    flightCamera.transform.rotation = Quaternion.LookRotation( vessel.transform.position - flightCamera.transform.position, cameraUp );
+                    _flightCamera.transform.rotation = Quaternion.LookRotation( _vessel.transform.position - _flightCamera.transform.position, cameraUp );
 
-                    if( referenceMode == ReferenceModes.Surface && vessel.srfSpeed > 4 )
+                    if( referenceMode == CameraReference.Surface && _vessel.srfSpeed > 4 )
                     {
-                        flightCamera.transform.position = vessel.transform.position + (distanceAhead * vessel.srf_velocity.normalized);
+                        _flightCamera.transform.position = _vessel.transform.position + (distanceAhead * _vessel.srf_velocity.normalized);
                     }
-                    else if( referenceMode == ReferenceModes.Orbit && vessel.obt_speed > 4 )
+                    else if( referenceMode == CameraReference.Orbit && _vessel.obt_speed > 4 )
                     {
-                        flightCamera.transform.position = vessel.transform.position + (distanceAhead * vessel.obt_velocity.normalized);
+                        _flightCamera.transform.position = _vessel.transform.position + (distanceAhead * _vessel.obt_velocity.normalized);
                     }
                     else
                     {
-                        flightCamera.transform.position = vessel.transform.position + (distanceAhead * vessel.vesselTransform.up);
+                        _flightCamera.transform.position = _vessel.transform.position + (distanceAhead * _vessel.vesselTransform.up);
                     }
 
-                    if( flightCamera.mode == FlightCamera.Modes.FREE || FlightCamera.GetAutoModeForVessel( vessel ) == FlightCamera.Modes.FREE )
+                    if( _flightCamera.mode == FlightCamera.Modes.FREE || FlightCamera.GetAutoModeForVessel( _vessel ) == FlightCamera.Modes.FREE )
                     {
-                        flightCamera.transform.position += (sideDistance * rightAxis) + (manualOffsetUp * cameraUp);
+                        _flightCamera.transform.position += (sideDistance * rightAxis) + (manualOffsetUp * cameraUp);
                     }
-                    else if( flightCamera.mode == FlightCamera.Modes.ORBITAL || FlightCamera.GetAutoModeForVessel( vessel ) == FlightCamera.Modes.ORBITAL )
+                    else if( _flightCamera.mode == FlightCamera.Modes.ORBITAL || FlightCamera.GetAutoModeForVessel( _vessel ) == FlightCamera.Modes.ORBITAL )
                     {
-                        flightCamera.transform.position += (sideDistance * FlightGlobals.getUpAxis()) + (manualOffsetUp * Vector3.up);
+                        _flightCamera.transform.position += (sideDistance * FlightGlobals.getUpAxis()) + (manualOffsetUp * Vector3.up);
                     }
                 }
                 else if( setPresetOffset )
                 {
-                    flightCamera.transform.position = presetOffset;
+                    _flightCamera.transform.position = presetOffset;
                     //setPresetOffset = false;
                 }
 
-                initialVelocity = vessel.srf_velocity;
+                initialVelocity = _vessel.srf_velocity;
                 initialOrbit = new Orbit();
-                initialOrbit.UpdateFromStateVectors( vessel.orbit.pos, vessel.orbit.vel, FlightGlobals.currentMainBody, Planetarium.GetUniversalTime() );
+                initialOrbit.UpdateFromStateVectors( _vessel.orbit.pos, _vessel.orbit.vel, FlightGlobals.currentMainBody, Planetarium.GetUniversalTime() );
                 initialUT = Planetarium.GetUniversalTime();
 
                 cameraToolActive = true;
@@ -1132,8 +1123,8 @@ namespace CameraToolsKatnissified
             {
                 Debug.Log( "CameraTools: Stationary Camera failed. Active Vessel is null." );
             }
-            resetPositionFix = flightCamera.transform.position;
-            Debug.Log( "flightCamera position post init: " + flightCamera.transform.position );
+            resetPositionFix = _flightCamera.transform.position;
+            Debug.Log( "flightCamera position post init: " + _flightCamera.transform.position );
         }
 
         void RevertCamera()
@@ -1142,10 +1133,10 @@ namespace CameraToolsKatnissified
 
             if( cameraToolActive )
             {
-                presetOffset = flightCamera.transform.position;
+                presetOffset = _flightCamera.transform.position;
                 if( camTarget == null )
                 {
-                    savedRotation = flightCamera.transform.rotation;
+                    savedRotation = _flightCamera.transform.rotation;
                     hasSavedRotation = true;
                 }
                 else
@@ -1156,15 +1147,15 @@ namespace CameraToolsKatnissified
             hasDied = false;
             if( FlightGlobals.ActiveVessel != null && HighLogic.LoadedScene == GameScenes.FLIGHT )
             {
-                flightCamera.SetTarget( FlightGlobals.ActiveVessel.transform, FlightCamera.TargetMode.Vessel );
+                _flightCamera.SetTarget( FlightGlobals.ActiveVessel.transform, FlightCamera.TargetMode.Vessel );
             }
-            flightCamera.transform.parent = origParent;
-            flightCamera.transform.position = origPosition;
-            flightCamera.transform.rotation = origRotation;
-            Camera.main.nearClipPlane = origNearClip;
+            _flightCamera.transform.parent = _origParent;
+            _flightCamera.transform.position = _origPosition;
+            _flightCamera.transform.rotation = _origRotation;
+            Camera.main.nearClipPlane = _origNearClip;
 
-            flightCamera.SetFoV( 60 );
-            flightCamera.ActivateUpdate();
+            _flightCamera.SetFoV( 60 );
+            _flightCamera.ActivateUpdate();
             currentFOV = 60;
 
             cameraToolActive = false;
@@ -1175,15 +1166,15 @@ namespace CameraToolsKatnissified
                 OnResetCTools();
             }
 
-            StopPlayingPath();
+            StopPlayingPathingCamera();
         }
 
         void SaveOriginalCamera()
         {
-            origPosition = flightCamera.transform.position;
-            origRotation = flightCamera.transform.localRotation;
-            origParent = flightCamera.transform.parent;
-            origNearClip = Camera.main.nearClipPlane;
+            _origPosition = _flightCamera.transform.position;
+            _origRotation = _flightCamera.transform.localRotation;
+            _origParent = _flightCamera.transform.parent;
+            _origNearClip = Camera.main.nearClipPlane;
         }
 
         Part GetPartFromMouse()
@@ -1235,27 +1226,32 @@ namespace CameraToolsKatnissified
             }
         }
 
-        //GUI
+        /// <summary>
+        /// Unity Message - Draws GUI
+        /// </summary>
         void OnGUI()
         {
-            if( guiEnabled && gameUIToggle )
+            if( GuiEnabled && _gameUIToggle )
             {
-                windowRect = GUI.Window( 320, windowRect, GuiWindow, "" );
+                _windowRect = GUI.Window( 320, _windowRect, DrawGuiWindow, "" );
 
-                if( showKeyframeEditor )
+                if( _showKeyframeEditor )
                 {
                     KeyframeEditorWindow();
                 }
-                if( showPathSelectorWindow )
+                if( _showPathSelectorWindow )
                 {
                     PathSelectorWindow();
                 }
             }
         }
 
-        void GuiWindow( int windowID )
+        /// <summary>
+        /// Controls how the camera Tools GUI window looks.
+        /// </summary>
+        void DrawGuiWindow( int windowId )
         {
-            GUI.DragWindow( new Rect( 0, 0, windowWidth, draggableHeight ) );
+            GUI.DragWindow( new Rect( 0, 0, _windowWidth, _draggableHeight ) );
 
             GUIStyle centerLabel = new GUIStyle();
             centerLabel.alignment = TextAnchor.UpperCenter;
@@ -1268,28 +1264,28 @@ namespace CameraToolsKatnissified
             GUIStyle leftLabelBold = new GUIStyle( leftLabel );
             leftLabelBold.fontStyle = FontStyle.Bold;
 
+            float line = 1; // Used to calculate the position of the next line of the GUI.
 
-
-            float line = 1;
-            float contentWidth = (windowWidth) - (2 * leftIndent);
+            float contentWidth = (_windowWidth) - (2 * _leftIndent);
             float contentTop = 20;
             GUIStyle titleStyle = new GUIStyle( centerLabel );
             titleStyle.fontSize = 24;
             titleStyle.alignment = TextAnchor.MiddleCenter;
-            GUI.Label( new Rect( 0, contentTop, windowWidth, 40 ), "Camera Tools", titleStyle );
+
+            GUI.Label( new Rect( 0, contentTop, _windowWidth, 40 ), "Camera Tools", titleStyle );
             line++;
             float parseResult;
 
             //tool mode switcher
-            GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Tool: " + toolMode.ToString(), leftLabelBold );
+            GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Tool: " + CurrentMode.ToString(), leftLabelBold );
             line++;
             if( !cameraToolActive )
             {
-                if( GUI.Button( new Rect( leftIndent, contentTop + (line * entryHeight), 25, entryHeight - 2 ), "<" ) )
+                if( GUI.Button( new Rect( _leftIndent, contentTop + (line * _entryHeight), 25, _entryHeight - 2 ), "<" ) )
                 {
                     CycleToolMode( false );
                 }
-                if( GUI.Button( new Rect( leftIndent + 25 + 4, contentTop + (line * entryHeight), 25, entryHeight - 2 ), ">" ) )
+                if( GUI.Button( new Rect( _leftIndent + 25 + 4, contentTop + (line * _entryHeight), 25, _entryHeight - 2 ), ">" ) )
                 {
                     CycleToolMode( true );
                 }
@@ -1298,68 +1294,69 @@ namespace CameraToolsKatnissified
             line++;
             if( autoFOV )
             {
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth / 2, entryHeight ), "Autozoom Margin: " );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth / 2, _entryHeight ), "Autozoom Margin: " );
                 line++;
-                autoZoomMargin = GUI.HorizontalSlider( new Rect( leftIndent, contentTop + ((line) * entryHeight), contentWidth - 45, entryHeight ), autoZoomMargin, 0, 50 );
-                GUI.Label( new Rect( leftIndent + contentWidth - 40, contentTop + ((line - 0.15f) * entryHeight), 40, entryHeight ), autoZoomMargin.ToString( "0.0" ), leftLabel );
+                autoZoomMargin = GUI.HorizontalSlider( new Rect( _leftIndent, contentTop + ((line) * _entryHeight), contentWidth - 45, _entryHeight ), autoZoomMargin, 0, 50 );
+                GUI.Label( new Rect( _leftIndent + contentWidth - 40, contentTop + ((line - 0.15f) * _entryHeight), 40, _entryHeight ), autoZoomMargin.ToString( "0.0" ), leftLabel );
             }
             else
             {
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Zoom:", leftLabel );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Zoom:", leftLabel );
                 line++;
-                zoomExp = GUI.HorizontalSlider( new Rect( leftIndent, contentTop + ((line) * entryHeight), contentWidth - 45, entryHeight ), zoomExp, 1, 8 );
-                GUI.Label( new Rect( leftIndent + contentWidth - 40, contentTop + ((line - 0.15f) * entryHeight), 40, entryHeight ), zoomFactor.ToString( "0.0" ) + "x", leftLabel );
+                _zoomExp = GUI.HorizontalSlider( new Rect( _leftIndent, contentTop + ((line) * _entryHeight), contentWidth - 45, _entryHeight ), _zoomExp, 1, 8 );
+                GUI.Label( new Rect( _leftIndent + contentWidth - 40, contentTop + ((line - 0.15f) * _entryHeight), 40, _entryHeight ), zoomFactor.ToString( "0.0" ) + "x", leftLabel );
             }
             line++;
 
-            if( toolMode != ToolModes.Pathing )
+            if( CurrentMode != CameraMode.Pathing )
             {
-                autoFOV = GUI.Toggle( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), autoFOV, "Auto Zoom" );//, leftLabel);
+                autoFOV = GUI.Toggle( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), autoFOV, "Auto Zoom" );//, leftLabel);
                 line++;
             }
             line++;
-            useAudioEffects = GUI.Toggle( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), useAudioEffects, "Use Audio Effects" );
+            useAudioEffects = GUI.Toggle( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), useAudioEffects, "Use Audio Effects" );
             line++;
-            GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Camera shake:" );
+            GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Camera shake:" );
             line++;
-            shakeMultiplier = GUI.HorizontalSlider( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth - 45, entryHeight ), shakeMultiplier, 0f, 10f );
-            GUI.Label( new Rect( leftIndent + contentWidth - 40, contentTop + ((line - 0.25f) * entryHeight), 40, entryHeight ), shakeMultiplier.ToString( "0.00" ) + "x" );
+            shakeMultiplier = GUI.HorizontalSlider( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth - 45, _entryHeight ), shakeMultiplier, 0f, 10f );
+            GUI.Label( new Rect( _leftIndent + contentWidth - 40, contentTop + ((line - 0.25f) * _entryHeight), 40, _entryHeight ), shakeMultiplier.ToString( "0.00" ) + "x" );
             line++;
             line++;
 
-            //Stationary camera GUI
-            if( toolMode == ToolModes.StationaryCamera )
+            // Draw Stationary Camera GUI
+
+            if( CurrentMode == CameraMode.StationaryCamera )
             {
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Frame of Reference: " + referenceMode.ToString(), leftLabel );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Frame of Reference: " + referenceMode.ToString(), leftLabel );
                 line++;
-                if( GUI.Button( new Rect( leftIndent, contentTop + (line * entryHeight), 25, entryHeight - 2 ), "<" ) )
+                if( GUI.Button( new Rect( _leftIndent, contentTop + (line * _entryHeight), 25, _entryHeight - 2 ), "<" ) )
                 {
                     CycleReferenceMode( false );
                 }
-                if( GUI.Button( new Rect( leftIndent + 25 + 4, contentTop + (line * entryHeight), 25, entryHeight - 2 ), ">" ) )
+                if( GUI.Button( new Rect( _leftIndent + 25 + 4, contentTop + (line * _entryHeight), 25, _entryHeight - 2 ), ">" ) )
                 {
                     CycleReferenceMode( true );
                 }
 
                 line++;
 
-                if( referenceMode == ReferenceModes.Surface || referenceMode == ReferenceModes.Orbit )
+                if( referenceMode == CameraReference.Surface || referenceMode == CameraReference.Orbit )
                 {
-                    GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth / 2, entryHeight ), "Max Rel. V: ", leftLabel );
-                    maxRelV = float.Parse( GUI.TextField( new Rect( leftIndent + contentWidth / 2, contentTop + (line * entryHeight), contentWidth / 2, entryHeight ), maxRelV.ToString() ) );
+                    GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth / 2, _entryHeight ), "Max Rel. V: ", leftLabel );
+                    maxRelV = float.Parse( GUI.TextField( new Rect( _leftIndent + contentWidth / 2, contentTop + (line * _entryHeight), contentWidth / 2, _entryHeight ), maxRelV.ToString() ) );
                 }
-                else if( referenceMode == ReferenceModes.InitialVelocity )
+                else if( referenceMode == CameraReference.InitialVelocity )
                 {
-                    useOrbital = GUI.Toggle( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), useOrbital, " Orbital" );
+                    useOrbital = GUI.Toggle( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), useOrbital, " Orbital" );
                 }
                 line++;
 
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Camera Position:", leftLabel );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Camera Position:", leftLabel );
                 line++;
                 string posButtonText = "Set Position w/ Click";
                 if( setPresetOffset ) posButtonText = "Clear Position";
                 if( waitingForPosition ) posButtonText = "Waiting...";
-                if( FlightGlobals.ActiveVessel != null && GUI.Button( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight - 2 ), posButtonText ) )
+                if( FlightGlobals.ActiveVessel != null && GUI.Button( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight - 2 ), posButtonText ) )
                 {
                     if( setPresetOffset )
                     {
@@ -1374,11 +1371,11 @@ namespace CameraToolsKatnissified
                 line++;
 
 
-                autoFlybyPosition = GUI.Toggle( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), autoFlybyPosition, "Auto Flyby Position" );
+                autoFlybyPosition = GUI.Toggle( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), autoFlybyPosition, "Auto Flyby Position" );
                 if( autoFlybyPosition ) manualOffset = false;
                 line++;
 
-                manualOffset = GUI.Toggle( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), manualOffset, "Manual Flyby Position" );
+                manualOffset = GUI.Toggle( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), manualOffset, "Manual Flyby Position" );
                 line++;
 
                 Color origGuiColor = GUI.color;
@@ -1390,9 +1387,9 @@ namespace CameraToolsKatnissified
                 {
                     GUI.color = new Color( 0.5f, 0.5f, 0.5f, origGuiColor.a );
                 }
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), 60, entryHeight ), "Fwd:", leftLabel );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), 60, _entryHeight ), "Fwd:", leftLabel );
                 float textFieldWidth = 42;
-                Rect fwdFieldRect = new Rect( leftIndent + contentWidth - textFieldWidth - (3 * incrButtonWidth), contentTop + (line * entryHeight), textFieldWidth, entryHeight );
+                Rect fwdFieldRect = new Rect( _leftIndent + contentWidth - textFieldWidth - (3 * _incrButtonWidth), contentTop + (line * _entryHeight), textFieldWidth, _entryHeight );
                 guiOffsetForward = GUI.TextField( fwdFieldRect, guiOffsetForward.ToString() );
                 if( float.TryParse( guiOffsetForward, out parseResult ) )
                 {
@@ -1402,8 +1399,8 @@ namespace CameraToolsKatnissified
                 guiOffsetForward = manualOffsetForward.ToString();
 
                 line++;
-                Rect rightFieldRect = new Rect( fwdFieldRect.x, contentTop + (line * entryHeight), textFieldWidth, entryHeight );
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), 60, entryHeight ), "Right:", leftLabel );
+                Rect rightFieldRect = new Rect( fwdFieldRect.x, contentTop + (line * _entryHeight), textFieldWidth, _entryHeight );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), 60, _entryHeight ), "Right:", leftLabel );
                 guiOffsetRight = GUI.TextField( rightFieldRect, guiOffsetRight );
                 if( float.TryParse( guiOffsetRight, out parseResult ) )
                 {
@@ -1413,8 +1410,8 @@ namespace CameraToolsKatnissified
                 guiOffsetRight = manualOffsetRight.ToString();
                 line++;
 
-                Rect upFieldRect = new Rect( fwdFieldRect.x, contentTop + (line * entryHeight), textFieldWidth, entryHeight );
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), 60, entryHeight ), "Up:", leftLabel );
+                Rect upFieldRect = new Rect( fwdFieldRect.x, contentTop + (line * _entryHeight), textFieldWidth, _entryHeight );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), 60, _entryHeight ), "Up:", leftLabel );
                 guiOffsetUp = GUI.TextField( upFieldRect, guiOffsetUp );
                 if( float.TryParse( guiOffsetUp, out parseResult ) )
                 {
@@ -1429,33 +1426,36 @@ namespace CameraToolsKatnissified
 
                 string targetText = "None";
                 if( camTarget != null ) targetText = camTarget.gameObject.name;
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Camera Target: " + targetText, leftLabel );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Camera Target: " + targetText, leftLabel );
                 line++;
                 string tgtButtonText = "Set Target w/ Click";
                 if( waitingForTarget ) tgtButtonText = "waiting...";
-                if( GUI.Button( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight - 2 ), tgtButtonText ) )
+                if( GUI.Button( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight - 2 ), tgtButtonText ) )
                 {
                     waitingForTarget = true;
                     mouseUp = false;
                 }
                 line++;
-                if( GUI.Button( new Rect( leftIndent, contentTop + (line * entryHeight), (contentWidth / 2) - 2, entryHeight - 2 ), "Target Self" ) )
+                if( GUI.Button( new Rect( _leftIndent, contentTop + (line * _entryHeight), (contentWidth / 2) - 2, _entryHeight - 2 ), "Target Self" ) )
                 {
                     camTarget = FlightGlobals.ActiveVessel.GetReferenceTransformPart();
                     hasTarget = true;
                 }
-                if( GUI.Button( new Rect( 2 + leftIndent + contentWidth / 2, contentTop + (line * entryHeight), (contentWidth / 2) - 2, entryHeight - 2 ), "Clear Target" ) )
+                if( GUI.Button( new Rect( 2 + _leftIndent + contentWidth / 2, contentTop + (line * _entryHeight), (contentWidth / 2) - 2, _entryHeight - 2 ), "Clear Target" ) )
                 {
                     camTarget = null;
                     hasTarget = false;
                 }
                 line++;
 
-                targetCoM = GUI.Toggle( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight - 2 ), targetCoM, "Vessel Center of Mass" );
+                targetCoM = GUI.Toggle( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight - 2 ), targetCoM, "Vessel Center of Mass" );
             }
-            else if( toolMode == ToolModes.DogfightCamera )
+
+            // Draw Dogfight Camera GUI.
+
+            else if( CurrentMode == CameraMode.DogfightCamera )
             {
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Secondary target:" );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Secondary target:" );
                 line++;
                 string tVesselLabel;
                 if( showingVesselList )
@@ -1470,7 +1470,7 @@ namespace CameraToolsKatnissified
                 {
                     tVesselLabel = "None";
                 }
-                if( GUI.Button( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), tVesselLabel ) )
+                if( GUI.Button( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), tVesselLabel ) )
                 {
                     if( showingVesselList )
                     {
@@ -1490,7 +1490,7 @@ namespace CameraToolsKatnissified
                     foreach( var v in loadedVessels )
                     {
                         if( !v || !v.loaded ) continue;
-                        if( GUI.Button( new Rect( leftIndent + 10, contentTop + (line * entryHeight), contentWidth - 10, entryHeight ), v.vesselName ) )
+                        if( GUI.Button( new Rect( _leftIndent + 10, contentTop + (line * _entryHeight), contentWidth - 10, _entryHeight ), v.vesselName ) )
                         {
                             dogfightTarget = v;
                             showingVesselList = false;
@@ -1498,78 +1498,71 @@ namespace CameraToolsKatnissified
                         line++;
                     }
                 }
-                line++;
-
-                if( hasBDAI )
-                {
-                    useBDAutoTarget = GUI.Toggle( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight - 2 ), useBDAutoTarget, "BDA AI Auto target" );
-                    line++;
-                }
 
                 line++;
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth / 2, entryHeight ), "Distance: " + dogfightDistance.ToString( "0.0" ) );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth / 2, _entryHeight ), "Distance: " + dogfightDistance.ToString( "0.0" ) );
                 line++;
-                dogfightDistance = GUI.HorizontalSlider( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), dogfightDistance, 1, 100 );
+                dogfightDistance = GUI.HorizontalSlider( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), dogfightDistance, 1, 100 );
                 line += 1.5f;
 
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Offset:" );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Offset:" );
                 line++;
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), 15, entryHeight ), "X: " );
-                dogfightOffsetX = GUI.HorizontalSlider( new Rect( leftIndent + 15, contentTop + (line * entryHeight) + 6, contentWidth - 45, entryHeight ), dogfightOffsetX, -dogfightMaxOffset, dogfightMaxOffset );
-                GUI.Label( new Rect( leftIndent + contentWidth - 25, contentTop + (line * entryHeight), 25, entryHeight ), dogfightOffsetX.ToString( "0.0" ) );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), 15, _entryHeight ), "X: " );
+                dogfightOffsetX = GUI.HorizontalSlider( new Rect( _leftIndent + 15, contentTop + (line * _entryHeight) + 6, contentWidth - 45, _entryHeight ), dogfightOffsetX, -dogfightMaxOffset, dogfightMaxOffset );
+                GUI.Label( new Rect( _leftIndent + contentWidth - 25, contentTop + (line * _entryHeight), 25, _entryHeight ), dogfightOffsetX.ToString( "0.0" ) );
                 line++;
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), 15, entryHeight ), "Y: " );
-                dogfightOffsetY = GUI.HorizontalSlider( new Rect( leftIndent + 15, contentTop + (line * entryHeight) + 6, contentWidth - 45, entryHeight ), dogfightOffsetY, -dogfightMaxOffset, dogfightMaxOffset );
-                GUI.Label( new Rect( leftIndent + contentWidth - 25, contentTop + (line * entryHeight), 25, entryHeight ), dogfightOffsetY.ToString( "0.0" ) );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), 15, _entryHeight ), "Y: " );
+                dogfightOffsetY = GUI.HorizontalSlider( new Rect( _leftIndent + 15, contentTop + (line * _entryHeight) + 6, contentWidth - 45, _entryHeight ), dogfightOffsetY, -dogfightMaxOffset, dogfightMaxOffset );
+                GUI.Label( new Rect( _leftIndent + contentWidth - 25, contentTop + (line * _entryHeight), 25, _entryHeight ), dogfightOffsetY.ToString( "0.0" ) );
                 line += 1.5f;
             }
-            else if( toolMode == ToolModes.Pathing )
+            else if( CurrentMode == CameraMode.Pathing )
             {
-                if( selectedPathIndex >= 0 )
+                if( _selectedPathIndex >= 0 )
                 {
-                    GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Path:" );
-                    currentPath.pathName = GUI.TextField( new Rect( leftIndent + 34, contentTop + (line * entryHeight), contentWidth - 34, entryHeight ), currentPath.pathName );
+                    GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Path:" );
+                    CurrentPath.pathName = GUI.TextField( new Rect( _leftIndent + 34, contentTop + (line * _entryHeight), contentWidth - 34, _entryHeight ), CurrentPath.pathName );
                 }
                 else
                 {
-                    GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Path: None" );
+                    GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Path: None" );
                 }
                 line += 1.25f;
-                if( GUI.Button( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Open Path" ) )
+                if( GUI.Button( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Open Path" ) )
                 {
                     TogglePathList();
                 }
                 line++;
-                if( GUI.Button( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth / 2, entryHeight ), "New Path" ) )
+                if( GUI.Button( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth / 2, _entryHeight ), "New Path" ) )
                 {
                     CreateNewPath();
                 }
-                if( GUI.Button( new Rect( leftIndent + (contentWidth / 2), contentTop + (line * entryHeight), contentWidth / 2, entryHeight ), "Delete Path" ) )
+                if( GUI.Button( new Rect( _leftIndent + (contentWidth / 2), contentTop + (line * _entryHeight), contentWidth / 2, _entryHeight ), "Delete Path" ) )
                 {
-                    DeletePath( selectedPathIndex );
+                    DeletePath( _selectedPathIndex );
                 }
                 line++;
-                if( selectedPathIndex >= 0 )
+                if( _selectedPathIndex >= 0 )
                 {
-                    GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Interpolation rate: " + currentPath.lerpRate.ToString( "0.0" ) );
+                    GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Interpolation rate: " + CurrentPath.lerpRate.ToString( "0.0" ) );
                     line++;
-                    currentPath.lerpRate = GUI.HorizontalSlider( new Rect( leftIndent, contentTop + (line * entryHeight) + 4, contentWidth - 50, entryHeight ), currentPath.lerpRate, 1f, 15f );
-                    currentPath.lerpRate = Mathf.Round( currentPath.lerpRate * 10 ) / 10;
+                    CurrentPath.lerpRate = GUI.HorizontalSlider( new Rect( _leftIndent, contentTop + (line * _entryHeight) + 4, contentWidth - 50, _entryHeight ), CurrentPath.lerpRate, 1f, 15f );
+                    CurrentPath.lerpRate = Mathf.Round( CurrentPath.lerpRate * 10 ) / 10;
                     line++;
-                    GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Path timescale " + currentPath.timeScale.ToString( "0.00" ) );
+                    GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Path timescale " + CurrentPath.timeScale.ToString( "0.00" ) );
                     line++;
-                    currentPath.timeScale = GUI.HorizontalSlider( new Rect( leftIndent, contentTop + (line * entryHeight) + 4, contentWidth - 50, entryHeight ), currentPath.timeScale, 0.05f, 4f );
-                    currentPath.timeScale = Mathf.Round( currentPath.timeScale * 20 ) / 20;
+                    CurrentPath.timeScale = GUI.HorizontalSlider( new Rect( _leftIndent, contentTop + (line * _entryHeight) + 4, contentWidth - 50, _entryHeight ), CurrentPath.timeScale, 0.05f, 4f );
+                    CurrentPath.timeScale = Mathf.Round( CurrentPath.timeScale * 20 ) / 20;
                     line++;
-                    float viewHeight = Mathf.Max( 6 * entryHeight, currentPath.keyframeCount * entryHeight );
-                    Rect scrollRect = new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, 6 * entryHeight );
+                    float viewHeight = Mathf.Max( 6 * _entryHeight, CurrentPath.keyframeCount * _entryHeight );
+                    Rect scrollRect = new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, 6 * _entryHeight );
                     GUI.Box( scrollRect, string.Empty );
-                    float viewContentWidth = contentWidth - (2 * leftIndent);
+                    float viewContentWidth = contentWidth - (2 * _leftIndent);
                     keysScrollPos = GUI.BeginScrollView( scrollRect, keysScrollPos, new Rect( 0, 0, viewContentWidth, viewHeight ) );
-                    if( currentPath.keyframeCount > 0 )
+                    if( CurrentPath.keyframeCount > 0 )
                     {
                         Color origGuiColor = GUI.color;
-                        for( int i = 0; i < currentPath.keyframeCount; i++ )
+                        for( int i = 0; i < CurrentPath.keyframeCount; i++ )
                         {
                             if( i == currentKeyframeIndex )
                             {
@@ -1579,12 +1572,12 @@ namespace CameraToolsKatnissified
                             {
                                 GUI.color = origGuiColor;
                             }
-                            string kLabel = "#" + i.ToString() + ": " + currentPath.GetKeyframe( i ).time.ToString( "0.00" ) + "s";
-                            if( GUI.Button( new Rect( 0, (i * entryHeight), 3 * viewContentWidth / 4, entryHeight ), kLabel ) )
+                            string kLabel = "#" + i.ToString() + ": " + CurrentPath.GetKeyframe( i ).time.ToString( "0.00" ) + "s";
+                            if( GUI.Button( new Rect( 0, (i * _entryHeight), 3 * viewContentWidth / 4, _entryHeight ), kLabel ) )
                             {
                                 SelectKeyframe( i );
                             }
-                            if( GUI.Button( new Rect( (3 * contentWidth / 4), (i * entryHeight), (viewContentWidth / 4) - 20, entryHeight ), "X" ) )
+                            if( GUI.Button( new Rect( (3 * contentWidth / 4), (i * _entryHeight), (viewContentWidth / 4) - 20, _entryHeight ), "X" ) )
                             {
                                 DeleteKeyframe( i );
                                 break;
@@ -1596,7 +1589,7 @@ namespace CameraToolsKatnissified
                     GUI.EndScrollView();
                     line += 6;
                     line += 0.5f;
-                    if( GUI.Button( new Rect( leftIndent, contentTop + (line * entryHeight), 3 * contentWidth / 4, entryHeight ), "New Key" ) )
+                    if( GUI.Button( new Rect( _leftIndent, contentTop + (line * _entryHeight), 3 * contentWidth / 4, _entryHeight ), "New Key" ) )
                     {
                         CreateNewKeyframe();
                     }
@@ -1605,13 +1598,13 @@ namespace CameraToolsKatnissified
 
             line += 1.25f;
 
-            enableKeypad = GUI.Toggle( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), enableKeypad, "Keypad Control" );
+            enableKeypad = GUI.Toggle( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), enableKeypad, "Keypad Control" );
             if( enableKeypad )
             {
                 line++;
 
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth / 2, entryHeight ), "Move Speed:" );
-                guiFreeMoveSpeed = GUI.TextField( new Rect( leftIndent + contentWidth / 2, contentTop + (line * entryHeight), contentWidth / 2, entryHeight ), guiFreeMoveSpeed );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth / 2, _entryHeight ), "Move Speed:" );
+                guiFreeMoveSpeed = GUI.TextField( new Rect( _leftIndent + contentWidth / 2, contentTop + (line * _entryHeight), contentWidth / 2, _entryHeight ), guiFreeMoveSpeed );
                 if( float.TryParse( guiFreeMoveSpeed, out parseResult ) )
                 {
                     freeMoveSpeed = Mathf.Abs( parseResult );
@@ -1620,8 +1613,8 @@ namespace CameraToolsKatnissified
 
                 line++;
 
-                GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth / 2, entryHeight ), "Zoom Speed:" );
-                guiKeyZoomSpeed = GUI.TextField( new Rect( leftIndent + contentWidth / 2, contentTop + (line * entryHeight), contentWidth / 2, entryHeight ), guiKeyZoomSpeed );
+                GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth / 2, _entryHeight ), "Zoom Speed:" );
+                guiKeyZoomSpeed = GUI.TextField( new Rect( _leftIndent + contentWidth / 2, contentTop + (line * _entryHeight), contentWidth / 2, _entryHeight ), guiKeyZoomSpeed );
                 if( float.TryParse( guiKeyZoomSpeed, out parseResult ) )
                 {
                     keyZoomSpeed = Mathf.Abs( parseResult );
@@ -1636,15 +1629,15 @@ namespace CameraToolsKatnissified
 
             line++;
             line++;
-            GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Keys:", centerLabel );
+            GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Keys:", centerLabel );
             line++;
 
             //activate key binding
-            GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Activate: ", leftLabel );
-            GUI.Label( new Rect( leftIndent + 60, contentTop + (line * entryHeight), 60, entryHeight ), cameraKey, leftLabel );
+            GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Activate: ", leftLabel );
+            GUI.Label( new Rect( _leftIndent + 60, contentTop + (line * _entryHeight), 60, _entryHeight ), cameraKey, leftLabel );
             if( !isRecordingInput )
             {
-                if( GUI.Button( new Rect( leftIndent + 125, contentTop + (line * entryHeight), 100, entryHeight ), "Bind Key" ) )
+                if( GUI.Button( new Rect( _leftIndent + 125, contentTop + (line * _entryHeight), 100, _entryHeight ), "Bind Key" ) )
                 {
                     mouseUp = false;
                     isRecordingInput = true;
@@ -1653,7 +1646,7 @@ namespace CameraToolsKatnissified
             }
             else if( mouseUp && isRecordingActivate )
             {
-                GUI.Label( new Rect( leftIndent + 125, contentTop + (line * entryHeight), 100, entryHeight ), "Press a Key", leftLabel );
+                GUI.Label( new Rect( _leftIndent + 125, contentTop + (line * _entryHeight), 100, _entryHeight ), "Press a Key", leftLabel );
 
                 string inputString = CCInputUtils.GetInputString();
                 if( inputString.Length > 0 )
@@ -1667,11 +1660,11 @@ namespace CameraToolsKatnissified
             line++;
 
             //revert key binding
-            GUI.Label( new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth, entryHeight ), "Revert: ", leftLabel );
-            GUI.Label( new Rect( leftIndent + 60, contentTop + (line * entryHeight), 60, entryHeight ), revertKey );
+            GUI.Label( new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth, _entryHeight ), "Revert: ", leftLabel );
+            GUI.Label( new Rect( _leftIndent + 60, contentTop + (line * _entryHeight), 60, _entryHeight ), revertKey );
             if( !isRecordingInput )
             {
-                if( GUI.Button( new Rect( leftIndent + 125, contentTop + (line * entryHeight), 100, entryHeight ), "Bind Key" ) )
+                if( GUI.Button( new Rect( _leftIndent + 125, contentTop + (line * _entryHeight), 100, _entryHeight ), "Bind Key" ) )
                 {
                     mouseUp = false;
                     isRecordingInput = true;
@@ -1680,7 +1673,7 @@ namespace CameraToolsKatnissified
             }
             else if( mouseUp && isRecordingRevert )
             {
-                GUI.Label( new Rect( leftIndent + 125, contentTop + (line * entryHeight), 100, entryHeight ), "Press a Key", leftLabel );
+                GUI.Label( new Rect( _leftIndent + 125, contentTop + (line * _entryHeight), 100, _entryHeight ), "Press a Key", leftLabel );
                 string inputString = CCInputUtils.GetInputString();
                 if( inputString.Length > 0 )
                 {
@@ -1692,7 +1685,7 @@ namespace CameraToolsKatnissified
 
             line++;
             line++;
-            Rect saveRect = new Rect( leftIndent, contentTop + (line * entryHeight), contentWidth / 2, entryHeight );
+            Rect saveRect = new Rect( _leftIndent, contentTop + (line * _entryHeight), contentWidth / 2, _entryHeight );
             if( GUI.Button( saveRect, "Save" ) )
             {
                 Save();
@@ -1706,11 +1699,11 @@ namespace CameraToolsKatnissified
             }
 
             //fix length
-            windowHeight = contentTop + (line * entryHeight) + entryHeight + entryHeight;
-            windowRect.height = windowHeight;// = new Rect(windowRect.x, windowRect.y, windowWidth, windowHeight);
+            _windowHeight = contentTop + (line * _entryHeight) + _entryHeight + _entryHeight;
+            _windowRect.height = _windowHeight;// = new Rect(windowRect.x, windowRect.y, windowWidth, windowHeight);
         }
 
-        public static string pathSaveURL = "GameData/CameraTools/paths.cfg";
+        public static string pathSaveURL = "GameData/CameraToolsKatnissified/paths.cfg";
         void Save()
         {
             CTPersistentField.Save();
@@ -1719,7 +1712,7 @@ namespace CameraToolsKatnissified
             ConfigNode pathsNode = pathFileNode.GetNode( "CAMERAPATHS" );
             pathsNode.RemoveNodes( "CAMERAPATH" );
 
-            foreach( var path in availablePaths )
+            foreach( var path in _availablePaths )
             {
                 path.Save( pathsNode );
             }
@@ -1736,12 +1729,12 @@ namespace CameraToolsKatnissified
             guiFreeMoveSpeed = freeMoveSpeed.ToString();
 
             DeselectKeyframe();
-            selectedPathIndex = -1;
-            availablePaths = new List<CameraPath>();
+            _selectedPathIndex = -1;
+            _availablePaths = new List<CameraPath>();
             ConfigNode pathFileNode = ConfigNode.Load( pathSaveURL );
             foreach( var node in pathFileNode.GetNode( "CAMERAPATHS" ).GetNodes( "CAMERAPATH" ) )
             {
-                availablePaths.Add( CameraPath.Load( node ) );
+                _availablePaths.Add( CameraPath.Load( node ) );
             }
         }
 
@@ -1749,7 +1742,7 @@ namespace CameraToolsKatnissified
         {
             float width = 300;
             float height = 130;
-            Rect kWindowRect = new Rect( windowRect.x - width, windowRect.y + 365, width, height );
+            Rect kWindowRect = new Rect( _windowRect.x - width, _windowRect.y + 365, width, height );
             GUI.Box( kWindowRect, string.Empty );
             GUI.BeginGroup( kWindowRect );
             GUI.Label( new Rect( 5, 5, 100, 25 ), "Keyframe #" + currentKeyframeIndex );
@@ -1768,7 +1761,7 @@ namespace CameraToolsKatnissified
             if( GUI.Button( new Rect( 100, 65, 195, 25 ), "Apply" ) )
             {
                 Debug.Log( "Applying keyframe at time: " + currentKeyframeTime );
-                currentPath.SetTransform( currentKeyframeIndex, flightCamera.transform, zoomExp, currentKeyframeTime );
+                CurrentPath.SetTransform( currentKeyframeIndex, _flightCamera.transform, _zoomExp, currentKeyframeTime );
                 applied = true;
             }
             if( GUI.Button( new Rect( 100, 105, 195, 20 ), "Cancel" ) )
@@ -1783,7 +1776,7 @@ namespace CameraToolsKatnissified
             }
         }
 
-        bool showPathSelectorWindow = false;
+        bool _showPathSelectorWindow = false;
         Vector2 pathSelectScrollPos;
         void PathSelectorWindow()
         {
@@ -1791,23 +1784,23 @@ namespace CameraToolsKatnissified
             float height = 300;
             float indent = 5;
             float scrollRectSize = width - indent - indent;
-            Rect pSelectRect = new Rect( windowRect.x - width, windowRect.y + 290, width, height );
+            Rect pSelectRect = new Rect( _windowRect.x - width, _windowRect.y + 290, width, height );
             GUI.Box( pSelectRect, string.Empty );
             GUI.BeginGroup( pSelectRect );
 
             Rect scrollRect = new Rect( indent, indent, scrollRectSize, scrollRectSize );
-            float scrollHeight = Mathf.Max( scrollRectSize, entryHeight * availablePaths.Count );
+            float scrollHeight = Mathf.Max( scrollRectSize, _entryHeight * _availablePaths.Count );
             Rect scrollViewRect = new Rect( 0, 0, scrollRectSize - 20, scrollHeight );
             pathSelectScrollPos = GUI.BeginScrollView( scrollRect, pathSelectScrollPos, scrollViewRect );
             bool selected = false;
-            for( int i = 0; i < availablePaths.Count; i++ )
+            for( int i = 0; i < _availablePaths.Count; i++ )
             {
-                if( GUI.Button( new Rect( 0, i * entryHeight, scrollRectSize - 90, entryHeight ), availablePaths[i].pathName ) )
+                if( GUI.Button( new Rect( 0, i * _entryHeight, scrollRectSize - 90, _entryHeight ), _availablePaths[i].pathName ) )
                 {
                     SelectPath( i );
                     selected = true;
                 }
-                if( GUI.Button( new Rect( scrollRectSize - 80, i * entryHeight, 60, entryHeight ), "Delete" ) )
+                if( GUI.Button( new Rect( scrollRectSize - 80, i * _entryHeight, 60, _entryHeight ), "Delete" ) )
                 {
                     DeletePath( i );
                     break;
@@ -1819,19 +1812,19 @@ namespace CameraToolsKatnissified
             GUI.EndGroup();
             if( selected )
             {
-                showPathSelectorWindow = false;
+                _showPathSelectorWindow = false;
             }
         }
 
         void DrawIncrementButtons( Rect fieldRect, ref float val )
         {
-            Rect incrButtonRect = new Rect( fieldRect.x - incrButtonWidth, fieldRect.y, incrButtonWidth, entryHeight );
+            Rect incrButtonRect = new Rect( fieldRect.x - _incrButtonWidth, fieldRect.y, _incrButtonWidth, _entryHeight );
             if( GUI.Button( incrButtonRect, "-" ) )
             {
                 val -= 5;
             }
 
-            incrButtonRect.x -= incrButtonWidth;
+            incrButtonRect.x -= _incrButtonWidth;
 
             if( GUI.Button( incrButtonRect, "--" ) )
             {
@@ -1845,7 +1838,7 @@ namespace CameraToolsKatnissified
                 val += 5;
             }
 
-            incrButtonRect.x += incrButtonWidth;
+            incrButtonRect.x += _incrButtonWidth;
 
             if( GUI.Button( incrButtonRect, "++" ) )
             {
@@ -1856,24 +1849,24 @@ namespace CameraToolsKatnissified
         //AppLauncherSetup
         void AddToolbarButton()
         {
-            if( !hasAddedButton )
+            if( !HasAddedButton )
             {
-                Texture buttonTexture = GameDatabase.Instance.GetTexture( "CameraTools/Textures/icon", false );
+                Texture buttonTexture = GameDatabase.Instance.GetTexture( $"{DIRECTORY_NAME}/Textures/icon", false );
                 ApplicationLauncher.Instance.AddModApplication( EnableGui, DisableGui, Dummy, Dummy, Dummy, Dummy, ApplicationLauncher.AppScenes.FLIGHT, buttonTexture );
-                CamTools.hasAddedButton = true;
+                CamTools.HasAddedButton = true;
             }
 
         }
 
         void EnableGui()
         {
-            guiEnabled = true;
+            GuiEnabled = true;
             Debug.Log( "Showing CamTools GUI" );
         }
 
         void DisableGui()
         {
-            guiEnabled = false;
+            GuiEnabled = false;
             Debug.Log( "Hiding CamTools GUI" );
         }
 
@@ -1882,17 +1875,17 @@ namespace CameraToolsKatnissified
 
         void GameUIEnable()
         {
-            gameUIToggle = true;
+            _gameUIToggle = true;
         }
 
         void GameUIDisable()
         {
-            gameUIToggle = false;
+            _gameUIToggle = false;
         }
 
         void CycleReferenceMode( bool forward )
         {
-            var length = System.Enum.GetValues( typeof( ReferenceModes ) ).Length;
+            var length = System.Enum.GetValues( typeof( CameraReference ) ).Length;
             if( forward )
             {
                 referenceMode++;
@@ -1901,22 +1894,22 @@ namespace CameraToolsKatnissified
             else
             {
                 referenceMode--;
-                if( (int)referenceMode == -1 ) referenceMode = (ReferenceModes)length - 1;
+                if( (int)referenceMode == -1 ) referenceMode = (CameraReference)length - 1;
             }
         }
 
         void CycleToolMode( bool forward )
         {
-            var length = System.Enum.GetValues( typeof( ToolModes ) ).Length;
+            var length = System.Enum.GetValues( typeof( CameraMode ) ).Length;
             if( forward )
             {
-                toolMode++;
-                if( (int)toolMode == length ) toolMode = 0;
+                CurrentMode++;
+                if( (int)CurrentMode == length ) CurrentMode = 0;
             }
             else
             {
-                toolMode--;
-                if( (int)toolMode == -1 ) toolMode = (ToolModes)length - 1;
+                CurrentMode--;
+                if( (int)CurrentMode == -1 ) CurrentMode = (CameraMode)length - 1;
             }
         }
 
@@ -1950,84 +1943,13 @@ namespace CameraToolsKatnissified
             }
         }
 
-        private void CheckForBDAI( Vessel v )
-        {
-            hasBDAI = false;
-            aiComponent = null;
-            if( v )
-            {
-                foreach( Part p in v.parts )
-                {
-                    if( p.GetComponent( "BDModulePilotAI" ) )
-                    {
-                        hasBDAI = true;
-                        aiComponent = (object)p.GetComponent( "BDModulePilotAI" );
-                        return;
-                    }
-                }
-            }
-        }
-
-        private Vessel GetAITargetedVessel()
-        {
-            if( !hasBDAI || aiComponent == null || bdAiTargetField == null )
-            {
-                return null;
-            }
-
-            return (Vessel)bdAiTargetField.GetValue( aiComponent );
-        }
-
-        private Type AIModuleType()
-        {
-            //Debug.Log("loaded assy's: ");
-            foreach( var assy in AssemblyLoader.loadedAssemblies )
-            {
-                //Debug.Log("- "+assy.assembly.FullName);
-                if( assy.assembly.FullName.Contains( "BDArmory" ) )
-                {
-                    foreach( var t in assy.assembly.GetTypes() )
-                    {
-                        if( t.Name == "BDModulePilotAI" )
-                        {
-                            return t;
-                        }
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        private FieldInfo GetAITargetField()
-        {
-            Type aiModType = AIModuleType();
-            if( aiModType == null ) return null;
-
-            FieldInfo[] fields = aiModType.GetFields( BindingFlags.NonPublic | BindingFlags.Instance );
-            //Debug.Log("bdai fields: ");
-            foreach( var f in fields )
-            {
-                //Debug.Log("- " + f.Name);
-                if( f.Name == "targetVessel" )
-                {
-                    return f;
-                }
-            }
-
-            return null;
-        }
-
-
         void SwitchToVessel( Vessel v )
         {
-            vessel = v;
-
-            CheckForBDAI( v );
+            _vessel = v;
 
             if( cameraToolActive )
             {
-                if( toolMode == ToolModes.DogfightCamera )
+                if( CurrentMode == CameraMode.DogfightCamera )
                 {
                     StartCoroutine( ResetDogfightCamRoutine() );
                 }
@@ -2043,63 +1965,63 @@ namespace CameraToolsKatnissified
 
         void CreateNewPath()
         {
-            showKeyframeEditor = false;
-            availablePaths.Add( new CameraPath() );
-            selectedPathIndex = availablePaths.Count - 1;
+            _showKeyframeEditor = false;
+            _availablePaths.Add( new CameraPath() );
+            _selectedPathIndex = _availablePaths.Count - 1;
         }
 
         void DeletePath( int index )
         {
             if( index < 0 ) return;
-            if( index >= availablePaths.Count ) return;
-            availablePaths.RemoveAt( index );
-            selectedPathIndex = -1;
+            if( index >= _availablePaths.Count ) return;
+            _availablePaths.RemoveAt( index );
+            _selectedPathIndex = -1;
         }
 
         void SelectPath( int index )
         {
-            selectedPathIndex = index;
+            _selectedPathIndex = index;
         }
 
         void SelectKeyframe( int index )
         {
-            if( isPlayingPath )
+            if( _isPlayingPath )
             {
-                StopPlayingPath();
+                StopPlayingPathingCamera();
             }
             currentKeyframeIndex = index;
             UpdateCurrentValues();
-            showKeyframeEditor = true;
+            _showKeyframeEditor = true;
             ViewKeyframe( currentKeyframeIndex );
         }
 
         void DeselectKeyframe()
         {
             currentKeyframeIndex = -1;
-            showKeyframeEditor = false;
+            _showKeyframeEditor = false;
         }
 
         void DeleteKeyframe( int index )
         {
-            currentPath.RemoveKeyframe( index );
+            CurrentPath.RemoveKeyframe( index );
             if( index == currentKeyframeIndex )
             {
                 DeselectKeyframe();
             }
-            if( currentPath.keyframeCount > 0 && currentKeyframeIndex >= 0 )
+            if( CurrentPath.keyframeCount > 0 && currentKeyframeIndex >= 0 )
             {
-                SelectKeyframe( Mathf.Clamp( currentKeyframeIndex, 0, currentPath.keyframeCount - 1 ) );
+                SelectKeyframe( Mathf.Clamp( currentKeyframeIndex, 0, CurrentPath.keyframeCount - 1 ) );
             }
         }
 
         void UpdateCurrentValues()
         {
-            if( currentPath == null ) return;
-            if( currentKeyframeIndex < 0 || currentKeyframeIndex >= currentPath.keyframeCount )
+            if( CurrentPath == null ) return;
+            if( currentKeyframeIndex < 0 || currentKeyframeIndex >= CurrentPath.keyframeCount )
             {
                 return;
             }
-            CameraKeyframe currentKey = currentPath.GetKeyframe( currentKeyframeIndex );
+            CameraKeyframe currentKey = CurrentPath.GetKeyframe( currentKeyframeIndex );
             currentKeyframeTime = currentKey.time;
 
             currKeyTimeString = currentKeyframeTime.ToString();
@@ -2112,15 +2034,15 @@ namespace CameraToolsKatnissified
                 StartPathingCam();
             }
 
-            showPathSelectorWindow = false;
+            _showPathSelectorWindow = false;
 
-            float time = currentPath.keyframeCount > 0 ? currentPath.GetKeyframe( currentPath.keyframeCount - 1 ).time + 1 : 0;
-            currentPath.AddTransform( flightCamera.transform, zoomExp, time );
-            SelectKeyframe( currentPath.keyframeCount - 1 );
+            float time = CurrentPath.keyframeCount > 0 ? CurrentPath.GetKeyframe( CurrentPath.keyframeCount - 1 ).time + 1 : 0;
+            CurrentPath.AddTransform( _flightCamera.transform, _zoomExp, time );
+            SelectKeyframe( CurrentPath.keyframeCount - 1 );
 
-            if( currentPath.keyframeCount > 6 )
+            if( CurrentPath.keyframeCount > 6 )
             {
-                keysScrollPos.y += entryHeight;
+                keysScrollPos.y += _entryHeight;
             }
         }
 
@@ -2130,39 +2052,39 @@ namespace CameraToolsKatnissified
             {
                 StartPathingCam();
             }
-            CameraKeyframe currentKey = currentPath.GetKeyframe( index );
-            flightCamera.transform.localPosition = currentKey.position;
-            flightCamera.transform.localRotation = currentKey.rotation;
-            zoomExp = currentKey.zoom;
+            CameraKeyframe currentKey = CurrentPath.GetKeyframe( index );
+            _flightCamera.transform.localPosition = currentKey.position;
+            _flightCamera.transform.localRotation = currentKey.rotation;
+            _zoomExp = currentKey.zoom;
         }
 
         void StartPathingCam()
         {
-            vessel = FlightGlobals.ActiveVessel;
-            cameraUp = -FlightGlobals.getGeeForceAtPosition( vessel.GetWorldPos3D() ).normalized;
-            if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( vessel ) == FlightCamera.Modes.ORBITAL) )
+            _vessel = FlightGlobals.ActiveVessel;
+            cameraUp = -FlightGlobals.getGeeForceAtPosition( _vessel.GetWorldPos3D() ).normalized;
+            if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( _vessel ) == FlightCamera.Modes.ORBITAL) )
             {
                 cameraUp = Vector3.up;
             }
 
-            cameraParent.transform.position = vessel.transform.position + vessel.rb_velocity * Time.fixedDeltaTime;
-            cameraParent.transform.rotation = vessel.transform.rotation;
-            flightCamera.SetTargetNone();
-            flightCamera.transform.parent = cameraParent.transform;
-            flightCamera.DeactivateUpdate();
+            _cameraParent.transform.position = _vessel.transform.position + _vessel.rb_velocity * Time.fixedDeltaTime;
+            _cameraParent.transform.rotation = _vessel.transform.rotation;
+            _flightCamera.SetTargetNone();
+            _flightCamera.transform.parent = _cameraParent.transform;
+            _flightCamera.DeactivateUpdate();
 
             cameraToolActive = true;
         }
 
-        void PlayPathingCam()
+        void StartPlayingPathingCamera()
         {
-            if( selectedPathIndex < 0 )
+            if( _selectedPathIndex < 0 )
             {
                 RevertCamera();
                 return;
             }
 
-            if( currentPath.keyframeCount <= 0 )
+            if( CurrentPath.keyframeCount <= 0 )
             {
                 RevertCamera();
                 return;
@@ -2175,69 +2097,69 @@ namespace CameraToolsKatnissified
                 StartPathingCam();
             }
 
-            CameraTransformation firstFrame = currentPath.Evaulate( 0 );
-            flightCamera.transform.localPosition = firstFrame.position;
-            flightCamera.transform.localRotation = firstFrame.rotation;
-            zoomExp = firstFrame.zoom;
+            CameraTransformation firstFrame = CurrentPath.Evaulate( 0 );
+            _flightCamera.transform.localPosition = firstFrame.position;
+            _flightCamera.transform.localRotation = firstFrame.rotation;
+            _zoomExp = firstFrame.zoom;
 
-            isPlayingPath = true;
+            _isPlayingPath = true;
             pathStartTime = Time.time;
         }
 
-        void StopPlayingPath()
+        void StopPlayingPathingCamera()
         {
-            isPlayingPath = false;
+            _isPlayingPath = false;
         }
 
         void TogglePathList()
         {
-            showKeyframeEditor = false;
-            showPathSelectorWindow = !showPathSelectorWindow;
+            _showKeyframeEditor = false;
+            _showPathSelectorWindow = !_showPathSelectorWindow;
         }
 
-        void UpdatePathingCam()
+        void UpdatePathingCamera()
         {
-            cameraParent.transform.position = vessel.transform.position + vessel.rb_velocity * Time.fixedDeltaTime;
-            cameraParent.transform.rotation = vessel.transform.rotation;
+            _cameraParent.transform.position = _vessel.transform.position + _vessel.rb_velocity * Time.fixedDeltaTime;
+            _cameraParent.transform.rotation = _vessel.transform.rotation;
 
-            if( isPlayingPath )
+            if( _isPlayingPath )
             {
-                CameraTransformation tf = currentPath.Evaulate( pathTime * currentPath.timeScale );
-                flightCamera.transform.localPosition = Vector3.Lerp( flightCamera.transform.localPosition, tf.position, currentPath.lerpRate * Time.fixedDeltaTime );
-                flightCamera.transform.localRotation = Quaternion.Slerp( flightCamera.transform.localRotation, tf.rotation, currentPath.lerpRate * Time.fixedDeltaTime );
-                zoomExp = Mathf.Lerp( zoomExp, tf.zoom, currentPath.lerpRate * Time.fixedDeltaTime );
+                CameraTransformation tf = CurrentPath.Evaulate( pathTime * CurrentPath.timeScale );
+                _flightCamera.transform.localPosition = Vector3.Lerp( _flightCamera.transform.localPosition, tf.position, CurrentPath.lerpRate * Time.fixedDeltaTime );
+                _flightCamera.transform.localRotation = Quaternion.Slerp( _flightCamera.transform.localRotation, tf.rotation, CurrentPath.lerpRate * Time.fixedDeltaTime );
+                _zoomExp = Mathf.Lerp( _zoomExp, tf.zoom, CurrentPath.lerpRate * Time.fixedDeltaTime );
             }
             else
             {
                 //move
                 //mouse panning, moving
-                Vector3 forwardLevelAxis = flightCamera.transform.forward;//(Quaternion.AngleAxis(-90, cameraUp) * flightCamera.transform.right).normalized;
-                Vector3 rightAxis = flightCamera.transform.right;//(Quaternion.AngleAxis(90, forwardLevelAxis) * cameraUp).normalized;
+                Vector3 forwardLevelAxis = _flightCamera.transform.forward;
+                Vector3 rightAxis = _flightCamera.transform.right;
                 if( enableKeypad )
                 {
                     if( Input.GetKey( fmUpKey ) )
                     {
-                        flightCamera.transform.position += cameraUp * freeMoveSpeed * Time.fixedDeltaTime;
+                        _flightCamera.transform.position += cameraUp * freeMoveSpeed * Time.fixedDeltaTime;
                     }
                     else if( Input.GetKey( fmDownKey ) )
                     {
-                        flightCamera.transform.position -= cameraUp * freeMoveSpeed * Time.fixedDeltaTime;
+                        _flightCamera.transform.position -= cameraUp * freeMoveSpeed * Time.fixedDeltaTime;
                     }
                     if( Input.GetKey( fmForwardKey ) )
                     {
-                        flightCamera.transform.position += forwardLevelAxis * freeMoveSpeed * Time.fixedDeltaTime;
+                        _flightCamera.transform.position += forwardLevelAxis * freeMoveSpeed * Time.fixedDeltaTime;
                     }
                     else if( Input.GetKey( fmBackKey ) )
                     {
-                        flightCamera.transform.position -= forwardLevelAxis * freeMoveSpeed * Time.fixedDeltaTime;
+                        _flightCamera.transform.position -= forwardLevelAxis * freeMoveSpeed * Time.fixedDeltaTime;
                     }
                     if( Input.GetKey( fmLeftKey ) )
                     {
-                        flightCamera.transform.position -= flightCamera.transform.right * freeMoveSpeed * Time.fixedDeltaTime;
+                        _flightCamera.transform.position -= _flightCamera.transform.right * freeMoveSpeed * Time.fixedDeltaTime;
                     }
                     else if( Input.GetKey( fmRightKey ) )
                     {
-                        flightCamera.transform.position += flightCamera.transform.right * freeMoveSpeed * Time.fixedDeltaTime;
+                        _flightCamera.transform.position += _flightCamera.transform.right * freeMoveSpeed * Time.fixedDeltaTime;
                     }
 
                     //keyZoom
@@ -2245,11 +2167,11 @@ namespace CameraToolsKatnissified
                     {
                         if( Input.GetKey( fmZoomInKey ) )
                         {
-                            zoomExp = Mathf.Clamp( zoomExp + (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
+                            _zoomExp = Mathf.Clamp( _zoomExp + (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
                         }
                         else if( Input.GetKey( fmZoomOutKey ) )
                         {
-                            zoomExp = Mathf.Clamp( zoomExp - (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
+                            _zoomExp = Mathf.Clamp( _zoomExp - (keyZoomSpeed * Time.fixedDeltaTime), 1, 8 );
                         }
                     }
                     else
@@ -2267,41 +2189,36 @@ namespace CameraToolsKatnissified
 
                 if( Input.GetKey( KeyCode.Mouse1 ) && Input.GetKey( KeyCode.Mouse2 ) )
                 {
-                    flightCamera.transform.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, flightCamera.transform.forward ) * flightCamera.transform.rotation;
+                    _flightCamera.transform.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, _flightCamera.transform.forward ) * _flightCamera.transform.rotation;
                 }
                 else
                 {
                     if( Input.GetKey( KeyCode.Mouse1 ) )
                     {
-                        flightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (zoomExp * zoomExp), Vector3.up ); //*(Mathf.Abs(Mouse.delta.x)/7)
-                        flightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (zoomExp * zoomExp), Vector3.right );
-                        flightCamera.transform.rotation = Quaternion.LookRotation( flightCamera.transform.forward, flightCamera.transform.up );
+                        _flightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (_zoomExp * _zoomExp), Vector3.up );
+                        _flightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (_zoomExp * _zoomExp), Vector3.right );
+                        _flightCamera.transform.rotation = Quaternion.LookRotation( _flightCamera.transform.forward, _flightCamera.transform.up );
                     }
                     if( Input.GetKey( KeyCode.Mouse2 ) )
                     {
-                        flightCamera.transform.position += flightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
-                        flightCamera.transform.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
+                        _flightCamera.transform.position += _flightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
+                        _flightCamera.transform.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
                     }
                 }
-                flightCamera.transform.position += flightCamera.transform.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
+                _flightCamera.transform.position += _flightCamera.transform.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
 
             }
 
             //zoom
-            zoomFactor = Mathf.Exp( zoomExp ) / Mathf.Exp( 1 );
+            zoomFactor = Mathf.Exp( _zoomExp ) / Mathf.Exp( 1 );
             manualFOV = 60 / zoomFactor;
-            updateFOV = (currentFOV != manualFOV);
-            if( updateFOV )
+            _updateFOV = (currentFOV != manualFOV);
+            if( _updateFOV )
             {
                 currentFOV = Mathf.Lerp( currentFOV, manualFOV, 0.1f );
-                flightCamera.SetFoV( currentFOV );
-                updateFOV = false;
+                _flightCamera.SetFoV( currentFOV );
+                _updateFOV = false;
             }
         }
-
     }
-
-    public enum ReferenceModes { InitialVelocity, Surface, Orbit }
-
-    public enum ToolModes { StationaryCamera, DogfightCamera, Pathing };
 }

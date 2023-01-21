@@ -5,7 +5,7 @@ namespace CameraToolsKatnissified
     [AttributeUsage( AttributeTargets.Field )]
     public class CTPersistentField : Attribute
     {
-        public static string settingsURL = "GameData/CameraTools/settings.cfg";
+        public static string settingsURL = "GameData/CameraToolsKatnissified/settings.cfg";
 
         public CTPersistentField()
         {
@@ -22,7 +22,7 @@ namespace CameraToolsKatnissified
             {
                 if( !field.IsDefined( typeof( CTPersistentField ), false ) ) continue;
 
-                settings.SetValue( field.Name, field.GetValue( CamTools.fetch ).ToString(), true );
+                settings.SetValue( field.Name, field.GetValue( CamTools.Instance ).ToString(), true );
             }
 
             fileNode.Save( settingsURL );
@@ -42,7 +42,7 @@ namespace CameraToolsKatnissified
                     object parsedValue = ParseValue( field.FieldType, settings.GetValue( field.Name ) );
                     if( parsedValue != null )
                     {
-                        field.SetValue( CamTools.fetch, parsedValue );
+                        field.SetValue( CamTools.Instance, parsedValue );
                     }
                 }
             }

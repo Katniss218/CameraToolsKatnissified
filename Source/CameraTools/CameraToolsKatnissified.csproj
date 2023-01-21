@@ -36,6 +36,8 @@
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
+    <Compile Include="CameraMode.cs" />
+    <Compile Include="CameraReference.cs" />
     <Compile Include="CamTools.cs" />
     <Compile Include="CCInputUtils.cs" />
     <Compile Include="CTAtmosphericAudioController.cs" />
@@ -148,8 +150,6 @@
     <Content Include="Distribution\GameData\CameraTools\Textures\icon.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Distribution\GameData\CameraTools\ATM_CameraTools.cfg" />
-    <None Include="Distribution\GameData\CameraTools\CameraTools.version" />
     <None Include="Distribution\GameData\CameraTools\paths.cfg" />
     <None Include="Distribution\GameData\CameraTools\settings.cfg" />
   </ItemGroup>
