@@ -1,52 +1,48 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace CameraToolsKatnissified
 {
-    /// <summary>
-    /// A marker attribute to persist the value of a field.
-    /// </summary>
-    [AttributeUsage( AttributeTargets.Field )]
-    public class CameraToolsPersistent : Attribute
+    public static class Serializer
     {
-        public static string settingsPath = $"GameData/{CamTools.DIRECTORY_NAME}/settings.cfg";
+        static string SETTINGS_PATH = $"GameData/{CameraToolsBehaviour.DIRECTORY_NAME}/settings.cfg";
 
-        public CameraToolsPersistent()
-        { }
-
-#warning TODO - move these to a more appropriate place.
         /// <summary>
         /// Saves the settings.
         /// </summary>
-        public static void Save()
+        public static void SaveFields()
         {
-            ConfigNode fileNode = ConfigNode.Load( settingsPath );
+            ConfigNode fileNode = ConfigNode.Load( SETTINGS_PATH );
             ConfigNode settings = fileNode.GetNode( "CToolsSettings" );
 
-            foreach( var field in typeof( CamTools ).GetFields() )
+            foreach( var field in typeof( CameraToolsBehaviour ).GetFields() )
             {
-                if( !field.IsDefined( typeof( CameraToolsPersistent ), false ) )
+                if( !field.IsDefined( typeof( PersistentField ), false ) )
                 {
                     continue;
                 }
 
-                settings.SetValue( field.Name, field.GetValue( CamTools.Instance ).ToString(), true );
+                settings.SetValue( field.Name, field.GetValue( CameraToolsBehaviour.Instance ).ToString(), true );
             }
 
-            fileNode.Save( settingsPath );
+            fileNode.Save( SETTINGS_PATH );
         }
 
         /// <summary>
         /// Loads and deserialized the settings.
         /// </summary>
-        public static void Load()
+        public static void LoadFields()
         {
-            ConfigNode fileNode = ConfigNode.Load( settingsPath );
+            ConfigNode fileNode = ConfigNode.Load( SETTINGS_PATH );
             ConfigNode settings = fileNode.GetNode( "CToolsSettings" );
 
-            foreach( var field in typeof( CamTools ).GetFields() )
+            foreach( var field in typeof( CameraToolsBehaviour ).GetFields() )
             {
-                if( !field.IsDefined( typeof( CameraToolsPersistent ), false ) )
+                if( !field.IsDefined( typeof( PersistentField ), false ) )
                 {
                     continue;
                 }
@@ -57,7 +53,7 @@ namespace CameraToolsKatnissified
 
                     if( parsedValue != null )
                     {
-                        field.SetValue( CamTools.Instance, parsedValue );
+                        field.SetValue( CameraToolsBehaviour.Instance, parsedValue );
                     }
                 }
             }

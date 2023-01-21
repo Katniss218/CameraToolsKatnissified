@@ -3,8 +3,8 @@ namespace CameraToolsKatnissified
 {
     public enum CameraReference
     {
-        InitialVelocity,
-        Surface,
-        Orbit
+        InitialVelocity = 0,
+        Surface = 1,
+        Orbit = 2
     }
 }

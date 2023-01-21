@@ -1,19 +1,22 @@
 ﻿using UnityEngine;
 
-namespace CameraToolsKatnissified
+namespace CameraToolsKatnissified.Animation
 {
-    public class RotationAnimation
+    /// <summary>
+    /// Used for pathing.
+    /// </summary>
+    public class Vector3Curve
     {
-        Quaternion[] _rotations;
+        Vector3[] _positions;
         float[] _times;
 
-        public RotationAnimation( Quaternion[] rots, float[] times )
+        public Vector3Curve( Vector3[] pos, float[] times )
         {
-            this._rotations = rots;
+            this._positions = pos;
             this._times = times;
         }
 
-        public Quaternion Evaluate( float t )
+        public Vector3 Evaluate( float t )
         {
             int startIndex = 0;
             for( int i = 0; i < _times.Length; i++ )
@@ -32,10 +35,11 @@ namespace CameraToolsKatnissified
 
             float overTime = t - _times[startIndex];
             float intervalTime = _times[nextIndex] - _times[startIndex];
-            if( intervalTime <= 0 ) return _rotations[nextIndex];
+            if( intervalTime <= 0 ) return _positions[nextIndex];
 
             float normTime = overTime / intervalTime;
-            return Quaternion.Lerp( _rotations[startIndex], _rotations[nextIndex], normTime );
+            return Vector3.Lerp( _positions[startIndex], _positions[nextIndex], normTime );
         }
     }
 }
+

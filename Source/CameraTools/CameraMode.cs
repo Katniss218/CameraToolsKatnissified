@@ -3,8 +3,7 @@ namespace CameraToolsKatnissified
 {
     public enum CameraMode
     {
-        StationaryCamera,
-        DogfightCamera,
-        Pathing
-    };
+        StationaryCamera = 0,
+        Pathing = 1
+    }
 }

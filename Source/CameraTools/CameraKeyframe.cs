@@ -17,7 +17,6 @@ namespace CameraToolsKatnissified
             zoom = z;
             time = t;
         }
-
     }
 
     public class CameraKeyframeComparer : IComparer<CameraKeyframe>

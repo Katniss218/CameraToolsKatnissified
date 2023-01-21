@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace CameraToolsKatnissified
+namespace CameraToolsKatnissified.Animation
 {
     public class CameraPath
     {
@@ -17,8 +17,8 @@ namespace CameraToolsKatnissified
         public float lerpRate = 15;
         public float timeScale = 1;
 
-        Vector3Animation _pointCurve;
-        RotationAnimation _rotationCurve;
+        Vector3Curve _pointCurve;
+        QuaternionCurve _rotationCurve;
         AnimationCurve _zoomCurve;
 
         public CameraPath()
@@ -133,7 +133,7 @@ namespace CameraToolsKatnissified
             zooms.Add( zoom );
             times.Add( time );
             keyframeCount = times.Count;
-            Sort();
+            SortKeyframes();
             UpdateCurves();
         }
 
@@ -143,14 +143,14 @@ namespace CameraToolsKatnissified
             rotations[index] = cameraTransform.localRotation;
             zooms[index] = zoom;
             times[index] = time;
-            Sort();
+            SortKeyframes();
             UpdateCurves();
         }
 
         public void Refresh()
         {
             keyframeCount = times.Count;
-            Sort();
+            SortKeyframes();
             UpdateCurves();
         }
 
@@ -164,7 +164,7 @@ namespace CameraToolsKatnissified
             UpdateCurves();
         }
 
-        public void Sort()
+        public void SortKeyframes()
         {
             List<CameraKeyframe> keyframes = new List<CameraKeyframe>();
             for( int i = 0; i < points.Count; i++ )
@@ -190,8 +190,8 @@ namespace CameraToolsKatnissified
 
         public void UpdateCurves()
         {
-            _pointCurve = new Vector3Animation( points.ToArray(), times.ToArray() );
-            _rotationCurve = new RotationAnimation( rotations.ToArray(), times.ToArray() );
+            _pointCurve = new Vector3Curve( points.ToArray(), times.ToArray() );
+            _rotationCurve = new QuaternionCurve( rotations.ToArray(), times.ToArray() );
             _zoomCurve = new AnimationCurve();
             for( int i = 0; i < zooms.Count; i++ )
             {
