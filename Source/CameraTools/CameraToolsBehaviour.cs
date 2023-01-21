@@ -210,6 +210,10 @@ namespace CameraToolsKatnissified
 
             if( Input.GetKeyDown( KeyCode.Home ) )
             {
+                if( _behaviour != null && _behaviour is PathCameraBehaviour )
+                {
+                    ((PathCameraBehaviour)_behaviour).StartPlayingPathCamera();
+                }
                 StartCamera();
             }
             if( Input.GetKeyDown( KeyCode.End ) )
@@ -537,7 +541,6 @@ namespace CameraToolsKatnissified
                     Destroy( _behaviour );
                 }
                 _behaviour = this.gameObject.AddComponent<PathCameraBehaviour>();
-                ((PathCameraBehaviour)_behaviour).IsPlayingPath = true;
             }
         }
 
