@@ -40,13 +40,14 @@
     <Compile Include="CameraReference.cs" />
     <Compile Include="CameraToolsBehaviour.cs" />
     <Compile Include="PersistentField.cs" />
-    <Compile Include="CameraTransformation.cs" />
+    <Compile Include="Animation\CameraTransformation.cs" />
     <Compile Include="Animation\CameraPath.cs" />
-    <Compile Include="CameraKeyframe.cs" />
+    <Compile Include="Animation\CameraKeyframe.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Animation\QuaternionCurve.cs" />
     <Compile Include="Serializer.cs" />
     <Compile Include="Animation\Vector3Curve.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />

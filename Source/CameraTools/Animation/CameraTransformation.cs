@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace CameraToolsKatnissified
+namespace CameraToolsKatnissified.Animation
 {
     public struct CameraTransformation
     {
