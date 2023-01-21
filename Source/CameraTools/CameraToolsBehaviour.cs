@@ -67,7 +67,10 @@ namespace CameraToolsKatnissified
         [field: PersistentField]
         public float ShakeMultiplier { get; set; } = 0.0f;
 
-        GameObject _stationaryCameraParent;
+        /// <summary>
+        /// Pivot used as a parent for the camera.
+        /// </summary>
+        GameObject _cameraPivot;
 
         /// <summary>
         /// True if the CameraTools camera is active.
@@ -95,12 +98,15 @@ namespace CameraToolsKatnissified
 
         float _manualFov = 60;
         float _currentFov = 60;
-        Vector3 _manualPosition = Vector3.zero;
+
+        Vector3 _manualPosition = Vector3.zero; // offset from moving the camera manually.
 
         float zoomFactor = 1;
 
         bool _hasDied = false;
         float _diedTime = 0;
+
+        const float SCROLL_MULTIPLIER = 50.0f;
 
 #warning TODO - maybe use separate components and add/remove them to 'this.gameObject' as needed? This would declutter this class.
         // Used for the Initial Velocity camera mode.
@@ -185,12 +191,12 @@ namespace CameraToolsKatnissified
             GameEvents.onGameSceneLoadRequested.Add( PostDeathRevert );
             //GameEvents.onFloatingOriginShift.Add( OnFloatingOriginShift );
 
-            _stationaryCameraParent = new GameObject( "StationaryCameraParent" );
+            _cameraPivot = new GameObject( "StationaryCameraParent" );
 
             if( FlightGlobals.ActiveVessel != null )
             {
                 _activeVessel = FlightGlobals.ActiveVessel;
-                _stationaryCameraParent.transform.position = FlightGlobals.ActiveVessel.transform.position;
+                _cameraPivot.transform.position = FlightGlobals.ActiveVessel.transform.position;
             }
 
             GameEvents.onVesselChange.Add( SwitchToVessel );
@@ -250,7 +256,7 @@ namespace CameraToolsKatnissified
         void LateUpdate()
         {
             //retain pos and rot after vessel destruction
-            if( _cameraToolsActive && _flightCamera.transform.parent != _stationaryCameraParent.transform )
+            if( _cameraToolsActive && _flightCamera.transform.parent != _cameraPivot.transform )
             {
                 _flightCamera.SetTargetNone();
                 _flightCamera.transform.parent = null;
@@ -296,180 +302,6 @@ namespace CameraToolsKatnissified
             {
                 EndCamera();
             }
-        }
-
-        void UpdateStationaryCamera()
-        {
-            if( _flightCamera.Target != null )
-            {
-                _flightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
-            }
-
-            if( _hasTarget )
-            {
-                Vector3 lookDirection =/* (*/_stationaryCameraTarget.transform.position /*+ 2 * (_stationaryCameraTarget.vessel.rb_velocity * Time.fixedDeltaTime))*/ - _flightCamera.transform.position;
-
-                _flightCamera.transform.rotation = Quaternion.LookRotation( lookDirection.normalized, _upDirection );
-            }
-
-            if( _activeVessel != null )
-            {
-                // Parent follows the vessel.
-                _stationaryCameraParent.transform.position = _manualPosition + (_activeVessel.transform.position/* - (_activeVessel.rb_velocity * Time.fixedDeltaTime)*/);
-
-                // Camera itself accumulates the inverse of the vessel movement.
-                if( CurrentReferenceMode == CameraReference.Surface )
-                {
-                    float magnitude = Mathf.Clamp( (float)_activeVessel.srf_velocity.magnitude, 0, MaxRelativeVelocity );
-                    _flightCamera.transform.position -= Time.fixedDeltaTime * magnitude * _activeVessel.srf_velocity.normalized;
-                }
-                else if( CurrentReferenceMode == CameraReference.Orbit )
-                {
-                    float magnitude = Mathf.Clamp( (float)_activeVessel.obt_velocity.magnitude, 0, MaxRelativeVelocity );
-                    _flightCamera.transform.position -= Time.fixedDeltaTime * magnitude * _activeVessel.obt_velocity.normalized;
-                }
-                else if( CurrentReferenceMode == CameraReference.InitialVelocity )
-                {
-                    Vector3 camVelocity;
-                    if( UseOrbital && _initialOrbit != null )
-                    {
-                        camVelocity = _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - _activeVessel.GetObtVelocity();
-                    }
-                    else
-                    {
-                        camVelocity = _initialVelocity - _activeVessel.srf_velocity;
-                    }
-                    _flightCamera.transform.position += camVelocity * Time.fixedDeltaTime;
-                }
-#warning TODO - add the velocity direction mode here.
-            }
-
-            //mouse panning, moving
-            Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, _upDirection ) * _flightCamera.transform.right).normalized;
-            Vector3 rightAxis = (Quaternion.AngleAxis( 90, forwardLevelAxis ) * _upDirection).normalized;
-
-            if( !_hasTarget )
-            {
-                if( Input.GetKey( KeyCode.Mouse1 ) )
-                {
-                    _flightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up ); //*(Mathf.Abs(Mouse.delta.x)/7)
-                    _flightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
-                    _flightCamera.transform.rotation = Quaternion.LookRotation( _flightCamera.transform.forward, _upDirection );
-                }
-            }
-
-            if( Input.GetKey( KeyCode.Mouse2 ) )
-            {
-                _manualPosition += _flightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
-                _manualPosition += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
-            }
-            _manualPosition += _upDirection * 10 * Input.GetAxis( "Mouse ScrollWheel" );
-
-            //autoFov
-            if( _hasTarget && UseAutoZoom )
-            {
-                float cameraDistance = Vector3.Distance( _stationaryCameraTarget.transform.position, _flightCamera.transform.position );
-
-                float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + AutoZoomMargin, 2, 60 );
-
-                _manualFov = targetFoV;
-            }
-
-            //FOV
-            if( !UseAutoZoom )
-            {
-                zoomFactor = Mathf.Exp( Zoom ) / Mathf.Exp( 1 );
-                _manualFov = 60 / zoomFactor;
-
-                if( _currentFov != _manualFov )
-                {
-                    _currentFov = Mathf.Lerp( _currentFov, _manualFov, 0.1f );
-                    _flightCamera.SetFoV( _currentFov );
-                }
-            }
-            else
-            {
-                _currentFov = Mathf.Lerp( _currentFov, _manualFov, 0.1f );
-                _flightCamera.SetFoV( _currentFov );
-                zoomFactor = 60 / _currentFov;
-            }
-
-            _lastCameraPosition = _flightCamera.transform.position;
-            _lastCameraRotation = _flightCamera.transform.rotation;
-
-            //vessel camera shake
-            if( ShakeMultiplier > 0 )
-            {
-                foreach( var vessel in FlightGlobals.Vessels )
-                {
-                    if( !vessel || !vessel.loaded || vessel.packed )
-                    {
-                        continue;
-                    }
-                    DoCameraShake( vessel );
-                }
-            }
-            UpdateCameraShake();
-        }
-
-        public void ShakeCamera( float magnitude )
-        {
-            _cameraShakeMagnitude = Mathf.Max( _cameraShakeMagnitude, magnitude );
-        }
-
-        void UpdateCameraShake()
-        {
-            if( ShakeMultiplier > 0 )
-            {
-                _flightCamera.transform.rotation = Quaternion.AngleAxis( (ShakeMultiplier / 2) * _cameraShakeMagnitude / 50f, Vector3.ProjectOnPlane( UnityEngine.Random.onUnitSphere, _flightCamera.transform.forward ) ) * _flightCamera.transform.rotation;
-            }
-
-            _cameraShakeMagnitude = Mathf.Lerp( _cameraShakeMagnitude, 0, 5 * Time.fixedDeltaTime );
-        }
-
-        public void DoCameraShake( Vessel vessel )
-        {
-            //shake
-            float camDistance = Vector3.Distance( _flightCamera.transform.position, vessel.CoM );
-
-            float distanceFactor = 50f / camDistance;
-            float fovFactor = 2f / zoomFactor;
-
-            float angleToCam = Vector3.Angle( vessel.srf_velocity, FlightCamera.fetch.mainCamera.transform.position - vessel.transform.position );
-            angleToCam = Mathf.Clamp( angleToCam, 1, 180 );
-
-            float srfSpeed = (float)vessel.srfSpeed;
-
-            float lagAudioFactor = (75000 / (Vector3.Distance( vessel.transform.position, FlightCamera.fetch.mainCamera.transform.position ) * srfSpeed * angleToCam / 90));
-            lagAudioFactor = Mathf.Clamp( lagAudioFactor * lagAudioFactor * lagAudioFactor, 0, 4 );
-            lagAudioFactor += srfSpeed / 230;
-
-            float waveFrontFactor = ((3.67f * angleToCam) / srfSpeed);
-            waveFrontFactor = Mathf.Clamp( waveFrontFactor * waveFrontFactor * waveFrontFactor, 0, 2 );
-            if( vessel.srfSpeed > 330 )
-            {
-                waveFrontFactor = (srfSpeed / (angleToCam) < 3.67f) ? srfSpeed / 15 : 0;
-            }
-
-            lagAudioFactor *= waveFrontFactor;
-
-            lagAudioFactor = Mathf.Clamp01( lagAudioFactor ) * distanceFactor * fovFactor;
-
-            float shakeAtmPressureMultiplier = (float)vessel.dynamicPressurekPa / 2f * lagAudioFactor;
-
-            float shakeThrustFactor = GetTotalThrust() / 1000f * distanceFactor * fovFactor * lagAudioFactor;
-
-            ShakeCamera( shakeAtmPressureMultiplier + shakeThrustFactor );
-        }
-
-        float GetTotalThrust()
-        {
-            float total = 0;
-            foreach( var engine in _activeVessel.FindPartModulesImplementing<ModuleEngines>() )
-            {
-                total += engine.finalThrust;
-            }
-            return total;
         }
 
         /// <summary>
@@ -540,10 +372,10 @@ namespace CameraToolsKatnissified
             if( FlightGlobals.ActiveVessel != null )
             {
                 _flightCamera.SetTargetNone();
-                _flightCamera.transform.parent = _stationaryCameraParent.transform;
+                _flightCamera.transform.parent = _cameraPivot.transform;
                 _flightCamera.DeactivateUpdate();
 
-                _stationaryCameraParent.transform.position = _activeVessel.transform.position + _activeVessel.rb_velocity * Time.fixedDeltaTime;
+                _cameraPivot.transform.position = _activeVessel.transform.position + _activeVessel.rb_velocity * Time.fixedDeltaTime;
                 _manualPosition = Vector3.zero;
 
                 if( _hasPosition )
@@ -566,16 +398,149 @@ namespace CameraToolsKatnissified
             Debug.Log( "flightCamera position post init: " + _flightCamera.transform.position );
         }
 
+        void UpdateStationaryCamera()
+        {
+            if( _flightCamera.Target != null )
+            {
+                _flightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
+            }
+
+            if( _hasTarget )
+            {
+                Vector3 toTargetDirection = (_stationaryCameraTarget.transform.position - _flightCamera.transform.position).normalized;
+
+                _flightCamera.transform.rotation = Quaternion.LookRotation( toTargetDirection, _upDirection );
+            }
+
+            if( _activeVessel != null )
+            {
+                // Parent follows the vessel.
+                _cameraPivot.transform.position = _manualPosition + _activeVessel.transform.position;
+
+                // Camera itself accumulates the inverse of the vessel movement.
+                if( CurrentReferenceMode == CameraReference.Surface )
+                {
+                    float magnitude = Mathf.Clamp( (float)_activeVessel.srf_velocity.magnitude, 0, MaxRelativeVelocity );
+                    _flightCamera.transform.position -= Time.fixedDeltaTime * magnitude * _activeVessel.srf_velocity.normalized;
+                }
+                else if( CurrentReferenceMode == CameraReference.Orbit )
+                {
+                    float magnitude = Mathf.Clamp( (float)_activeVessel.obt_velocity.magnitude, 0, MaxRelativeVelocity );
+                    _flightCamera.transform.position -= Time.fixedDeltaTime * magnitude * _activeVessel.obt_velocity.normalized;
+                }
+                else if( CurrentReferenceMode == CameraReference.InitialVelocity )
+                {
+                    Vector3 camVelocity;
+                    if( UseOrbital && _initialOrbit != null )
+                    {
+                        camVelocity = _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - _activeVessel.GetObtVelocity();
+                    }
+                    else
+                    {
+                        camVelocity = _initialVelocity - _activeVessel.srf_velocity;
+                    }
+                    _flightCamera.transform.position += camVelocity * Time.fixedDeltaTime;
+                }
+#warning TODO - add the velocity direction mode here.
+            }
+
+            //mouse panning, moving
+            Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, _upDirection ) * _flightCamera.transform.right).normalized;
+
+            if( Input.GetKey( KeyCode.Mouse1 ) ) // right mouse
+            {
+                // No target - should turn the camera like a tripod.
+                // Has target - should orbit the target.
+                if( !_hasTarget )
+                {
+                    _flightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up );
+                    _flightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
+                    _flightCamera.transform.rotation = Quaternion.LookRotation( _flightCamera.transform.forward, _upDirection );
+                }
+                else
+                {
+                    var verticalaxis = _flightCamera.transform.TransformDirection( Vector3.up );
+                    var horizontalaxis = _flightCamera.transform.TransformDirection( Vector3.right );
+                    _flightCamera.transform.RotateAround( _stationaryCameraTarget.transform.position, verticalaxis, Input.GetAxis( "Mouse X" ) * 1.7f );
+                    _flightCamera.transform.RotateAround( _stationaryCameraTarget.transform.position, horizontalaxis, -Input.GetAxis( "Mouse Y" ) * 1.7f );
+                    _flightCamera.transform.rotation = Quaternion.LookRotation( _flightCamera.transform.forward, _upDirection );
+                }
+            }
+
+            if( Input.GetKey( KeyCode.Mouse2 ) ) // middle mouse
+            {
+                _manualPosition += _flightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
+                _manualPosition += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
+            }
+
+            _manualPosition += _upDirection * SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
+
+            // autoFov
+            if( _hasTarget && UseAutoZoom )
+            {
+                float cameraDistance = Vector3.Distance( _stationaryCameraTarget.transform.position, _flightCamera.transform.position );
+
+                float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + AutoZoomMargin, 2, 60 );
+
+                _manualFov = targetFoV;
+            }
+
+            //FOV
+            if( !UseAutoZoom )
+            {
+                zoomFactor = Mathf.Exp( Zoom ) / Mathf.Exp( 1 );
+                _manualFov = 60 / zoomFactor;
+
+                if( _currentFov != _manualFov )
+                {
+                    _currentFov = Mathf.Lerp( _currentFov, _manualFov, 0.1f );
+                    _flightCamera.SetFoV( _currentFov );
+                }
+            }
+            else
+            {
+                _currentFov = Mathf.Lerp( _currentFov, _manualFov, 0.1f );
+                _flightCamera.SetFoV( _currentFov );
+                zoomFactor = 60 / _currentFov;
+            }
+
+            _lastCameraPosition = _flightCamera.transform.position;
+            _lastCameraRotation = _flightCamera.transform.rotation;
+
+            //vessel camera shake
+            if( ShakeMultiplier > 0 )
+            {
+                foreach( var vessel in FlightGlobals.Vessels )
+                {
+                    if( !vessel || !vessel.loaded || vessel.packed )
+                    {
+                        continue;
+                    }
+
+                    DoCameraShake( vessel );
+                }
+
+                UpdateCameraShakeMagnitude();
+            }
+        }
+
         void StartPathCamera()
         {
-            _stationaryCameraParent.transform.position = _activeVessel.transform.position + _activeVessel.rb_velocity * Time.fixedDeltaTime;
-            _stationaryCameraParent.transform.rotation = _activeVessel.transform.rotation;
+            if( FlightGlobals.ActiveVessel != null )
+            {
+                _cameraPivot.transform.position = _activeVessel.transform.position + _activeVessel.rb_velocity * Time.fixedDeltaTime;
+                _cameraPivot.transform.rotation = _activeVessel.transform.rotation;
 
-            _flightCamera.SetTargetNone();
-            _flightCamera.transform.parent = _stationaryCameraParent.transform;
-            _flightCamera.DeactivateUpdate();
+                _flightCamera.SetTargetNone();
+                _flightCamera.transform.parent = _cameraPivot.transform;
+                _flightCamera.DeactivateUpdate();
 
-            _cameraToolsActive = true;
+                _cameraToolsActive = true;
+            }
+            else
+            {
+                Debug.Log( "CameraTools: Stationary Camera failed. Active Vessel is null." );
+            }
         }
 
         void StartPlayingPathCamera()
@@ -599,6 +564,9 @@ namespace CameraToolsKatnissified
             Zoom = firstFrame.zoom;
 
             _isPlayingPath = true;
+
+            // initialize the rotation on start, but don't update it so if the rocket rolls, the camera won't follow it.
+            _cameraPivot.transform.rotation = _activeVessel.transform.rotation;
         }
 
         void StopPlayingPathCamera()
@@ -606,16 +574,11 @@ namespace CameraToolsKatnissified
             _isPlayingPath = false;
         }
 
-        void TogglePathList()
-        {
-            _pathKeyframeWindowVisible = false;
-            _pathWindowVisible = !_pathWindowVisible;
-        }
-
         void UpdatePathingCamera()
         {
-            _stationaryCameraParent.transform.position = _activeVessel.transform.position + _activeVessel.rb_velocity * Time.fixedDeltaTime;
-            _stationaryCameraParent.transform.rotation = _activeVessel.transform.rotation;
+            // Update the frame of reference's position to follow the vessel.
+            _cameraPivot.transform.position = _activeVessel.transform.position + _activeVessel.rb_velocity * Time.fixedDeltaTime;
+            //_stationaryCameraParent.transform.rotation = _activeVessel.transform.rotation; // here to follow rotation.
 
             if( _isPlayingPath )
             {
@@ -664,12 +627,78 @@ namespace CameraToolsKatnissified
             }
         }
 
+        void TogglePathList()
+        {
+            _pathKeyframeWindowVisible = false;
+            _pathWindowVisible = !_pathWindowVisible;
+        }
+
         void SaveOriginalCamera()
         {
             _originalCameraPosition = _flightCamera.transform.position;
             _originalCameraRotation = _flightCamera.transform.localRotation;
             _originalCameraParent = _flightCamera.transform.parent;
             _originalCameraNearClip = Camera.main.nearClipPlane;
+        }
+
+        public void ShakeCamera( float magnitude )
+        {
+            _cameraShakeMagnitude = Mathf.Max( _cameraShakeMagnitude, magnitude );
+        }
+
+        void UpdateCameraShakeMagnitude()
+        {
+            if( ShakeMultiplier > 0 )
+            {
+                _flightCamera.transform.rotation = Quaternion.AngleAxis( (ShakeMultiplier / 2) * _cameraShakeMagnitude / 50f, Vector3.ProjectOnPlane( UnityEngine.Random.onUnitSphere, _flightCamera.transform.forward ) ) * _flightCamera.transform.rotation;
+            }
+
+            _cameraShakeMagnitude = Mathf.Lerp( _cameraShakeMagnitude, 0, 5 * Time.fixedDeltaTime );
+        }
+
+        public void DoCameraShake( Vessel vessel )
+        {
+            //shake
+            float camDistance = Vector3.Distance( _flightCamera.transform.position, vessel.CoM );
+
+            float distanceFactor = 50f / camDistance;
+            float fovFactor = 2f / zoomFactor;
+
+            float angleToCam = Vector3.Angle( vessel.srf_velocity, FlightCamera.fetch.mainCamera.transform.position - vessel.transform.position );
+            angleToCam = Mathf.Clamp( angleToCam, 1, 180 );
+
+            float srfSpeed = (float)vessel.srfSpeed;
+
+            float lagAudioFactor = (75000 / (Vector3.Distance( vessel.transform.position, FlightCamera.fetch.mainCamera.transform.position ) * srfSpeed * angleToCam / 90));
+            lagAudioFactor = Mathf.Clamp( lagAudioFactor * lagAudioFactor * lagAudioFactor, 0, 4 );
+            lagAudioFactor += srfSpeed / 230;
+
+            float waveFrontFactor = ((3.67f * angleToCam) / srfSpeed);
+            waveFrontFactor = Mathf.Clamp( waveFrontFactor * waveFrontFactor * waveFrontFactor, 0, 2 );
+            if( vessel.srfSpeed > 330 )
+            {
+                waveFrontFactor = (srfSpeed / (angleToCam) < 3.67f) ? srfSpeed / 15 : 0;
+            }
+
+            lagAudioFactor *= waveFrontFactor;
+
+            lagAudioFactor = Mathf.Clamp01( lagAudioFactor ) * distanceFactor * fovFactor;
+
+            float shakeAtmPressureMultiplier = (float)vessel.dynamicPressurekPa / 2f * lagAudioFactor;
+
+            float shakeThrustFactor = GetTotalThrust() / 1000f * distanceFactor * fovFactor * lagAudioFactor;
+
+            ShakeCamera( shakeAtmPressureMultiplier + shakeThrustFactor );
+        }
+
+        float GetTotalThrust()
+        {
+            float total = 0;
+            foreach( var engine in _activeVessel.FindPartModulesImplementing<ModuleEngines>() )
+            {
+                total += engine.finalThrust;
+            }
+            return total;
         }
 
         void PostDeathRevert( GameScenes f )
@@ -778,12 +807,12 @@ namespace CameraToolsKatnissified
 
         /*OnFloatingOriginShift( Vector3d offset, Vector3d data1 )
         {
-            
-			Debug.LogWarning ("======Floating origin shifted.======");
-			Debug.LogWarning ("======Passed offset: "+offset+"======");
-			Debug.LogWarning ("======FloatingOrigin offset: "+FloatingOrigin.fetch.offset+"======");
-			Debug.LogWarning("========Floating Origin threshold: "+FloatingOrigin.fetch.threshold+"==========");
-			
+
+            Debug.LogWarning ("======Floating origin shifted.======");
+            Debug.LogWarning ("======Passed offset: "+offset+"======");
+            Debug.LogWarning ("======FloatingOrigin offset: "+FloatingOrigin.fetch.offset+"======");
+            Debug.LogWarning("========Floating Origin threshold: "+FloatingOrigin.fetch.threshold+"==========");
+
         }*/
 
         void SwitchToVessel( Vessel vessel )
