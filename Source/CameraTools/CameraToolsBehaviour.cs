@@ -110,7 +110,6 @@ namespace CameraToolsKatnissified
 
         public const float SCROLL_MULTIPLIER = 10.0f;
 
-#warning TODO - maybe use separate components and add/remove them to 'this.gameObject' as needed? This would declutter this class.
         // Used for the Initial Velocity camera mode.
         public Vector3 InitialVelocity { get; set; }
         public Vector3 InitialPosition { get; set; }
@@ -154,6 +153,12 @@ namespace CameraToolsKatnissified
 
         bool _settingPositionEnabled;
         bool _settingTargetEnabled;
+
+        public Vector3? StationaryCameraPosition { get; set; } = null;
+        public bool HasPosition => StationaryCameraPosition != null;
+
+        public Part StationaryCameraTarget { get; set; } = null;
+        public bool HasTarget => StationaryCameraTarget != null;
 
         void Awake()
         {
@@ -226,30 +231,27 @@ namespace CameraToolsKatnissified
                 _wasMouseUp = true;
             }
 
-            if( _behaviour != null && _behaviour is StationaryCameraBehaviour )
+            // Set target from a mouse raycast.
+            if( _settingTargetEnabled && _wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
             {
-                // Set target from a mouse raycast.
-                if( _settingTargetEnabled && _wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
-                {
-                    _settingTargetEnabled = false;
+                _settingTargetEnabled = false;
 
-                    Part newTarget = Utils.GetPartFromMouse();
-                    if( newTarget != null )
-                    {
-                        ((StationaryCameraBehaviour)_behaviour).StationaryCameraTarget = newTarget;
-                    }
+                Part newTarget = Utils.GetPartFromMouse();
+                if( newTarget != null )
+                {
+                    StationaryCameraTarget = newTarget;
                 }
+            }
 
-                // Set position from a mouse raycast
-                if( _settingPositionEnabled && _wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
+            // Set position from a mouse raycast
+            if( _settingPositionEnabled && _wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
+            {
+                _settingPositionEnabled = false;
+
+                Vector3? newPosition = Utils.GetPosFromMouse();
+                if( newPosition != null )
                 {
-                    _settingPositionEnabled = false;
-
-                    Vector3? newPosition = Utils.GetPosFromMouse();
-                    if( newPosition != null )
-                    {
-                        ((StationaryCameraBehaviour)_behaviour).StationaryCameraPosition = newPosition;
-                    }
+                    StationaryCameraPosition = newPosition;
                 }
             }
         }
@@ -315,7 +317,7 @@ namespace CameraToolsKatnissified
                 }
             }
 
-            _behaviour?.StartPlaying();
+            _behaviour.StartPlaying();
         }
 
         /// <summary>
@@ -339,7 +341,6 @@ namespace CameraToolsKatnissified
             CurrentFov = 60;
 
             GameObject.Destroy( _behaviour );
-            _behaviour = null;
         }
 
         void TogglePathList()
@@ -526,20 +527,17 @@ namespace CameraToolsKatnissified
         /// </summary>
         void AddBehaviour()
         {
+            if( _behaviour != null )
+            {
+                Destroy( _behaviour );
+            }
+
             if( CurrentCameraMode == CameraMode.StationaryCamera )
             {
-                if( _behaviour != null )
-                {
-                    Destroy( _behaviour );
-                }
                 _behaviour = this.gameObject.AddComponent<StationaryCameraBehaviour>();
             }
             else if( CurrentCameraMode == CameraMode.Pathing )
             {
-                if( _behaviour != null )
-                {
-                    Destroy( _behaviour );
-                }
                 _behaviour = this.gameObject.AddComponent<PathCameraBehaviour>();
             }
         }

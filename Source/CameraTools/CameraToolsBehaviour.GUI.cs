@@ -162,7 +162,8 @@ namespace CameraToolsKatnissified
 
                 // Draw position buttons.
 
-                string positionButtonText = sb.HasPosition ? sb.StationaryCameraPosition.Value.ToString() : "None";
+#warning SB is null here?
+                string positionButtonText = HasPosition ? StationaryCameraPosition.Value.ToString() : "None";
                 GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Position: " + positionButtonText, labelLeftStyle );
                 line++;
 
@@ -174,14 +175,14 @@ namespace CameraToolsKatnissified
                 }
                 if( GUI.Button( new Rect( 2 + GUI_MARGIN + contentWidth / 2, contentTop + (line * ENTRY_HEIGHT), (contentWidth / 2) - 2, ENTRY_HEIGHT - 2 ), "Clear Position" ) )
                 {
-                    sb.StationaryCameraPosition = null;
+                    StationaryCameraPosition = null;
                 }
                 line++;
                 line++;
 
                 // Draw target buttons.
 
-                string targetButtonText = sb.HasTarget ? sb.StationaryCameraTarget.gameObject.name : "None";
+                string targetButtonText = HasTarget ? StationaryCameraTarget.gameObject.name : "None";
                 GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Target: " + targetButtonText, labelLeftStyle );
                 line++;
 
@@ -193,7 +194,7 @@ namespace CameraToolsKatnissified
                 }
                 if( GUI.Button( new Rect( 2 + GUI_MARGIN + contentWidth / 2, contentTop + (line * ENTRY_HEIGHT), (contentWidth / 2) - 2, ENTRY_HEIGHT - 2 ), "Clear Target" ) )
                 {
-                    sb.StationaryCameraTarget = null;
+                    StationaryCameraTarget = null;
                 }
             }
 
