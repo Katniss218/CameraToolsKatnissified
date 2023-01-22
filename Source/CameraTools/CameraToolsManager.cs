@@ -13,11 +13,11 @@ namespace CameraToolsKatnissified
     [KSPAddon( KSPAddon.Startup.Flight, false )]
     public sealed partial class CameraToolsManager : MonoBehaviour
     {
+        // This class should handle user input, and manage the camera behaviours.
+
         public const string DIRECTORY_NAME = "CameraToolsKatnissified";
 
         public static string pathSaveURL = $"GameData/{DIRECTORY_NAME}/paths.cfg";
-
-        public static CameraToolsManager Instance { get; set; }
 
         // GUI
         /// <summary>
@@ -104,7 +104,7 @@ namespace CameraToolsKatnissified
 
         public Vector3 ManualPosition { get; set; } = Vector3.zero; // offset from moving the camera manually.
 
-        public float ZoomFactor = 1;
+        public float ZoomFactor { get; set; } = 1;
 
         bool _hasDied = false;
         float _diedTime = 0;
@@ -122,22 +122,14 @@ namespace CameraToolsKatnissified
 
         float _cameraShakeMagnitude = 0.0f;
 
-        public bool _pathWindowVisible = false;
-        public bool _pathKeyframeWindowVisible = false;
+        public bool PathWindowVisible { get; set; } = false;
+        public bool PathKeyframeWindowVisible { get; set; } = false;
 
         bool _settingPositionEnabled;
         bool _settingTargetEnabled;
 
         void Awake()
         {
-            // Instance = the last CamTools object that has Awake called.
-            if( Instance != null )
-            {
-                Destroy( Instance );
-            }
-
-            Instance = this;
-
             SetBehaviours();
 
             LoadAndDeserialize();
@@ -314,8 +306,8 @@ namespace CameraToolsKatnissified
 
         void TogglePathList()
         {
-            _pathKeyframeWindowVisible = false;
-            _pathWindowVisible = !_pathWindowVisible;
+            PathKeyframeWindowVisible = false;
+            PathWindowVisible = !PathWindowVisible;
         }
 
         void SaveOriginalCamera()
@@ -414,7 +406,7 @@ namespace CameraToolsKatnissified
 #warning TODO - add a method like that to the camera behaviour instead.
             var pathCam = (PathCameraBehaviour)Behaviours[CameraMode.PathCamera];
 
-            foreach( var path in pathCam._availableCameraPaths )
+            foreach( var path in pathCam.AvailableCameraPaths )
             {
                 path.Save( pathsNode );
             }
@@ -428,13 +420,12 @@ namespace CameraToolsKatnissified
             var pathCam = (PathCameraBehaviour)Behaviours[CameraMode.PathCamera];
 
             pathCam.DeselectKeyframe();
-            pathCam._currentCameraPathIndex = -1;
-            pathCam._availableCameraPaths = new List<CameraPath>();
+            pathCam.TemporaryResetBeforeLoad();
             ConfigNode pathFileNode = ConfigNode.Load( pathSaveURL );
 
             foreach( var node in pathFileNode.GetNode( "CAMERAPATHS" ).GetNodes( "CAMERAPATH" ) )
             {
-                pathCam._availableCameraPaths.Add( CameraPath.Load( node ) );
+                pathCam.AvailableCameraPaths.Add( CameraPath.LoadOld( node ) );
             }
         }
 

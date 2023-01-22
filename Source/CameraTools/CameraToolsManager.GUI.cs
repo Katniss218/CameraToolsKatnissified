@@ -32,11 +32,11 @@ namespace CameraToolsKatnissified
             {
                 _windowRect = GUI.Window( 320, _windowRect, DrawGuiWindow, "" );
 
-                if( _pathKeyframeWindowVisible )
+                if( PathKeyframeWindowVisible )
                 {
                     ((PathCameraBehaviour)Behaviours[CameraMode.PathCamera]).DrawKeyframeEditorWindow();
                 }
-                if( _pathWindowVisible )
+                if( PathWindowVisible )
                 {
                     ((PathCameraBehaviour)Behaviours[CameraMode.PathCamera]).DrawPathSelectorWindow();
                 }
@@ -203,10 +203,10 @@ namespace CameraToolsKatnissified
             {
                 PathCameraBehaviour sb = (PathCameraBehaviour)Behaviours[CameraMode.PathCamera];
 
-                if( sb._currentCameraPathIndex >= 0 )
+                if( sb.CurrentCameraPath != null )
                 {
                     GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path:" );
-                    sb.CurrentCameraPath.pathName = GUI.TextField( new Rect( GUI_MARGIN + 34, contentTop + (line * ENTRY_HEIGHT), contentWidth - 34, ENTRY_HEIGHT ), sb.CurrentCameraPath.pathName );
+                    sb.CurrentCameraPath.PathName = GUI.TextField( new Rect( GUI_MARGIN + 34, contentTop + (line * ENTRY_HEIGHT), contentWidth - 34, ENTRY_HEIGHT ), sb.CurrentCameraPath.PathName );
                 }
                 else
                 {
@@ -226,23 +226,23 @@ namespace CameraToolsKatnissified
                 }
                 if( GUI.Button( new Rect( GUI_MARGIN + (contentWidth / 2), contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), "Delete Path" ) )
                 {
-                    sb.DeletePath( sb._currentCameraPathIndex );
+                    sb.DeletePath( sb.CurrentCameraPath );
                 }
                 line++;
 
-                if( sb._currentCameraPathIndex >= 0 )
+                if( sb.CurrentCameraPath != null )
                 {
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Interpolation rate: " + sb.CurrentCameraPath.lerpRate.ToString( "0.0" ) );
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Interpolation rate: " + sb.CurrentCameraPath.LerpRate.ToString( "0.0" ) );
                     line++;
-                    sb.CurrentCameraPath.lerpRate = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), sb.CurrentCameraPath.lerpRate, 1f, 15f );
-                    sb.CurrentCameraPath.lerpRate = Mathf.Round( sb.CurrentCameraPath.lerpRate * 10 ) / 10;
-                    line++;
-
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path timescale " + sb.CurrentCameraPath.timeScale.ToString( "0.00" ) );
+                    sb.CurrentCameraPath.LerpRate = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), sb.CurrentCameraPath.LerpRate, 1f, 15f );
+                    sb.CurrentCameraPath.LerpRate = Mathf.Round( sb.CurrentCameraPath.LerpRate * 10 ) / 10;
                     line++;
 
-                    sb.CurrentCameraPath.timeScale = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), sb.CurrentCameraPath.timeScale, 0.05f, 4f );
-                    sb.CurrentCameraPath.timeScale = Mathf.Round( sb.CurrentCameraPath.timeScale * 20 ) / 20;
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path timescale " + sb.CurrentCameraPath.TimeScale.ToString( "0.00" ) );
+                    line++;
+
+                    sb.CurrentCameraPath.TimeScale = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), sb.CurrentCameraPath.TimeScale, 0.05f, 4f );
+                    sb.CurrentCameraPath.TimeScale = Mathf.Round( sb.CurrentCameraPath.TimeScale * 20 ) / 20;
                     line++;
 
                     float viewHeight = Mathf.Max( 6 * ENTRY_HEIGHT, sb.CurrentCameraPath.keyframeCount * ENTRY_HEIGHT );
@@ -258,7 +258,7 @@ namespace CameraToolsKatnissified
                         Color origGuiColor = GUI.color;
                         for( int i = 0; i < sb.CurrentCameraPath.keyframeCount; i++ )
                         {
-                            if( i == sb._currentKeyframeIndex )
+                            if( sb.CurrentCameraPath.GetKeyframe( i ) == sb.currentKeyframe )
                             {
                                 GUI.color = Color.green;
                             }
@@ -266,14 +266,14 @@ namespace CameraToolsKatnissified
                             {
                                 GUI.color = origGuiColor;
                             }
-                            string kLabel = "#" + i.ToString() + ": " + sb.CurrentCameraPath.GetKeyframe( i ).time.ToString( "0.00" ) + "s";
+                            string kLabel = "#" + i.ToString() + ": " + sb.CurrentCameraPath.GetKeyframe( i ).Time.ToString( "0.00" ) + "s";
                             if( GUI.Button( new Rect( 0, (i * ENTRY_HEIGHT), 3 * viewContentWidth / 4, ENTRY_HEIGHT ), kLabel ) )
                             {
-                                sb.SelectKeyframe( i );
+                                sb.SelectKeyframe( sb.CurrentCameraPath.GetKeyframe( i ) );
                             }
                             if( GUI.Button( new Rect( (3 * contentWidth / 4), (i * ENTRY_HEIGHT), (viewContentWidth / 4) - 20, ENTRY_HEIGHT ), "X" ) )
                             {
-                                sb.DeleteKeyframe( i );
+                                sb.DeleteKeyframe( sb.CurrentCameraPath.GetKeyframe( i ) );
                                 break;
                             }
                         }

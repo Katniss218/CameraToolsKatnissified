@@ -39,7 +39,7 @@
     <Compile Include="Cameras\CameraBehaviour.cs" />
     <Compile Include="CameraMode.cs" />
     <Compile Include="CameraReference.cs" />
-    <Compile Include="CameraToolsBehaviour.cs" />
+    <Compile Include="CameraToolsManager.cs" />
     <Compile Include="Cameras\PathCameraBehaviour.cs" />
     <Compile Include="PersistentField.cs" />
     <Compile Include="Animation\CameraTransformation.cs" />
@@ -151,7 +151,7 @@
     <Content Include="Distribution\GameData\CameraTools\Textures\icon.png" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CameraToolsBehaviour.GUI.cs" />
+    <Compile Include="CameraToolsManager.GUI.cs" />
     <None Include="Distribution\GameData\CameraTools\paths.cfg" />
     <None Include="Distribution\GameData\CameraTools\settings.cfg" />
   </ItemGroup>

@@ -9,6 +9,8 @@ namespace CameraToolsKatnissified.Cameras
 {
     public abstract class CameraBehaviour : MonoBehaviour
     {
+        // This class should be a base camera behaviour that you can derive from to make new camera modes.
+
         protected CameraToolsManager cameraBeh;
 
         /// <summary>

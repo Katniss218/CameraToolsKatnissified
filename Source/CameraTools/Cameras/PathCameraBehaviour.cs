@@ -11,27 +11,17 @@ namespace CameraToolsKatnissified.Cameras
         /// </summary>
         public bool IsPlayingPath { get; private set; } = false;
 
-        //pathing
-        public int _currentCameraPathIndex = -1;
-        public List<CameraPath> _availableCameraPaths;
+        public CameraPath CurrentCameraPath { get; private set; }
+        public List<CameraPath> AvailableCameraPaths { get; private set; }
 
-        public CameraPath CurrentCameraPath
+        public CameraKeyframe currentKeyframe { get; private set; }
+
+        public void TemporaryResetBeforeLoad()
         {
-            get
-            {
-                if( _currentCameraPathIndex >= 0 && _currentCameraPathIndex < _availableCameraPaths.Count )
-                {
-                    return _availableCameraPaths[_currentCameraPathIndex];
-                }
-
-                return null;
-            }
+#warning TODO - move the load logic itself to here so we don't have to reset it from a different class.
+            CurrentCameraPath = null;
+            AvailableCameraPaths = new List<CameraPath>();
         }
-
-#warning TODO - probably better to edit the reference inside the list in-place.
-        public int _currentKeyframeIndex = -1; // setting/editing the path keyframe?
-        public float _currentKeyframeTime;
-        public string _currKeyTimeString;
 
         protected override void OnStartPlaying()
         {
@@ -54,18 +44,14 @@ namespace CameraToolsKatnissified.Cameras
         public void StartPlayingPath()
         {
             Debug.Log( "Path Camera Now Playing Path" );
-            if( _currentCameraPathIndex < 0 || CurrentCameraPath.keyframeCount <= 0 )
+            if( CurrentCameraPath == null || CurrentCameraPath.keyframeCount <= 0 )
             {
                 cameraBeh.EndCamera();
                 return;
             }
 
             DeselectKeyframe();
-
-            //if( !cameraBeh.CameraToolsActive )
-            //{
             OnStartPlaying();
-            // }
 
             CameraTransformation firstFrame = CurrentCameraPath.Evaulate( 0 );
             cameraBeh.FlightCamera.transform.localPosition = firstFrame.position;
@@ -87,14 +73,13 @@ namespace CameraToolsKatnissified.Cameras
 
             if( IsPlayingPath )
             {
-                CameraTransformation tf = CurrentCameraPath.Evaulate( cameraBeh.TimeSinceStart * CurrentCameraPath.timeScale );
-                cameraBeh.FlightCamera.transform.localPosition = Vector3.Lerp( cameraBeh.FlightCamera.transform.localPosition, tf.position, CurrentCameraPath.lerpRate * Time.fixedDeltaTime );
-                cameraBeh.FlightCamera.transform.localRotation = Quaternion.Slerp( cameraBeh.FlightCamera.transform.localRotation, tf.rotation, CurrentCameraPath.lerpRate * Time.fixedDeltaTime );
-                cameraBeh.Zoom = Mathf.Lerp( cameraBeh.Zoom, tf.zoom, CurrentCameraPath.lerpRate * Time.fixedDeltaTime );
+                CameraTransformation tf = CurrentCameraPath.Evaulate( cameraBeh.TimeSinceStart * CurrentCameraPath.TimeScale );
+                cameraBeh.FlightCamera.transform.localPosition = Vector3.Lerp( cameraBeh.FlightCamera.transform.localPosition, tf.position, CurrentCameraPath.LerpRate * Time.fixedDeltaTime );
+                cameraBeh.FlightCamera.transform.localRotation = Quaternion.Slerp( cameraBeh.FlightCamera.transform.localRotation, tf.rotation, CurrentCameraPath.LerpRate * Time.fixedDeltaTime );
+                cameraBeh.Zoom = Mathf.Lerp( cameraBeh.Zoom, tf.zoom, CurrentCameraPath.LerpRate * Time.fixedDeltaTime );
             }
             else // this is to set up the path.
             {
-                //move
                 //mouse panning, moving
                 Vector3 forwardLevelAxis = cameraBeh.FlightCamera.transform.forward;
 
@@ -134,57 +119,36 @@ namespace CameraToolsKatnissified.Cameras
         protected override void OnStopPlaying()
         {
             IsPlayingPath = false;
+            DeselectKeyframe();
         }
+
         public void CreateNewPath()
         {
-            cameraBeh._pathKeyframeWindowVisible = false;
-            _availableCameraPaths.Add( new CameraPath() );
-            _currentCameraPathIndex = _availableCameraPaths.Count - 1;
+            cameraBeh.PathKeyframeWindowVisible = false;
+            CameraPath path = new CameraPath();
+            AvailableCameraPaths.Add( path );
+            CurrentCameraPath = path;
         }
 
-        public void DeletePath( int index )
+        public void DeletePath( CameraPath path )
         {
-            if( index < 0 || index >= _availableCameraPaths.Count )
-            {
-                return;
-            }
-
-            _availableCameraPaths.RemoveAt( index );
-            _currentCameraPathIndex = -1;
+            AvailableCameraPaths.Remove( path );
+            CurrentCameraPath = null;
         }
 
-        public void SelectPath( int index )
-        {
-            _currentCameraPathIndex = index;
-        }
-
-        public void SelectKeyframe( int index )
+        public void SelectKeyframe( CameraKeyframe kf )
         {
             cameraBeh.Behaviours[cameraBeh.CurrentCameraMode].StopPlaying();
 
-            _currentKeyframeIndex = index;
-            UpdateCurrentKeyframeValues();
-            cameraBeh._pathKeyframeWindowVisible = true;
-            ViewKeyframe( _currentKeyframeIndex );
+            currentKeyframe = kf;
+            cameraBeh.PathKeyframeWindowVisible = true;
+            ViewKeyframe( currentKeyframe );
         }
 
         public void DeselectKeyframe()
         {
-            _currentKeyframeIndex = -1;
-            cameraBeh._pathKeyframeWindowVisible = false;
-        }
-
-        public void UpdateCurrentKeyframeValues()
-        {
-            if( CurrentCameraPath == null || _currentKeyframeIndex < 0 || _currentKeyframeIndex >= CurrentCameraPath.keyframeCount )
-            {
-                return;
-            }
-
-            CameraKeyframe currentKey = CurrentCameraPath.GetKeyframe( _currentKeyframeIndex );
-            _currentKeyframeTime = currentKey.time;
-
-            _currKeyTimeString = _currentKeyframeTime.ToString();
+            currentKeyframe = null;
+            cameraBeh.PathKeyframeWindowVisible = false;
         }
 
         public void CreateNewKeyframe()
@@ -193,11 +157,11 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.CurrentCameraMode = CameraMode.PathCamera;
             cameraBeh.Behaviours[cameraBeh.CurrentCameraMode].StartPlaying();
 
-            cameraBeh._pathWindowVisible = false;
+            cameraBeh.PathWindowVisible = false;
 
-            float time = CurrentCameraPath.keyframeCount > 0 ? CurrentCameraPath.GetKeyframe( CurrentCameraPath.keyframeCount - 1 ).time + 1 : 0;
+            float time = CurrentCameraPath.keyframeCount > 0 ? CurrentCameraPath.GetKeyframe( CurrentCameraPath.keyframeCount - 1 ).Time + 1 : 0;
             CurrentCameraPath.AddTransform( cameraBeh.FlightCamera.transform, cameraBeh.Zoom, time );
-            SelectKeyframe( CurrentCameraPath.keyframeCount - 1 );
+            SelectKeyframe( CurrentCameraPath.GetKeyframe(CurrentCameraPath.keyframeCount - 1) );
 
             if( CurrentCameraPath.keyframeCount > 6 )
             {
@@ -205,32 +169,28 @@ namespace CameraToolsKatnissified.Cameras
             }
         }
 
-        public void DeleteKeyframe( int index )
+        public void DeleteKeyframe( CameraKeyframe keyframe )
         {
-            CurrentCameraPath.RemoveKeyframe( index );
-            if( index == _currentKeyframeIndex )
+            CurrentCameraPath.RemoveKeyframe( keyframe );
+            if( currentKeyframe == keyframe )
             {
                 DeselectKeyframe();
-            }
-            if( CurrentCameraPath.keyframeCount > 0 && _currentKeyframeIndex >= 0 )
-            {
-                SelectKeyframe( Mathf.Clamp( _currentKeyframeIndex, 0, CurrentCameraPath.keyframeCount - 1 ) );
+                SelectKeyframe( CurrentCameraPath.GetKeyframe( 0 ) );
             }
         }
 
         /// <summary>
-        /// Positions the camera at the keyframe.
+        /// Positions the camera at a keyframe.
         /// </summary>
-        public void ViewKeyframe( int index )
+        public void ViewKeyframe( CameraKeyframe keyframe )
         {
             cameraBeh.Behaviours[cameraBeh.CurrentCameraMode].StopPlaying();
             cameraBeh.CurrentCameraMode = CameraMode.PathCamera;
             cameraBeh.Behaviours[cameraBeh.CurrentCameraMode].StartPlaying();
 
-            CameraKeyframe currentKey = CurrentCameraPath.GetKeyframe( index );
-            cameraBeh.FlightCamera.transform.localPosition = currentKey.position;
-            cameraBeh.FlightCamera.transform.localRotation = currentKey.rotation;
-            cameraBeh.Zoom = currentKey.zoom;
+            cameraBeh.FlightCamera.transform.localPosition = keyframe.Position;
+            cameraBeh.FlightCamera.transform.localRotation = keyframe.Rotation;
+            cameraBeh.Zoom = keyframe.Zoom;
         }
 
 
@@ -244,27 +204,27 @@ namespace CameraToolsKatnissified.Cameras
 
             GUI.BeginGroup( kWindowRect );
 
-            GUI.Label( new Rect( 5, 5, 100, 25 ), $"Keyframe {_currentKeyframeIndex}" );
+            GUI.Label( new Rect( 5, 5, 100, 25 ), $"Keyframe t={currentKeyframe.Time}" );
 
             if( GUI.Button( new Rect( 105, 5, 180, 25 ), "Revert Pos" ) )
             {
-                ViewKeyframe( _currentKeyframeIndex );
+                ViewKeyframe( currentKeyframe );
             }
 
             GUI.Label( new Rect( 5, 35, 80, 25 ), "Time: " );
-            _currKeyTimeString = GUI.TextField( new Rect( 100, 35, 195, 25 ), _currKeyTimeString, 16 );
+            string s = GUI.TextField( new Rect( 100, 35, 195, 25 ), currentKeyframe.Time.ToString(), 16 );
 
-            if( float.TryParse( _currKeyTimeString, out float parsed ) )
+            if( float.TryParse( s, out float parsed ) )
             {
-                _currentKeyframeTime = parsed;
+                currentKeyframe.Time = parsed;
             }
 
             bool isApplied = false;
 
             if( GUI.Button( new Rect( 100, 65, 195, 25 ), "Apply" ) )
             {
-                Debug.Log( $"Applying keyframe at time: {_currentKeyframeTime}" );
-                CurrentCameraPath.SetTransform( _currentKeyframeIndex, cameraBeh.FlightCamera.transform, cameraBeh.Zoom, _currentKeyframeTime );
+                Debug.Log( $"Applying keyframe at time: {currentKeyframe.Time}" );
+                CurrentCameraPath.SetTransform( currentKeyframe, cameraBeh.FlightCamera.transform, cameraBeh.Zoom, currentKeyframe.Time );
                 isApplied = true;
             }
 
@@ -294,22 +254,22 @@ namespace CameraToolsKatnissified.Cameras
             GUI.BeginGroup( pSelectRect );
 
             Rect scrollRect = new Rect( indent, indent, scrollRectSize, scrollRectSize );
-            float scrollHeight = Mathf.Max( scrollRectSize, CameraToolsManager.ENTRY_HEIGHT * _availableCameraPaths.Count );
+            float scrollHeight = Mathf.Max( scrollRectSize, CameraToolsManager.ENTRY_HEIGHT * AvailableCameraPaths.Count );
             Rect scrollViewRect = new Rect( 0, 0, scrollRectSize - 20, scrollHeight );
             cameraBeh._pathSelectScrollPos = GUI.BeginScrollView( scrollRect, cameraBeh._pathSelectScrollPos, scrollViewRect );
 
             bool isAnyPathSelected = false;
 
-            for( int i = 0; i < _availableCameraPaths.Count; i++ )
+            for( int i = 0; i < AvailableCameraPaths.Count; i++ )
             {
-                if( GUI.Button( new Rect( 0, i * CameraToolsManager.ENTRY_HEIGHT, scrollRectSize - 90, CameraToolsManager.ENTRY_HEIGHT ), _availableCameraPaths[i].pathName ) )
+                if( GUI.Button( new Rect( 0, i * CameraToolsManager.ENTRY_HEIGHT, scrollRectSize - 90, CameraToolsManager.ENTRY_HEIGHT ), AvailableCameraPaths[i].PathName ) )
                 {
-                    SelectPath( i );
+                    CurrentCameraPath = AvailableCameraPaths[i];
                     isAnyPathSelected = true;
                 }
                 if( GUI.Button( new Rect( scrollRectSize - 80, i * CameraToolsManager.ENTRY_HEIGHT, 60, CameraToolsManager.ENTRY_HEIGHT ), "Delete" ) )
                 {
-                    DeletePath( i );
+                    DeletePath( AvailableCameraPaths[i] );
                     break;
                 }
             }
@@ -319,7 +279,7 @@ namespace CameraToolsKatnissified.Cameras
             GUI.EndGroup();
             if( isAnyPathSelected )
             {
-                cameraBeh._pathWindowVisible = false;
+                cameraBeh.PathWindowVisible = false;
             }
         }
     }

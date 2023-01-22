@@ -6,190 +6,141 @@ namespace CameraToolsKatnissified.Animation
 {
     public class CameraPath
     {
-        public string pathName;
-        public int keyframeCount { get; set; }
+        public string PathName { get; set; }
 
-        public List<Vector3> points;
-        public List<Quaternion> rotations;
-        public List<float> times;
-        public List<float> zooms;
+        public int keyframeCount => _keyframes.Count;
 
-        public float lerpRate = 15;
-        public float timeScale = 1;
+        public float LerpRate { get; set; } = 15;
+        public float TimeScale { get; set; } = 1;
 
+        List<CameraKeyframe> _keyframes;
+
+        // Internal variables for interpolation.
         Vector3Curve _pointCurve;
         QuaternionCurve _rotationCurve;
         AnimationCurve _zoomCurve;
 
         public CameraPath()
         {
-            pathName = "New Path";
-            points = new List<Vector3>();
-            rotations = new List<Quaternion>();
-            times = new List<float>();
-            zooms = new List<float>();
+            PathName = "New Path";
+
+            _keyframes = new List<CameraKeyframe>();
         }
 
-        public static CameraPath Load( ConfigNode node )
+        public static CameraPath LoadOld( ConfigNode node )
         {
+            // This method should be able to load the pre-katnissification path.
+
             CameraPath newPath = new CameraPath();
 
-            newPath.pathName = node.GetValue( "pathName" );
-            newPath.points = ParseVectorList( node.GetValue( "points" ) );
-            newPath.rotations = ParseQuaternionList( node.GetValue( "rotations" ) );
-            newPath.times = ParseFloatList( node.GetValue( "times" ) );
-            newPath.zooms = ParseFloatList( node.GetValue( "zooms" ) );
-            newPath.lerpRate = float.Parse( node.GetValue( "lerpRate" ) );
-            newPath.timeScale = float.Parse( node.GetValue( "timeScale" ) );
-            newPath.Refresh();
+            newPath.PathName = node.GetValue( "pathName" );
+
+            // decompose keyframes for backwards compatibility.
+            var points = Utils.ParseVectorList( node.GetValue( "points" ) );
+            var rotations = Utils.ParseQuaternionList( node.GetValue( "rotations" ) );
+            var zooms = Utils.ParseFloatList( node.GetValue( "zooms" ) );
+            var times = Utils.ParseFloatList( node.GetValue( "times" ) );
+
+            for( int i = 0; i < points.Count; i++ )
+            {
+                CameraKeyframe kf = new CameraKeyframe( points[i], rotations[i], zooms[i], times[i] );
+                newPath._keyframes.Add( kf );
+            }
+
+            newPath.LerpRate = float.Parse( node.GetValue( "lerpRate" ) );
+            newPath.TimeScale = float.Parse( node.GetValue( "timeScale" ) );
+            newPath.SortAndUpdate();
 
             return newPath;
         }
 
         public void Save( ConfigNode node )
         {
-            Debug.Log( "Saving path: " + pathName );
+            Debug.Log( "Saving path: " + PathName );
             ConfigNode pathNode = node.AddNode( "CAMERAPATH" );
-            pathNode.AddValue( "pathName", pathName );
-            pathNode.AddValue( "points", WriteVectorList( points ) );
-            pathNode.AddValue( "rotations", WriteQuaternionList( rotations ) );
-            pathNode.AddValue( "times", WriteFloatList( times ) );
-            pathNode.AddValue( "zooms", WriteFloatList( zooms ) );
-            pathNode.AddValue( "lerpRate", lerpRate );
-            pathNode.AddValue( "timeScale", timeScale );
-        }
+            pathNode.AddValue( "pathName", PathName );
 
-        public static string WriteVectorList( List<Vector3> list )
-        {
-            string output = string.Empty;
-            foreach( var val in list )
-            {
-                output += ConfigNode.WriteVector( val ) + ";";
-            }
-            return output;
-        }
+            // decompose keyframes for backwards compatibility.
+            List<Vector3> points = new List<Vector3>();
+            List<Quaternion> rotations = new List<Quaternion>();
+            List<float> zooms = new List<float>();
+            List<float> times = new List<float>();
 
-        public static string WriteQuaternionList( List<Quaternion> list )
-        {
-            string output = string.Empty;
-            foreach( var val in list )
+            foreach( var kf in _keyframes )
             {
-                output += ConfigNode.WriteQuaternion( val ) + ";";
-            }
-            return output;
-        }
-
-        public static string WriteFloatList( List<float> list )
-        {
-            string output = string.Empty;
-            foreach( var val in list )
-            {
-                output += val.ToString() + ";";
-            }
-            return output;
-        }
-
-        public static List<Vector3> ParseVectorList( string arrayString )
-        {
-            string[] vectorStrings = arrayString.Split( new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries );
-            List<Vector3> vList = new List<Vector3>();
-            for( int i = 0; i < vectorStrings.Length; i++ )
-            {
-                Debug.Log( "attempting to parse vector: --" + vectorStrings[i] + "--" );
-                vList.Add( ConfigNode.ParseVector3( vectorStrings[i] ) );
+                points.Add( kf.Position );
+                rotations.Add( kf.Rotation );
+                zooms.Add( kf.Zoom );
+                times.Add( kf.Time );
             }
 
-            return vList;
-        }
+            pathNode.AddValue( "points", Utils.WriteVectorList( points ) );
+            pathNode.AddValue( "rotations", Utils.WriteQuaternionList( rotations ) );
+            pathNode.AddValue( "zooms", Utils.WriteFloatList( zooms ) );
+            pathNode.AddValue( "times", Utils.WriteFloatList( times ) );
 
-        public static List<Quaternion> ParseQuaternionList( string arrayString )
-        {
-            string[] qStrings = arrayString.Split( new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries );
-            List<Quaternion> qList = new List<Quaternion>();
-            for( int i = 0; i < qStrings.Length; i++ )
-            {
-                qList.Add( ConfigNode.ParseQuaternion( qStrings[i] ) );
-            }
-
-            return qList;
-        }
-
-        public static List<float> ParseFloatList( string arrayString )
-        {
-            string[] fStrings = arrayString.Split( new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries );
-            List<float> fList = new List<float>();
-            for( int i = 0; i < fStrings.Length; i++ )
-            {
-                fList.Add( float.Parse( fStrings[i] ) );
-            }
-
-            return fList;
+            pathNode.AddValue( "lerpRate", LerpRate );
+            pathNode.AddValue( "timeScale", TimeScale );
         }
 
         public void AddTransform( Transform cameraTransform, float zoom, float time )
         {
-            points.Add( cameraTransform.localPosition );
-            rotations.Add( cameraTransform.localRotation );
-            zooms.Add( zoom );
-            times.Add( time );
-            keyframeCount = times.Count;
+            _keyframes.Add( new CameraKeyframe( cameraTransform.localPosition, cameraTransform.localRotation, zoom, time ) );
+
+            SortAndUpdate();
+        }
+
+        public void SetTransform( CameraKeyframe keyframe, Transform cameraTransform, float zoom, float time )
+        {
+            keyframe.Position = cameraTransform.localPosition;
+            keyframe.Rotation = cameraTransform.localRotation;
+            keyframe.Zoom = zoom;
+            keyframe.Time = time;
+
+            SortAndUpdate();
+        }
+
+        /// <summary>
+        /// Call this after adding a keyframe.
+        /// </summary>
+        void SortAndUpdate()
+        {
             SortKeyframes();
             UpdateCurves();
         }
 
-        public void SetTransform( int index, Transform cameraTransform, float zoom, float time )
+        public void RemoveKeyframe( CameraKeyframe kf )
         {
-            points[index] = cameraTransform.localPosition;
-            rotations[index] = cameraTransform.localRotation;
-            zooms[index] = zoom;
-            times[index] = time;
-            SortKeyframes();
-            UpdateCurves();
-        }
+            _keyframes.Remove( kf );
 
-        public void Refresh()
-        {
-            keyframeCount = times.Count;
-            SortKeyframes();
-            UpdateCurves();
-        }
-
-        public void RemoveKeyframe( int index )
-        {
-            points.RemoveAt( index );
-            rotations.RemoveAt( index );
-            zooms.RemoveAt( index );
-            times.RemoveAt( index );
-            keyframeCount = times.Count;
-            UpdateCurves();
+            SortAndUpdate();
         }
 
         public void SortKeyframes()
         {
-            List<CameraKeyframe> keyframes = new List<CameraKeyframe>();
-            for( int i = 0; i < points.Count; i++ )
-            {
-                keyframes.Add( new CameraKeyframe( points[i], rotations[i], zooms[i], times[i] ) );
-            }
-            keyframes.Sort( new CameraKeyframeComparer() );
-
-            for( int i = 0; i < keyframes.Count; i++ )
-            {
-                points[i] = keyframes[i].position;
-                rotations[i] = keyframes[i].rotation;
-                zooms[i] = keyframes[i].zoom;
-                times[i] = keyframes[i].time;
-            }
+            _keyframes.Sort( new CameraKeyframeComparer() );
         }
 
         public CameraKeyframe GetKeyframe( int index )
         {
-            int i = index;
-            return new CameraKeyframe( points[i], rotations[i], zooms[i], times[i] );
+            return _keyframes[index];
         }
 
         public void UpdateCurves()
         {
+            List<Vector3> points = new List<Vector3>();
+            List<Quaternion> rotations = new List<Quaternion>();
+            List<float> zooms = new List<float>();
+            List<float> times = new List<float>();
+
+            foreach( var kf in _keyframes )
+            {
+                points.Add( kf.Position );
+                rotations.Add( kf.Rotation );
+                zooms.Add( kf.Zoom );
+                times.Add( kf.Time );
+            }
+
             _pointCurve = new Vector3Curve( points.ToArray(), times.ToArray() );
             _rotationCurve = new QuaternionCurve( rotations.ToArray(), times.ToArray() );
             _zoomCurve = new AnimationCurve();

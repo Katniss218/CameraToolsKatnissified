@@ -36,5 +36,73 @@ namespace CameraToolsKatnissified
 
             return null;
         }
+
+        public static string WriteVectorList( List<Vector3> list )
+        {
+            string output = string.Empty;
+            foreach( var val in list )
+            {
+                output += ConfigNode.WriteVector( val ) + ";";
+            }
+            return output;
+        }
+
+        public static string WriteQuaternionList( List<Quaternion> list )
+        {
+            string output = string.Empty;
+            foreach( var val in list )
+            {
+                output += ConfigNode.WriteQuaternion( val ) + ";";
+            }
+            return output;
+        }
+
+        public static string WriteFloatList( List<float> list )
+        {
+            string output = string.Empty;
+            foreach( var val in list )
+            {
+                output += val.ToString() + ";";
+            }
+            return output;
+        }
+
+        public static List<Vector3> ParseVectorList( string arrayString )
+        {
+            string[] vectorStrings = arrayString.Split( new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries );
+            List<Vector3> vList = new List<Vector3>();
+            for( int i = 0; i < vectorStrings.Length; i++ )
+            {
+                Debug.Log( "attempting to parse vector: --" + vectorStrings[i] + "--" );
+                vList.Add( ConfigNode.ParseVector3( vectorStrings[i] ) );
+            }
+
+            return vList;
+        }
+
+        public static List<Quaternion> ParseQuaternionList( string arrayString )
+        {
+            string[] qStrings = arrayString.Split( new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries );
+            List<Quaternion> qList = new List<Quaternion>();
+            for( int i = 0; i < qStrings.Length; i++ )
+            {
+                qList.Add( ConfigNode.ParseQuaternion( qStrings[i] ) );
+            }
+
+            return qList;
+        }
+
+        public static List<float> ParseFloatList( string arrayString )
+        {
+            string[] fStrings = arrayString.Split( new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries );
+            List<float> fList = new List<float>();
+            for( int i = 0; i < fStrings.Length; i++ )
+            {
+                fList.Add( float.Parse( fStrings[i] ) );
+            }
+
+            return fList;
+        }
+
     }
 }

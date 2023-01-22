@@ -35,9 +35,15 @@ namespace CameraToolsKatnissified.Animation
 
             float overTime = t - _times[startIndex];
             float intervalTime = _times[nextIndex] - _times[startIndex];
-            if( intervalTime <= 0 ) return _positions[nextIndex];
+
+            if( intervalTime <= 0 )
+            {
+                return _positions[nextIndex];
+            }
 
             float normTime = overTime / intervalTime;
+
+            // This should probably do a cubic or something, maybe swap between different modes. Lerp is way too jittery.
             return Vector3.Lerp( _positions[startIndex], _positions[nextIndex], normTime );
         }
     }
