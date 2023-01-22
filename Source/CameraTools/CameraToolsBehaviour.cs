@@ -111,11 +111,6 @@ namespace CameraToolsKatnissified
 
         public const float SCROLL_MULTIPLIER = 10.0f;
 
-        // Used for the Initial Velocity camera mode.
-        public Vector3 InitialVelocity { get; set; }
-        public Vector3 InitialPosition { get; set; }
-        public Orbit InitialOrbit { get; set; }
-
         // retaining position and rotation after vessel destruction
         public Vector3 LastCameraPosition { get; set; }
         public Quaternion LastCameraRotation { get; set; }
@@ -253,7 +248,7 @@ namespace CameraToolsKatnissified
 
         void LateUpdate()
         {
-            //retain pos and rot after vessel destruction
+            // Retain pos and rot after vessel destruction
             // This will fuck the camera is called when CT is not supposed to be active.
             if( CameraToolsActive && FlightCamera.transform.parent != CameraPivot.transform )
             {
@@ -370,6 +365,7 @@ namespace CameraToolsKatnissified
 
         public void DoCameraShake( Vessel vessel )
         {
+#warning TODO - change this to be simpler. it has no business being this complicated.
             //shake
             float camDistance = Vector3.Distance( FlightCamera.transform.position, vessel.CoM );
 

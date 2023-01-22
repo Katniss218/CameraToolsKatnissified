@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace CameraToolsKatnissified
 {
@@ -19,14 +20,17 @@ namespace CameraToolsKatnissified
             ConfigNode fileNode = ConfigNode.Load( SETTINGS_PATH );
             ConfigNode settings = fileNode.GetNode( "CToolsSettings" );
 
-            foreach( var field in typeof( CameraToolsBehaviour ).GetFields() )
+            CameraToolsBehaviour ctb = Object.FindObjectOfType<CameraToolsBehaviour>();
+            var fields = typeof( CameraToolsBehaviour ).GetFields();
+
+            foreach( var field in fields )
             {
                 if( !field.IsDefined( typeof( PersistentField ), false ) )
                 {
                     continue;
                 }
 
-                settings.SetValue( field.Name, field.GetValue( CameraToolsBehaviour.Instance ).ToString(), true );
+                settings.SetValue( field.Name, field.GetValue( ctb ).ToString(), true );
             }
 
             fileNode.Save( SETTINGS_PATH );
@@ -40,7 +44,10 @@ namespace CameraToolsKatnissified
             ConfigNode fileNode = ConfigNode.Load( SETTINGS_PATH );
             ConfigNode settings = fileNode.GetNode( "CToolsSettings" );
 
-            foreach( var field in typeof( CameraToolsBehaviour ).GetFields() )
+            CameraToolsBehaviour ctb = Object.FindObjectOfType<CameraToolsBehaviour>();
+            var fields = typeof( CameraToolsBehaviour ).GetFields();
+
+            foreach( var field in fields )
             {
                 if( !field.IsDefined( typeof( PersistentField ), false ) )
                 {
@@ -53,7 +60,7 @@ namespace CameraToolsKatnissified
 
                     if( parsedValue != null )
                     {
-                        field.SetValue( CameraToolsBehaviour.Instance, parsedValue );
+                        field.SetValue( ctb, parsedValue );
                     }
                 }
             }

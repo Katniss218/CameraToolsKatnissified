@@ -11,39 +11,61 @@ namespace CameraToolsKatnissified.Cameras
     {
         protected CameraToolsBehaviour cameraBeh;
 
-        protected bool isPlaying;
+        /// <summary>
+        /// True if the camera behaviour is currently controlling the camera (playing). False otherwise.
+        /// </summary>
+        public bool IsPlaying { get; protected set; } = false;
 
-        public bool IsPlaying { get => isPlaying; }
-
+        /// <summary>
+        /// Called when the camera behaviour starts playing. Use this to set the initial state.
+        /// </summary>
         protected abstract void OnStartPlaying();
+
+        /// <summary>
+        /// Called every frame while the camera behaviour is playing.
+        /// </summary>
         protected abstract void OnPlaying();
+
+        /// <summary>
+        /// Called when the camera behaviour stops playing.
+        /// </summary>
         protected abstract void OnStopPlaying();
+
+        /// <summary>
+        /// Call this to start playing the camera behaviour.
+        /// </summary>
+        public void StartPlaying()
+        {
+            this.enabled = true;
+            Debug.Log( "[CTK] StartPlaying was called." );
+            IsPlaying = true;
+            OnStartPlaying();
+        }
+
+        /// <summary>
+        /// Call this to stop playing the camera behaviour.
+        /// </summary>
+        public void StopPlaying()
+        {
+            this.enabled = false;
+            IsPlaying = false;
+            OnStopPlaying();
+        }
+
 
         protected virtual void Awake()
         {
             cameraBeh = this.GetComponent<CameraToolsBehaviour>();
         }
 
-        public void StartPlaying()
-        {
-            this.enabled = true;
-            Debug.Log( "[CTK] StartPlaying was called." );
-            isPlaying = true;
-            OnStartPlaying();
-        }
-
-        public void StopPlaying()
-        {
-            this.enabled = false;
-            isPlaying = false;
-            OnStopPlaying();
-        }
-
         protected virtual void FixedUpdate()
         {
-            if( isPlaying )
+            if( IsPlaying )
             {
                 OnPlaying();
+
+                cameraBeh.LastCameraPosition = cameraBeh.FlightCamera.transform.position; // was in stationary camera only.
+                cameraBeh.LastCameraRotation = cameraBeh.FlightCamera.transform.rotation;
             }
         }
     }

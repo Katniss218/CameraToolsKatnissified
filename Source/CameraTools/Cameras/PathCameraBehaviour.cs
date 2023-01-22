@@ -8,7 +8,7 @@ namespace CameraToolsKatnissified.Cameras
         /// <summary>
         /// If true, the camera is currently playing out a path, instead of setting it up in free mode.
         /// </summary>
-        public bool IsPlayingPath { get; set; } = false;
+        public bool IsPlayingPath { get; private set; } = false;
 
         protected override void OnStartPlaying()
         {
@@ -49,7 +49,7 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.FlightCamera.transform.localRotation = firstFrame.rotation;
             cameraBeh.Zoom = firstFrame.zoom;
 
-            isPlaying = true;
+            IsPlaying = true;
             IsPlayingPath = true;
 
             // initialize the rotation on start, but don't update it so if the rocket rolls, the camera won't follow it.

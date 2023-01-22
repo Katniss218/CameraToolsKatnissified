@@ -9,6 +9,10 @@ namespace CameraToolsKatnissified.Cameras
 {
     public sealed class StationaryCameraBehaviour : CameraBehaviour
     {
+        // Used for the Initial Velocity camera mode.
+        public Vector3 InitialVelocity { get; set; }
+        public Vector3 InitialPosition { get; set; }
+        public Orbit InitialOrbit { get; set; }
 
         public Vector3? StationaryCameraPosition { get; set; } = null;
         public bool HasPosition => StationaryCameraPosition != null;
@@ -36,9 +40,9 @@ namespace CameraToolsKatnissified.Cameras
                     cameraBeh.FlightCamera.transform.position = StationaryCameraPosition.Value;
                 }
 
-                cameraBeh.InitialVelocity = cameraBeh.ActiveVessel.srf_velocity;
-                cameraBeh.InitialOrbit = new Orbit();
-                cameraBeh.InitialOrbit.UpdateFromStateVectors( cameraBeh.ActiveVessel.orbit.pos, cameraBeh.ActiveVessel.orbit.vel, FlightGlobals.currentMainBody, Planetarium.GetUniversalTime() );
+                InitialVelocity = cameraBeh.ActiveVessel.srf_velocity;
+                InitialOrbit = new Orbit();
+                InitialOrbit.UpdateFromStateVectors( cameraBeh.ActiveVessel.orbit.pos, cameraBeh.ActiveVessel.orbit.vel, FlightGlobals.currentMainBody, Planetarium.GetUniversalTime() );
                 //_initialUT = Planetarium.GetUniversalTime();
             }
             else
@@ -82,13 +86,13 @@ namespace CameraToolsKatnissified.Cameras
                 else if( cameraBeh.CurrentReferenceMode == CameraReference.InitialVelocity )
                 {
                     Vector3 camVelocity;
-                    if( cameraBeh.UseOrbitalInitialVelocity && cameraBeh.InitialOrbit != null )
+                    if( cameraBeh.UseOrbitalInitialVelocity && InitialOrbit != null )
                     {
-                        camVelocity = cameraBeh.InitialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - cameraBeh.ActiveVessel.GetObtVelocity();
+                        camVelocity = InitialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - cameraBeh.ActiveVessel.GetObtVelocity();
                     }
                     else
                     {
-                        camVelocity = cameraBeh.InitialVelocity - cameraBeh.ActiveVessel.srf_velocity;
+                        camVelocity = InitialVelocity - cameraBeh.ActiveVessel.srf_velocity;
                     }
                     cameraBeh.FlightCamera.transform.position += camVelocity * Time.fixedDeltaTime;
                 }
@@ -129,6 +133,8 @@ namespace CameraToolsKatnissified.Cameras
             // autoFov
             if( HasTarget && cameraBeh.UseAutoZoom )
             {
+#warning TODO - change this to use the equation for constant angular size, possibly go through the parts in the vessel to determine its longest axis, or maybe there are bounds.
+
                 float cameraDistance = Vector3.Distance( StationaryCameraTarget.transform.position, cameraBeh.FlightCamera.transform.position );
 
                 float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + cameraBeh.AutoZoomMargin, 2, 60 );
@@ -154,9 +160,6 @@ namespace CameraToolsKatnissified.Cameras
                 cameraBeh.FlightCamera.SetFoV( cameraBeh.CurrentFov );
                 cameraBeh.ZoomFactor = 60 / cameraBeh.CurrentFov;
             }
-
-            cameraBeh.LastCameraPosition = cameraBeh.FlightCamera.transform.position;
-            cameraBeh.LastCameraRotation = cameraBeh.FlightCamera.transform.rotation;
 
             //vessel camera shake
             if( cameraBeh.ShakeMultiplier > 0 )
