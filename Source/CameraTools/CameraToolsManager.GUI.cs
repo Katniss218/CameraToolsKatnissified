@@ -14,7 +14,7 @@ namespace CameraToolsKatnissified
         public const float GUI_MARGIN = 12;
         public const float ENTRY_HEIGHT = 20;
 
-        public static readonly GUIStyle titleStyle = new GUIStyle()
+        public static readonly GUIStyle TitleStyle = new GUIStyle()
         {
             fontSize = 24,
             alignment = TextAnchor.MiddleCenter,
@@ -24,7 +24,7 @@ namespace CameraToolsKatnissified
             }
         };
 
-        public static readonly GUIStyle labelStyle = new GUIStyle()
+        public static readonly GUIStyle LabelStyle = new GUIStyle()
         {
             alignment = TextAnchor.UpperLeft,
             normal = new GUIStyleState()
@@ -33,7 +33,7 @@ namespace CameraToolsKatnissified
             }
         };
 
-        public static readonly GUIStyle labelBoldStyle = new GUIStyle( labelStyle )
+        public static readonly GUIStyle LabelBoldStyle = new GUIStyle( LabelStyle )
         {
             fontStyle = FontStyle.Bold
         };
@@ -58,11 +58,11 @@ namespace CameraToolsKatnissified
 
                 if( PathKeyframeWindowVisible )
                 {
-                    ((PathCameraBehaviour)Behaviours[CameraMode.PathCamera]).DrawKeyframeEditorWindow();
+                    ((PathCameraBehaviour)_behaviours[CameraMode.PathCamera]).DrawKeyframeEditorWindow();
                 }
                 if( PathWindowVisible )
                 {
-                    ((PathCameraBehaviour)Behaviours[CameraMode.PathCamera]).DrawPathSelectorWindow();
+                    ((PathCameraBehaviour)_behaviours[CameraMode.PathCamera]).DrawPathSelectorWindow();
                 }
             }
         }
@@ -79,11 +79,11 @@ namespace CameraToolsKatnissified
             float contentWidth = WINDOW_WIDTH - (2 * GUI_MARGIN);
             float contentTop = 20;
 
-            GUI.Label( new Rect( 0, contentTop, WINDOW_WIDTH, 40 ), "Camera Tools", titleStyle );
+            GUI.Label( new Rect( 0, contentTop, WINDOW_WIDTH, 40 ), "Camera Tools", TitleStyle );
             line++;
 
             //tool mode switcher
-            GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), $"Tool: {CurrentCameraMode}", labelBoldStyle );
+            GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), $"Tool: {CurrentCameraMode}", LabelBoldStyle );
             line++;
             if( !CameraToolsActive )
             {
@@ -104,14 +104,14 @@ namespace CameraToolsKatnissified
                 GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), "Autozoom Margin:" );
                 line++;
                 AutoZoomMargin = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + ((line) * ENTRY_HEIGHT), contentWidth - 45, ENTRY_HEIGHT ), AutoZoomMargin, 0.0f, 50.0f );
-                GUI.Label( new Rect( GUI_MARGIN + contentWidth - 40, contentTop + ((line - 0.15f) * ENTRY_HEIGHT), 40, ENTRY_HEIGHT ), AutoZoomMargin.ToString( "0.0" ), labelStyle );
+                GUI.Label( new Rect( GUI_MARGIN + contentWidth - 40, contentTop + ((line - 0.15f) * ENTRY_HEIGHT), 40, ENTRY_HEIGHT ), AutoZoomMargin.ToString( "0.0" ), LabelStyle );
             }
             else
             {
-                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Zoom:", labelStyle );
+                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Zoom:", LabelStyle );
                 line++;
                 Zoom = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + ((line) * ENTRY_HEIGHT), contentWidth - 45, ENTRY_HEIGHT ), Zoom, 1.0f, 8.0f );
-                GUI.Label( new Rect( GUI_MARGIN + contentWidth - 40, contentTop + ((line - 0.15f) * ENTRY_HEIGHT), 40, ENTRY_HEIGHT ), ZoomFactor.ToString( "0.0" ) + "x", labelStyle );
+                GUI.Label( new Rect( GUI_MARGIN + contentWidth - 40, contentTop + ((line - 0.15f) * ENTRY_HEIGHT), 40, ENTRY_HEIGHT ), ZoomFactor.ToString( "0.0" ) + "x", LabelStyle );
             }
             line++;
 
@@ -134,9 +134,9 @@ namespace CameraToolsKatnissified
 
             if( CurrentCameraMode == CameraMode.StationaryCamera )
             {
-                StationaryCameraBehaviour sb = (StationaryCameraBehaviour)Behaviours[CameraMode.StationaryCamera];
+                StationaryCameraBehaviour sb = (StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera];
 
-                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), $"Frame of Reference: {CurrentReferenceMode}", labelStyle );
+                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), $"Frame of Reference: {CurrentReferenceMode}", LabelStyle );
                 line++;
                 if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
                 {
@@ -151,7 +151,7 @@ namespace CameraToolsKatnissified
 
                 if( CurrentReferenceMode == CameraReference.Surface || CurrentReferenceMode == CameraReference.Orbit )
                 {
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), "Max Rel. V:", labelStyle );
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), "Max Rel. V:", LabelStyle );
                     MaxRelativeVelocity = float.Parse( GUI.TextField( new Rect( GUI_MARGIN + contentWidth / 2, contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), MaxRelativeVelocity.ToString() ) );
                 }
                 else if( CurrentReferenceMode == CameraReference.InitialVelocity )
@@ -164,7 +164,7 @@ namespace CameraToolsKatnissified
                 // Draw position buttons.
 
                 string positionButtonText = sb.CameraPosition == null ? "None" : sb.CameraPosition.Value.ToString();
-                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Position:" + positionButtonText, labelStyle );
+                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Position:" + positionButtonText, LabelStyle );
                 line++;
 
                 positionButtonText = _settingPositionEnabled ? "waiting..." : "Set Position";
@@ -183,7 +183,7 @@ namespace CameraToolsKatnissified
                 // Draw target buttons.
 
                 string targetButtonText = sb.Target == null ? "None" : sb.Target.gameObject.name;
-                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Target:" + targetButtonText, labelStyle );
+                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Target:" + targetButtonText, LabelStyle );
                 line++;
 
                 targetButtonText = _settingTargetEnabled ? "waiting..." : "Set Target";
@@ -202,7 +202,7 @@ namespace CameraToolsKatnissified
 
             else if( CurrentCameraMode == CameraMode.PathCamera )
             {
-                PathCameraBehaviour sb = (PathCameraBehaviour)Behaviours[CameraMode.PathCamera];
+                PathCameraBehaviour sb = (PathCameraBehaviour)_behaviours[CameraMode.PathCamera];
 
                 if( sb.CurrentPath != null )
                 {
@@ -245,7 +245,7 @@ namespace CameraToolsKatnissified
                     sb.CurrentPath.TimeScale = Mathf.Round( sb.CurrentPath.TimeScale * 20 ) / 20;
                     line++;
 
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path Frame:" + sb.CurrentPath.Frame.ToString(), labelStyle );
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path Frame:" + sb.CurrentPath.Frame.ToString(), LabelStyle );
                     line++;
                     if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
                     {

@@ -33,12 +33,14 @@ namespace CameraToolsKatnissified
         [field: PersistentField]
         public CameraMode CurrentCameraMode { get; set; } = CameraMode.StationaryCamera;
 
-        public Dictionary<CameraMode, CameraBehaviour> Behaviours { get; private set; } = new Dictionary<CameraMode, CameraBehaviour>();
+        public CameraBehaviour CurrentBehaviour { get => _behaviours[CurrentCameraMode]; }
+
+        Dictionary<CameraMode, CameraBehaviour> _behaviours = new Dictionary<CameraMode, CameraBehaviour>();
 
         /// <summary>
         /// True if the CameraTools camera is active.
         /// </summary>
-        public bool CameraToolsActive => Behaviours[CurrentCameraMode].enabled && Behaviours[CurrentCameraMode].IsPlaying;
+        public bool CameraToolsActive => _behaviours[CurrentCameraMode].enabled && _behaviours[CurrentCameraMode].IsPlaying;
 
         [field: PersistentField]
         public CameraReference CurrentReferenceMode { get; set; } = CameraReference.Surface;
@@ -177,7 +179,7 @@ namespace CameraToolsKatnissified
                 StartCamera();
                 if( CurrentCameraMode == CameraMode.PathCamera )
                 {
-                    ((PathCameraBehaviour)Behaviours[CurrentCameraMode]).StartPlayingPath();
+                    ((PathCameraBehaviour)_behaviours[CurrentCameraMode]).StartPlayingPath();
                 }
             }
             if( Input.GetKeyDown( KeyCode.End ) )
@@ -198,7 +200,7 @@ namespace CameraToolsKatnissified
                 Part newTarget = Utils.GetPartFromMouse();
                 if( newTarget != null )
                 {
-                    ((StationaryCameraBehaviour)Behaviours[CameraMode.StationaryCamera]).Target = newTarget;
+                    ((StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera]).Target = newTarget;
                 }
             }
 
@@ -210,7 +212,7 @@ namespace CameraToolsKatnissified
                 Vector3? newPosition = Utils.GetPosFromMouse();
                 if( newPosition != null )
                 {
-                    ((StationaryCameraBehaviour)Behaviours[CameraMode.StationaryCamera]).CameraPosition = newPosition;
+                    ((StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera]).CameraPosition = newPosition;
                 }
             }
         }
@@ -277,7 +279,7 @@ namespace CameraToolsKatnissified
                 }
             }
 
-            Behaviours[CurrentCameraMode].StartPlaying();
+            _behaviours[CurrentCameraMode].StartPlaying();
         }
 
         /// <summary>
@@ -300,7 +302,7 @@ namespace CameraToolsKatnissified
             FlightCamera.ActivateUpdate();
             CurrentFov = 60;
 
-            Behaviours[CurrentCameraMode].StopPlaying();
+            _behaviours[CurrentCameraMode].StopPlaying();
         }
 
         void TogglePathList()
@@ -397,7 +399,7 @@ namespace CameraToolsKatnissified
         {
             Serializer.SaveFields();
 
-            foreach( var beh in Behaviours.Values )
+            foreach( var beh in _behaviours.Values )
             {
                 beh.OnSave( null );
             }
@@ -407,7 +409,7 @@ namespace CameraToolsKatnissified
         {
             Serializer.LoadFields();
 
-            foreach( var beh in Behaviours.Values )
+            foreach( var beh in _behaviours.Values )
             {
                 beh.OnLoad( null );
             }
@@ -461,7 +463,7 @@ namespace CameraToolsKatnissified
         {
             int length = Enum.GetValues( typeof( CameraMode ) ).Length;
 
-            Behaviours[CurrentCameraMode].StopPlaying();
+            _behaviours[CurrentCameraMode].StopPlaying();
 
             CurrentCameraMode = (CameraMode)(((int)CurrentCameraMode + step + length) % length); // adding length unfucks negative modulo
         }
@@ -480,8 +482,8 @@ namespace CameraToolsKatnissified
             PathCameraBehaviour b2 = this.gameObject.AddComponent<PathCameraBehaviour>();
             b1.enabled = false;
 
-            Behaviours[CameraMode.StationaryCamera] = b1;
-            Behaviours[CameraMode.PathCamera] = b2;
+            _behaviours[CameraMode.StationaryCamera] = b1;
+            _behaviours[CameraMode.PathCamera] = b2;
         }
 
         /*OnFloatingOriginShift( Vector3d offset, Vector3d data1 )

@@ -179,7 +179,7 @@ namespace CameraToolsKatnissified.Cameras
 
         public void SelectKeyframe( CameraKeyframe kf )
         {
-            cameraBeh.Behaviours[cameraBeh.CurrentCameraMode].StopPlaying();
+            cameraBeh.CurrentBehaviour.StopPlaying();
 
             CurrentKeyframe = kf;
             cameraBeh.PathKeyframeWindowVisible = true;
@@ -194,9 +194,9 @@ namespace CameraToolsKatnissified.Cameras
 
         public void CreateNewKeyframe()
         {
-            cameraBeh.Behaviours[cameraBeh.CurrentCameraMode].StopPlaying();
+            cameraBeh.CurrentBehaviour.StopPlaying();
             cameraBeh.CurrentCameraMode = CameraMode.PathCamera;
-            cameraBeh.Behaviours[cameraBeh.CurrentCameraMode].StartPlaying();
+            cameraBeh.CurrentBehaviour.StartPlaying();
 
             cameraBeh.PathWindowVisible = false;
 
@@ -225,9 +225,9 @@ namespace CameraToolsKatnissified.Cameras
         /// </summary>
         public void ViewKeyframe( CameraKeyframe keyframe )
         {
-            cameraBeh.Behaviours[cameraBeh.CurrentCameraMode].StopPlaying();
+            cameraBeh.CurrentBehaviour.StopPlaying();
             cameraBeh.CurrentCameraMode = CameraMode.PathCamera;
-            cameraBeh.Behaviours[cameraBeh.CurrentCameraMode].StartPlaying();
+            cameraBeh.CurrentBehaviour.StartPlaying();
 
             cameraBeh.FlightCamera.transform.localPosition = keyframe.Position;
             cameraBeh.FlightCamera.transform.localRotation = keyframe.Rotation;
