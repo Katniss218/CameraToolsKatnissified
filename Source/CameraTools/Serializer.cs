@@ -10,7 +10,7 @@ namespace CameraToolsKatnissified
 {
     public static class Serializer
     {
-        static string SETTINGS_PATH = $"GameData/{CameraToolsBehaviour.DIRECTORY_NAME}/settings.cfg";
+        static string SETTINGS_PATH = $"GameData/{CameraToolsManager.DIRECTORY_NAME}/settings.cfg";
 
         /// <summary>
         /// Saves the settings.
@@ -20,8 +20,8 @@ namespace CameraToolsKatnissified
             ConfigNode fileNode = ConfigNode.Load( SETTINGS_PATH );
             ConfigNode settings = fileNode.GetNode( "CToolsSettings" );
 
-            CameraToolsBehaviour ctb = Object.FindObjectOfType<CameraToolsBehaviour>();
-            var fields = typeof( CameraToolsBehaviour ).GetFields();
+            CameraToolsManager ctb = Object.FindObjectOfType<CameraToolsManager>();
+            var fields = typeof( CameraToolsManager ).GetFields();
 
             foreach( var field in fields )
             {
@@ -44,8 +44,8 @@ namespace CameraToolsKatnissified
             ConfigNode fileNode = ConfigNode.Load( SETTINGS_PATH );
             ConfigNode settings = fileNode.GetNode( "CToolsSettings" );
 
-            CameraToolsBehaviour ctb = Object.FindObjectOfType<CameraToolsBehaviour>();
-            var fields = typeof( CameraToolsBehaviour ).GetFields();
+            CameraToolsManager ctb = Object.FindObjectOfType<CameraToolsManager>();
+            var fields = typeof( CameraToolsManager ).GetFields();
 
             foreach( var field in fields )
             {

@@ -8,20 +8,20 @@ using UnityEngine;
 
 namespace CameraToolsKatnissified
 {
-    public sealed partial class CameraToolsBehaviour
+    public sealed partial class CameraToolsManager
     {
-        const float WINDOW_WIDTH = 250;
-        const float GUI_MARGIN = 12;
-        const float ENTRY_HEIGHT = 20;
+        public const float WINDOW_WIDTH = 250;
+        public const float GUI_MARGIN = 12;
+        public const float ENTRY_HEIGHT = 20;
 
-        Rect _windowRect = new Rect( 0, 0, 0, 0 );
-        float _windowHeight = 400;
-        float _draggableHeight = 40;
+        public Rect _windowRect = new Rect( 0, 0, 0, 0 );
+        public float _windowHeight = 400;
+        public float _draggableHeight = 40;
 
 
         // GUI - the location of the path scroll view.
-        Vector2 _pathScrollPosition;
-        Vector2 _pathSelectScrollPos;
+        public Vector2 _pathScrollPosition;
+        public Vector2 _pathSelectScrollPos;
 
         /// <summary>
         /// Unity Message - Draws GUI
@@ -34,11 +34,11 @@ namespace CameraToolsKatnissified
 
                 if( _pathKeyframeWindowVisible )
                 {
-                    DrawKeyframeEditorWindow();
+                    ((PathCameraBehaviour)Behaviours[CameraMode.PathCamera]).DrawKeyframeEditorWindow();
                 }
                 if( _pathWindowVisible )
                 {
-                    DrawPathSelectorWindow();
+                    ((PathCameraBehaviour)Behaviours[CameraMode.PathCamera]).DrawPathSelectorWindow();
                 }
             }
         }
@@ -133,7 +133,7 @@ namespace CameraToolsKatnissified
 
             if( CurrentCameraMode == CameraMode.StationaryCamera )
             {
-                StationaryCameraBehaviour sb = (StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera];
+                StationaryCameraBehaviour sb = (StationaryCameraBehaviour)Behaviours[CameraMode.StationaryCamera];
 
                 GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Frame of Reference: " + CurrentReferenceMode.ToString(), labelLeftStyle );
                 line++;
@@ -201,12 +201,12 @@ namespace CameraToolsKatnissified
 
             else if( CurrentCameraMode == CameraMode.PathCamera )
             {
-                PathCameraBehaviour sb = (PathCameraBehaviour)_behaviours[CameraMode.PathCamera];
+                PathCameraBehaviour sb = (PathCameraBehaviour)Behaviours[CameraMode.PathCamera];
 
-                if( _currentCameraPathIndex >= 0 )
+                if( sb._currentCameraPathIndex >= 0 )
                 {
                     GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path:" );
-                    CurrentCameraPath.pathName = GUI.TextField( new Rect( GUI_MARGIN + 34, contentTop + (line * ENTRY_HEIGHT), contentWidth - 34, ENTRY_HEIGHT ), CurrentCameraPath.pathName );
+                    sb.CurrentCameraPath.pathName = GUI.TextField( new Rect( GUI_MARGIN + 34, contentTop + (line * ENTRY_HEIGHT), contentWidth - 34, ENTRY_HEIGHT ), sb.CurrentCameraPath.pathName );
                 }
                 else
                 {
@@ -222,30 +222,30 @@ namespace CameraToolsKatnissified
 
                 if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), "New Path" ) )
                 {
-                    CreateNewPath();
+                    sb.CreateNewPath();
                 }
                 if( GUI.Button( new Rect( GUI_MARGIN + (contentWidth / 2), contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), "Delete Path" ) )
                 {
-                    DeletePath( _currentCameraPathIndex );
+                    sb.DeletePath( sb._currentCameraPathIndex );
                 }
                 line++;
 
-                if( _currentCameraPathIndex >= 0 )
+                if( sb._currentCameraPathIndex >= 0 )
                 {
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Interpolation rate: " + CurrentCameraPath.lerpRate.ToString( "0.0" ) );
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Interpolation rate: " + sb.CurrentCameraPath.lerpRate.ToString( "0.0" ) );
                     line++;
-                    CurrentCameraPath.lerpRate = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), CurrentCameraPath.lerpRate, 1f, 15f );
-                    CurrentCameraPath.lerpRate = Mathf.Round( CurrentCameraPath.lerpRate * 10 ) / 10;
-                    line++;
-
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path timescale " + CurrentCameraPath.timeScale.ToString( "0.00" ) );
+                    sb.CurrentCameraPath.lerpRate = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), sb.CurrentCameraPath.lerpRate, 1f, 15f );
+                    sb.CurrentCameraPath.lerpRate = Mathf.Round( sb.CurrentCameraPath.lerpRate * 10 ) / 10;
                     line++;
 
-                    CurrentCameraPath.timeScale = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), CurrentCameraPath.timeScale, 0.05f, 4f );
-                    CurrentCameraPath.timeScale = Mathf.Round( CurrentCameraPath.timeScale * 20 ) / 20;
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path timescale " + sb.CurrentCameraPath.timeScale.ToString( "0.00" ) );
                     line++;
 
-                    float viewHeight = Mathf.Max( 6 * ENTRY_HEIGHT, CurrentCameraPath.keyframeCount * ENTRY_HEIGHT );
+                    sb.CurrentCameraPath.timeScale = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), sb.CurrentCameraPath.timeScale, 0.05f, 4f );
+                    sb.CurrentCameraPath.timeScale = Mathf.Round( sb.CurrentCameraPath.timeScale * 20 ) / 20;
+                    line++;
+
+                    float viewHeight = Mathf.Max( 6 * ENTRY_HEIGHT, sb.CurrentCameraPath.keyframeCount * ENTRY_HEIGHT );
                     Rect scrollRect = new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, 6 * ENTRY_HEIGHT );
                     GUI.Box( scrollRect, string.Empty );
 
@@ -253,12 +253,12 @@ namespace CameraToolsKatnissified
                     _pathScrollPosition = GUI.BeginScrollView( scrollRect, _pathScrollPosition, new Rect( 0, 0, viewContentWidth, viewHeight ) );
 
                     // Draw path keyframe list.
-                    if( CurrentCameraPath.keyframeCount > 0 )
+                    if( sb.CurrentCameraPath.keyframeCount > 0 )
                     {
                         Color origGuiColor = GUI.color;
-                        for( int i = 0; i < CurrentCameraPath.keyframeCount; i++ )
+                        for( int i = 0; i < sb.CurrentCameraPath.keyframeCount; i++ )
                         {
-                            if( i == _currentKeyframeIndex )
+                            if( i == sb._currentKeyframeIndex )
                             {
                                 GUI.color = Color.green;
                             }
@@ -266,14 +266,14 @@ namespace CameraToolsKatnissified
                             {
                                 GUI.color = origGuiColor;
                             }
-                            string kLabel = "#" + i.ToString() + ": " + CurrentCameraPath.GetKeyframe( i ).time.ToString( "0.00" ) + "s";
+                            string kLabel = "#" + i.ToString() + ": " + sb.CurrentCameraPath.GetKeyframe( i ).time.ToString( "0.00" ) + "s";
                             if( GUI.Button( new Rect( 0, (i * ENTRY_HEIGHT), 3 * viewContentWidth / 4, ENTRY_HEIGHT ), kLabel ) )
                             {
-                                SelectKeyframe( i );
+                                sb.SelectKeyframe( i );
                             }
                             if( GUI.Button( new Rect( (3 * contentWidth / 4), (i * ENTRY_HEIGHT), (viewContentWidth / 4) - 20, ENTRY_HEIGHT ), "X" ) )
                             {
-                                DeleteKeyframe( i );
+                                sb.DeleteKeyframe( i );
                                 break;
                             }
                         }
@@ -284,7 +284,7 @@ namespace CameraToolsKatnissified
                     line += 6.5f;
                     if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), 3 * contentWidth / 4, ENTRY_HEIGHT ), "New Key" ) )
                     {
-                        CreateNewKeyframe();
+                        sb.CreateNewKeyframe();
                     }
                 }
             }
@@ -307,95 +307,6 @@ namespace CameraToolsKatnissified
             // fix length
             _windowHeight = contentTop + (line * ENTRY_HEIGHT) + ENTRY_HEIGHT + ENTRY_HEIGHT;
             _windowRect.height = _windowHeight;
-        }
-
-        void DrawKeyframeEditorWindow()
-        {
-            float width = 300;
-            float height = 130;
-
-            Rect kWindowRect = new Rect( _windowRect.x - width, _windowRect.y + 365, width, height );
-            GUI.Box( kWindowRect, string.Empty );
-
-            GUI.BeginGroup( kWindowRect );
-
-            GUI.Label( new Rect( 5, 5, 100, 25 ), $"Keyframe {_currentKeyframeIndex}" );
-
-            if( GUI.Button( new Rect( 105, 5, 180, 25 ), "Revert Pos" ) )
-            {
-                ViewKeyframe( _currentKeyframeIndex );
-            }
-
-            GUI.Label( new Rect( 5, 35, 80, 25 ), "Time: " );
-            _currKeyTimeString = GUI.TextField( new Rect( 100, 35, 195, 25 ), _currKeyTimeString, 16 );
-
-            if( float.TryParse( _currKeyTimeString, out float parsed ) )
-            {
-                _currentKeyframeTime = parsed;
-            }
-
-            bool isApplied = false;
-
-            if( GUI.Button( new Rect( 100, 65, 195, 25 ), "Apply" ) )
-            {
-                Debug.Log( $"Applying keyframe at time: {_currentKeyframeTime}" );
-                CurrentCameraPath.SetTransform( _currentKeyframeIndex, FlightCamera.transform, Zoom, _currentKeyframeTime );
-                isApplied = true;
-            }
-
-            if( GUI.Button( new Rect( 100, 105, 195, 20 ), "Cancel" ) )
-            {
-                isApplied = true;
-            }
-
-            GUI.EndGroup();
-
-            if( isApplied )
-            {
-                DeselectKeyframe();
-            }
-        }
-
-        void DrawPathSelectorWindow()
-        {
-            float width = 300;
-            float height = 300;
-            float indent = 5;
-            float scrollRectSize = width - indent - indent;
-
-            Rect pSelectRect = new Rect( _windowRect.x - width, _windowRect.y + 290, width, height );
-            GUI.Box( pSelectRect, string.Empty );
-
-            GUI.BeginGroup( pSelectRect );
-
-            Rect scrollRect = new Rect( indent, indent, scrollRectSize, scrollRectSize );
-            float scrollHeight = Mathf.Max( scrollRectSize, ENTRY_HEIGHT * _availableCameraPaths.Count );
-            Rect scrollViewRect = new Rect( 0, 0, scrollRectSize - 20, scrollHeight );
-            _pathSelectScrollPos = GUI.BeginScrollView( scrollRect, _pathSelectScrollPos, scrollViewRect );
-
-            bool isAnyPathSelected = false;
-
-            for( int i = 0; i < _availableCameraPaths.Count; i++ )
-            {
-                if( GUI.Button( new Rect( 0, i * ENTRY_HEIGHT, scrollRectSize - 90, ENTRY_HEIGHT ), _availableCameraPaths[i].pathName ) )
-                {
-                    SelectPath( i );
-                    isAnyPathSelected = true;
-                }
-                if( GUI.Button( new Rect( scrollRectSize - 80, i * ENTRY_HEIGHT, 60, ENTRY_HEIGHT ), "Delete" ) )
-                {
-                    DeletePath( i );
-                    break;
-                }
-            }
-
-            GUI.EndScrollView();
-
-            GUI.EndGroup();
-            if( isAnyPathSelected )
-            {
-                _pathWindowVisible = false;
-            }
         }
     }
 }

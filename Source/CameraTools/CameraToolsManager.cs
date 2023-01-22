@@ -11,13 +11,13 @@ namespace CameraToolsKatnissified
     /// The main class controlling the camera.
     /// </summary>
     [KSPAddon( KSPAddon.Startup.Flight, false )]
-    public sealed partial class CameraToolsBehaviour : MonoBehaviour
+    public sealed partial class CameraToolsManager : MonoBehaviour
     {
         public const string DIRECTORY_NAME = "CameraToolsKatnissified";
 
         public static string pathSaveURL = $"GameData/{DIRECTORY_NAME}/paths.cfg";
 
-        public static CameraToolsBehaviour Instance { get; set; }
+        public static CameraToolsManager Instance { get; set; }
 
         // GUI
         /// <summary>
@@ -34,12 +34,12 @@ namespace CameraToolsKatnissified
         [field: PersistentField]
         public CameraMode CurrentCameraMode { get; set; } = CameraMode.StationaryCamera;
 
-        private Dictionary<CameraMode, CameraBehaviour> _behaviours = new Dictionary<CameraMode, CameraBehaviour>();
+        public Dictionary<CameraMode, CameraBehaviour> Behaviours = new Dictionary<CameraMode, CameraBehaviour>();
 
         /// <summary>
         /// True if the CameraTools camera is active.
         /// </summary>
-        bool CameraToolsActive => _behaviours[CurrentCameraMode].enabled && _behaviours[CurrentCameraMode].IsPlaying;
+        public bool CameraToolsActive => Behaviours[CurrentCameraMode].enabled && Behaviours[CurrentCameraMode].IsPlaying;
 
         [field: PersistentField]
         public CameraReference CurrentReferenceMode { get; set; } = CameraReference.Surface;
@@ -122,30 +122,8 @@ namespace CameraToolsKatnissified
 
         float _cameraShakeMagnitude = 0.0f;
 
-        //pathing
-        public int _currentCameraPathIndex = -1;
-        public List<CameraPath> _availableCameraPaths;
-
-        public CameraPath CurrentCameraPath
-        {
-            get
-            {
-                if( _currentCameraPathIndex >= 0 && _currentCameraPathIndex < _availableCameraPaths.Count )
-                {
-                    return _availableCameraPaths[_currentCameraPathIndex];
-                }
-
-                return null;
-            }
-        }
-
-#warning TODO - probably better to edit the reference inside the list in-place.
-        public int _currentKeyframeIndex = -1; // setting/editing the path keyframe?
-        public float _currentKeyframeTime;
-        public string _currKeyTimeString;
-
-        bool _pathWindowVisible = false;
-        bool _pathKeyframeWindowVisible = false;
+        public bool _pathWindowVisible = false;
+        public bool _pathKeyframeWindowVisible = false;
 
         bool _settingPositionEnabled;
         bool _settingTargetEnabled;
@@ -159,6 +137,8 @@ namespace CameraToolsKatnissified
             }
 
             Instance = this;
+
+            SetBehaviours();
 
             LoadAndDeserialize();
         }
@@ -186,8 +166,6 @@ namespace CameraToolsKatnissified
                 CameraPivot.transform.position = FlightGlobals.ActiveVessel.transform.position;
             }
 
-            SetBehaviours();
-
             GameEvents.onVesselChange.Add( SwitchToVessel );
         }
 
@@ -208,7 +186,7 @@ namespace CameraToolsKatnissified
                 StartCamera();
                 if( CurrentCameraMode == CameraMode.PathCamera )
                 {
-                    ((PathCameraBehaviour)_behaviours[CurrentCameraMode]).StartPlayingPath();
+                    ((PathCameraBehaviour)Behaviours[CurrentCameraMode]).StartPlayingPath();
                 }
             }
             if( Input.GetKeyDown( KeyCode.End ) )
@@ -229,7 +207,7 @@ namespace CameraToolsKatnissified
                 Part newTarget = Utils.GetPartFromMouse();
                 if( newTarget != null )
                 {
-                    ((StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera]).StationaryCameraTarget = newTarget;
+                    ((StationaryCameraBehaviour)Behaviours[CameraMode.StationaryCamera]).StationaryCameraTarget = newTarget;
                 }
             }
 
@@ -241,7 +219,7 @@ namespace CameraToolsKatnissified
                 Vector3? newPosition = Utils.GetPosFromMouse();
                 if( newPosition != null )
                 {
-                    ((StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera]).StationaryCameraPosition = newPosition;
+                    ((StationaryCameraBehaviour)Behaviours[CameraMode.StationaryCamera]).StationaryCameraPosition = newPosition;
                 }
             }
         }
@@ -308,7 +286,7 @@ namespace CameraToolsKatnissified
                 }
             }
 
-            _behaviours[CurrentCameraMode].StartPlaying();
+            Behaviours[CurrentCameraMode].StartPlaying();
         }
 
         /// <summary>
@@ -331,7 +309,7 @@ namespace CameraToolsKatnissified
             FlightCamera.ActivateUpdate();
             CurrentFov = 60;
 
-            _behaviours[CurrentCameraMode].StopPlaying();
+            Behaviours[CurrentCameraMode].StopPlaying();
         }
 
         void TogglePathList()
@@ -433,7 +411,10 @@ namespace CameraToolsKatnissified
             ConfigNode pathsNode = pathFileNode.GetNode( "CAMERAPATHS" );
             pathsNode.RemoveNodes( "CAMERAPATH" );
 
-            foreach( var path in _availableCameraPaths )
+#warning TODO - add a method like that to the camera behaviour instead.
+            var pathCam = (PathCameraBehaviour)Behaviours[CameraMode.PathCamera];
+
+            foreach( var path in pathCam._availableCameraPaths )
             {
                 path.Save( pathsNode );
             }
@@ -444,14 +425,16 @@ namespace CameraToolsKatnissified
         {
             Serializer.LoadFields();
 
-            DeselectKeyframe();
-            _currentCameraPathIndex = -1;
-            _availableCameraPaths = new List<CameraPath>();
+            var pathCam = (PathCameraBehaviour)Behaviours[CameraMode.PathCamera];
+
+            pathCam.DeselectKeyframe();
+            pathCam._currentCameraPathIndex = -1;
+            pathCam._availableCameraPaths = new List<CameraPath>();
             ConfigNode pathFileNode = ConfigNode.Load( pathSaveURL );
 
             foreach( var node in pathFileNode.GetNode( "CAMERAPATHS" ).GetNodes( "CAMERAPATH" ) )
             {
-                _availableCameraPaths.Add( CameraPath.Load( node ) );
+                pathCam._availableCameraPaths.Add( CameraPath.Load( node ) );
             }
         }
 
@@ -503,7 +486,7 @@ namespace CameraToolsKatnissified
         {
             int length = Enum.GetValues( typeof( CameraMode ) ).Length;
 
-            _behaviours[CurrentCameraMode].StopPlaying();
+            Behaviours[CurrentCameraMode].StopPlaying();
 
             CurrentCameraMode = (CameraMode)(((int)CurrentCameraMode + step + length) % length); // adding length unfucks negative modulo
         }
@@ -522,8 +505,8 @@ namespace CameraToolsKatnissified
             PathCameraBehaviour b2 = this.gameObject.AddComponent<PathCameraBehaviour>();
             b1.enabled = false;
 
-            _behaviours[CameraMode.StationaryCamera] = b1;
-            _behaviours[CameraMode.PathCamera] = b2;
+            Behaviours[CameraMode.StationaryCamera] = b1;
+            Behaviours[CameraMode.PathCamera] = b2;
         }
 
         /*OnFloatingOriginShift( Vector3d offset, Vector3d data1 )
@@ -539,104 +522,6 @@ namespace CameraToolsKatnissified
         public void SwitchToVessel( Vessel vessel )
         {
             ActiveVessel = vessel;
-        }
-
-        public void CreateNewPath()
-        {
-            _pathKeyframeWindowVisible = false;
-            _availableCameraPaths.Add( new CameraPath() );
-            _currentCameraPathIndex = _availableCameraPaths.Count - 1;
-        }
-
-        public void DeletePath( int index )
-        {
-            if( index < 0 || index >= _availableCameraPaths.Count )
-            {
-                return;
-            }
-
-            _availableCameraPaths.RemoveAt( index );
-            _currentCameraPathIndex = -1;
-        }
-
-        public void SelectPath( int index )
-        {
-            _currentCameraPathIndex = index;
-        }
-
-        public void SelectKeyframe( int index )
-        {
-            _behaviours[CurrentCameraMode].StopPlaying();
-
-            _currentKeyframeIndex = index;
-            UpdateCurrentKeyframeValues();
-            _pathKeyframeWindowVisible = true;
-            ViewKeyframe( _currentKeyframeIndex );
-        }
-
-        public void DeselectKeyframe()
-        {
-            _currentKeyframeIndex = -1;
-            _pathKeyframeWindowVisible = false;
-        }
-
-        public void UpdateCurrentKeyframeValues()
-        {
-            if( CurrentCameraPath == null || _currentKeyframeIndex < 0 || _currentKeyframeIndex >= CurrentCameraPath.keyframeCount )
-            {
-                return;
-            }
-
-            CameraKeyframe currentKey = CurrentCameraPath.GetKeyframe( _currentKeyframeIndex );
-            _currentKeyframeTime = currentKey.time;
-
-            _currKeyTimeString = _currentKeyframeTime.ToString();
-        }
-
-        public void CreateNewKeyframe()
-        {
-            _behaviours[CurrentCameraMode].StopPlaying();
-            CurrentCameraMode = CameraMode.PathCamera;
-            _behaviours[CurrentCameraMode].StartPlaying();
-
-            _pathWindowVisible = false;
-
-            float time = CurrentCameraPath.keyframeCount > 0 ? CurrentCameraPath.GetKeyframe( CurrentCameraPath.keyframeCount - 1 ).time + 1 : 0;
-            CurrentCameraPath.AddTransform( FlightCamera.transform, Zoom, time );
-            SelectKeyframe( CurrentCameraPath.keyframeCount - 1 );
-
-            if( CurrentCameraPath.keyframeCount > 6 )
-            {
-                _pathScrollPosition.y += ENTRY_HEIGHT;
-            }
-        }
-
-        public void DeleteKeyframe( int index )
-        {
-            CurrentCameraPath.RemoveKeyframe( index );
-            if( index == _currentKeyframeIndex )
-            {
-                DeselectKeyframe();
-            }
-            if( CurrentCameraPath.keyframeCount > 0 && _currentKeyframeIndex >= 0 )
-            {
-                SelectKeyframe( Mathf.Clamp( _currentKeyframeIndex, 0, CurrentCameraPath.keyframeCount - 1 ) );
-            }
-        }
-
-        /// <summary>
-        /// Positions the camera at the keyframe.
-        /// </summary>
-        public void ViewKeyframe( int index )
-        {
-            _behaviours[CurrentCameraMode].StopPlaying();
-            CurrentCameraMode = CameraMode.PathCamera;
-            _behaviours[CurrentCameraMode].StartPlaying();
-
-            CameraKeyframe currentKey = CurrentCameraPath.GetKeyframe( index );
-            FlightCamera.transform.localPosition = currentKey.position;
-            FlightCamera.transform.localRotation = currentKey.rotation;
-            Zoom = currentKey.zoom;
         }
     }
 }

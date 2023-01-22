@@ -128,7 +128,7 @@ namespace CameraToolsKatnissified.Cameras
                 cameraBeh.ManualPosition += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
             }
 
-            cameraBeh.ManualPosition += cameraBeh.UpDirection * CameraToolsBehaviour.SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
+            cameraBeh.ManualPosition += cameraBeh.UpDirection * CameraToolsManager.SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
 
             // autoFov
             if( HasTarget && cameraBeh.UseAutoZoom )

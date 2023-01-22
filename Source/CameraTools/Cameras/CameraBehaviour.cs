@@ -9,7 +9,7 @@ namespace CameraToolsKatnissified.Cameras
 {
     public abstract class CameraBehaviour : MonoBehaviour
     {
-        protected CameraToolsBehaviour cameraBeh;
+        protected CameraToolsManager cameraBeh;
 
         /// <summary>
         /// True if the camera behaviour is currently controlling the camera (playing). False otherwise.
@@ -55,7 +55,7 @@ namespace CameraToolsKatnissified.Cameras
 
         protected virtual void Awake()
         {
-            cameraBeh = this.GetComponent<CameraToolsBehaviour>();
+            cameraBeh = this.GetComponent<CameraToolsManager>();
         }
 
         protected virtual void FixedUpdate()
