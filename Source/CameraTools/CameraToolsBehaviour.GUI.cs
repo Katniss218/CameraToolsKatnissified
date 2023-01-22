@@ -114,7 +114,7 @@ namespace CameraToolsKatnissified
             }
             line++;
 
-            if( CurrentCameraMode != CameraMode.Pathing )
+            if( CurrentCameraMode != CameraMode.PathCamera )
             {
                 UseAutoZoom = GUI.Toggle( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), UseAutoZoom, "Auto Zoom" );//, leftLabel);
                 line++;
@@ -133,7 +133,7 @@ namespace CameraToolsKatnissified
 
             if( CurrentCameraMode == CameraMode.StationaryCamera )
             {
-                StationaryCameraBehaviour sb = (StationaryCameraBehaviour)_behaviour;
+                StationaryCameraBehaviour sb = (StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera];
 
                 GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Frame of Reference: " + CurrentReferenceMode.ToString(), labelLeftStyle );
                 line++;
@@ -200,9 +200,9 @@ namespace CameraToolsKatnissified
 
             // Draw pathing camera GUI.
 
-            else if( CurrentCameraMode == CameraMode.Pathing )
+            else if( CurrentCameraMode == CameraMode.PathCamera )
             {
-                PathCameraBehaviour pb = (PathCameraBehaviour)_behaviour;
+                PathCameraBehaviour sb = (PathCameraBehaviour)_behaviours[CameraMode.PathCamera];
 
                 if( _currentCameraPathIndex >= 0 )
                 {

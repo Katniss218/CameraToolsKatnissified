@@ -12,6 +12,7 @@ namespace CameraToolsKatnissified.Cameras
 
         protected override void OnStart()
         {
+            Debug.Log( "[CTK] Path Camera Active" );
             if( FlightGlobals.ActiveVessel != null )
             {
                 cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position + cameraBeh.ActiveVessel.rb_velocity * Time.fixedDeltaTime;
@@ -27,8 +28,9 @@ namespace CameraToolsKatnissified.Cameras
             }
         }
 
-        public void StartPlayingPathCamera()
+        public void StartPlayingPath()
         {
+            Debug.Log( "Path Camera Now Playing Path" );
             if( cameraBeh._currentCameraPathIndex < 0 || cameraBeh.CurrentCameraPath.keyframeCount <= 0 )
             {
                 cameraBeh.EndCamera();
@@ -47,6 +49,7 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.FlightCamera.transform.localRotation = firstFrame.rotation;
             cameraBeh.Zoom = firstFrame.zoom;
 
+            isPlaying = true;
             IsPlayingPath = true;
 
             // initialize the rotation on start, but don't update it so if the rocket rolls, the camera won't follow it.
@@ -103,6 +106,11 @@ namespace CameraToolsKatnissified.Cameras
                 cameraBeh.CurrentFov = Mathf.Lerp( cameraBeh.CurrentFov, cameraBeh.ManualFov, 0.1f );
                 cameraBeh.FlightCamera.SetFoV( cameraBeh.CurrentFov );
             }
+        }
+
+        protected override void OnStop()
+        {
+            IsPlayingPath = false;
         }
     }
 }

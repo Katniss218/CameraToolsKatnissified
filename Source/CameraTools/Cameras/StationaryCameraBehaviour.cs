@@ -11,6 +11,7 @@ namespace CameraToolsKatnissified.Cameras
     {
         protected override void OnStart()
         {
+            Debug.Log( "[CTK] Stationary Camera Active" );
             Debug.Log( "flightCamera position init: " + cameraBeh.FlightCamera.transform.position );
 
             if( FlightGlobals.ActiveVessel != null )
@@ -164,6 +165,11 @@ namespace CameraToolsKatnissified.Cameras
 
                 cameraBeh.UpdateCameraShakeMagnitude();
             }
+        }
+
+        protected override void OnStop()
+        {
+
         }
     }
 }

@@ -34,6 +34,13 @@ namespace CameraToolsKatnissified
         [field: PersistentField]
         public CameraMode CurrentCameraMode { get; set; } = CameraMode.StationaryCamera;
 
+        private Dictionary<CameraMode, CameraBehaviour> _behaviours = new Dictionary<CameraMode, CameraBehaviour>();
+
+        /// <summary>
+        /// True if the CameraTools camera is active.
+        /// </summary>
+        bool CameraToolsActive => _behaviours[CurrentCameraMode].enabled && _behaviours[CurrentCameraMode].IsPlaying;
+
         [field: PersistentField]
         public CameraReference CurrentReferenceMode { get; set; } = CameraReference.Surface;
 
@@ -73,12 +80,6 @@ namespace CameraToolsKatnissified
         public GameObject CameraPivot { get; set; }
 
         public FlightCamera FlightCamera { get; set; }
-
-        private CameraBehaviour _behaviour;
-        /// <summary>
-        /// True if the CameraTools camera is active.
-        /// </summary>
-        bool CameraToolsActive => _behaviour != null;
 
         float _startCameraTimestamp;
         public float TimeSinceStart
@@ -196,8 +197,7 @@ namespace CameraToolsKatnissified
                 CameraPivot.transform.position = FlightGlobals.ActiveVessel.transform.position;
             }
 
-#error TODO - mod doesn't work. For some reason the camera starts bugged and later refuses to disable/enable itself.
-            AddBehaviour();
+            SetBehaviours();
 
             GameEvents.onVesselChange.Add( SwitchToVessel );
         }
@@ -217,9 +217,9 @@ namespace CameraToolsKatnissified
             if( Input.GetKeyDown( KeyCode.Home ) )
             {
                 StartCamera();
-                if( _behaviour != null && _behaviour is PathCameraBehaviour behaviour )
+                if( CurrentCameraMode == CameraMode.PathCamera )
                 {
-                    behaviour.StartPlayingPathCamera();
+                    ((PathCameraBehaviour)_behaviours[CurrentCameraMode]).StartPlayingPath();
                 }
             }
             if( Input.GetKeyDown( KeyCode.End ) )
@@ -260,6 +260,7 @@ namespace CameraToolsKatnissified
         void LateUpdate()
         {
             //retain pos and rot after vessel destruction
+            // This will fuck the camera is called when CT is not supposed to be active.
             if( CameraToolsActive && FlightCamera.transform.parent != CameraPivot.transform )
             {
                 FlightCamera.SetTargetNone();
@@ -318,7 +319,7 @@ namespace CameraToolsKatnissified
                 }
             }
 
-            _behaviour.StartPlaying();
+            _behaviours[CurrentCameraMode].StartPlaying();
         }
 
         /// <summary>
@@ -341,7 +342,7 @@ namespace CameraToolsKatnissified
             FlightCamera.ActivateUpdate();
             CurrentFov = 60;
 
-            GameObject.Destroy( _behaviour );
+            _behaviours[CurrentCameraMode].StopPlaying();
         }
 
         void TogglePathList()
@@ -508,6 +509,15 @@ namespace CameraToolsKatnissified
             _uiVisible = false;
         }
 
+        void CycleToolMode( int step )
+        {
+            int length = Enum.GetValues( typeof( CameraMode ) ).Length;
+
+            _behaviours[CurrentCameraMode].StopPlaying();
+
+            CurrentCameraMode = (CameraMode)(((int)CurrentCameraMode + step + length) % length); // adding length unfucks negative modulo
+        }
+
         void CycleReferenceMode( int step )
         {
             int length = Enum.GetValues( typeof( CameraReference ) ).Length;
@@ -515,32 +525,15 @@ namespace CameraToolsKatnissified
             CurrentReferenceMode = (CameraReference)(((int)CurrentReferenceMode + step + length) % length); // adding length unfucks negative modulo
         }
 
-        void CycleToolMode( int step )
+        void SetBehaviours()
         {
-            int length = Enum.GetValues( typeof( CameraMode ) ).Length;
+            StationaryCameraBehaviour b1 = this.gameObject.AddComponent<StationaryCameraBehaviour>();
+            b1.enabled = false;
+            PathCameraBehaviour b2 = this.gameObject.AddComponent<PathCameraBehaviour>();
+            b1.enabled = false;
 
-            CurrentCameraMode = (CameraMode)(((int)CurrentCameraMode + step + length) % length); // adding length unfucks negative modulo
-            AddBehaviour();
-        }
-
-        /// <summary>
-        /// Adds the camera behaviour for the corresponding selected camera mode.
-        /// </summary>
-        void AddBehaviour()
-        {
-            if( _behaviour != null )
-            {
-                Destroy( _behaviour );
-            }
-
-            if( CurrentCameraMode == CameraMode.StationaryCamera )
-            {
-                _behaviour = this.gameObject.AddComponent<StationaryCameraBehaviour>();
-            }
-            else if( CurrentCameraMode == CameraMode.Pathing )
-            {
-                _behaviour = this.gameObject.AddComponent<PathCameraBehaviour>();
-            }
+            _behaviours[CameraMode.StationaryCamera] = b1;
+            _behaviours[CameraMode.PathCamera] = b2;
         }
 
         /*OnFloatingOriginShift( Vector3d offset, Vector3d data1 )
@@ -583,15 +576,7 @@ namespace CameraToolsKatnissified
 
         public void SelectKeyframe( int index )
         {
-            //if( _isPlayingPath )
-            //{
-            //    StopPlayingPathCamera();
-            //}
-            if( _behaviour != null && _behaviour is PathCameraBehaviour )
-            {
-                PathCameraBehaviour b = (PathCameraBehaviour)_behaviour;
-                b.IsPlayingPath = false;
-            }
+            _behaviours[CurrentCameraMode].StopPlaying();
 
             _currentKeyframeIndex = index;
             UpdateCurrentKeyframeValues();
@@ -620,15 +605,9 @@ namespace CameraToolsKatnissified
 
         public void CreateNewKeyframe()
         {
-            //if( !CameraToolsActive )
-            //{
-            //    StartPathCamera();
-            // }
-            if( _behaviour == null )
-            {
-                _behaviour = this.gameObject.AddComponent<PathCameraBehaviour>();
-                ((PathCameraBehaviour)_behaviour).IsPlayingPath = false;
-            }
+            _behaviours[CurrentCameraMode].StopPlaying();
+            CurrentCameraMode = CameraMode.PathCamera;
+            _behaviours[CurrentCameraMode].StartPlaying();
 
             _pathWindowVisible = false;
 
@@ -660,15 +639,9 @@ namespace CameraToolsKatnissified
         /// </summary>
         public void ViewKeyframe( int index )
         {
-            //if( !CameraToolsActive )
-            //{
-            //    StartPathCamera();
-            //}
-            if( _behaviour == null )
-            {
-                _behaviour = this.gameObject.AddComponent<PathCameraBehaviour>();
-                ((PathCameraBehaviour)_behaviour).IsPlayingPath = false;
-            }
+            _behaviours[CurrentCameraMode].StopPlaying();
+            CurrentCameraMode = CameraMode.PathCamera;
+            _behaviours[CurrentCameraMode].StartPlaying();
 
             CameraKeyframe currentKey = CurrentCameraPath.GetKeyframe( index );
             FlightCamera.transform.localPosition = currentKey.position;

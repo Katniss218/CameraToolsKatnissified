@@ -4,6 +4,6 @@ namespace CameraToolsKatnissified
     public enum CameraMode
     {
         StationaryCamera = 0,
-        Pathing = 1
+        PathCamera = 1
     }
 }
