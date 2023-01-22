@@ -52,13 +52,14 @@ namespace CameraToolsKatnissified
             {
                 _windowRect = GUI.Window( 320, _windowRect, DrawGuiWindow, "" );
 
+#warning TODO - each behaviour should draw itself, instead of having CameraToolsManager draw them. Just call the current behaviour to be drawn. And then setting the target by click, would also happen in the behaviour.
                 if( PathKeyframeWindowVisible )
                 {
-                    ((PathCameraBehaviour)_behaviours[CameraMode.PathCamera]).DrawKeyframeEditorWindow();
+                    GetBehaviour<PathCameraBehaviour>().DrawKeyframeEditorWindow();
                 }
                 if( PathWindowVisible )
                 {
-                    ((PathCameraBehaviour)_behaviours[CameraMode.PathCamera]).DrawPathSelectorWindow();
+                    GetBehaviour<PathCameraBehaviour>().DrawPathSelectorWindow();
                 }
             }
         }
@@ -79,7 +80,7 @@ namespace CameraToolsKatnissified
             line++;
 
             //tool mode switcher
-            GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), $"Tool: {CurrentCameraMode}", HeaderStyle );
+            GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), $"Tool: {CurrentBehaviour.GetType().Name}", HeaderStyle );
             line++;
             if( !CameraToolsActive )
             {
@@ -111,7 +112,7 @@ namespace CameraToolsKatnissified
             }
             line++;
 
-            if( CurrentCameraMode != CameraMode.PathCamera )
+            if( !(CurrentBehaviour is PathCameraBehaviour) )
             {
                 UseAutoZoom = GUI.Toggle( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), UseAutoZoom, "Auto Zoom" );
                 line++;
@@ -128,19 +129,17 @@ namespace CameraToolsKatnissified
 
             // Draw Stationary Camera GUI
 
-            if( CurrentCameraMode == CameraMode.StationaryCamera )
+            if( CurrentBehaviour is StationaryCameraBehaviour sb )
             {
-                StationaryCameraBehaviour sb = (StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera];
-
                 GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), $"Frame of Reference: {CurrentReferenceMode}" );
                 line++;
                 if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
                 {
-                    CycleReferenceMode( -1 );
+                    CurrentReferenceMode = Utils.CycleEnum( CurrentReferenceMode, -1 );
                 }
                 if( GUI.Button( new Rect( GUI_MARGIN + 25 + 4, contentTop + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), ">" ) )
                 {
-                    CycleReferenceMode( 1 );
+                    CurrentReferenceMode = Utils.CycleEnum( CurrentReferenceMode, 1 );
                 }
 
                 line++;
@@ -196,14 +195,12 @@ namespace CameraToolsKatnissified
 
             // Draw pathing camera GUI.
 
-            else if( CurrentCameraMode == CameraMode.PathCamera )
+            else if( CurrentBehaviour is PathCameraBehaviour pb )
             {
-                PathCameraBehaviour sb = (PathCameraBehaviour)_behaviours[CameraMode.PathCamera];
-
-                if( sb.CurrentPath != null )
+                if( pb.CurrentPath != null )
                 {
                     GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path:" );
-                    sb.CurrentPath.PathName = GUI.TextField( new Rect( GUI_MARGIN + 34, contentTop + (line * ENTRY_HEIGHT), contentWidth - 34, ENTRY_HEIGHT ), sb.CurrentPath.PathName );
+                    pb.CurrentPath.PathName = GUI.TextField( new Rect( GUI_MARGIN + 34, contentTop + (line * ENTRY_HEIGHT), contentWidth - 34, ENTRY_HEIGHT ), pb.CurrentPath.PathName );
                 }
                 else
                 {
@@ -219,41 +216,41 @@ namespace CameraToolsKatnissified
 
                 if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), "New Path" ) )
                 {
-                    sb.CreateNewPath();
+                    pb.CreateNewPath();
                 }
                 if( GUI.Button( new Rect( GUI_MARGIN + (contentWidth / 2), contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), "Delete Path" ) )
                 {
-                    sb.DeletePath( sb.CurrentPath );
+                    pb.DeletePath( pb.CurrentPath );
                 }
                 line++;
 
-                if( sb.CurrentPath != null )
+                if( pb.CurrentPath != null )
                 {
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Interpolation Rate:" + sb.CurrentPath.LerpRate.ToString( "0.0" ) );
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Interpolation Rate:" + pb.CurrentPath.LerpRate.ToString( "0.0" ) );
                     line++;
-                    sb.CurrentPath.LerpRate = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), sb.CurrentPath.LerpRate, 1f, 15f );
-                    sb.CurrentPath.LerpRate = Mathf.Round( sb.CurrentPath.LerpRate * 10 ) / 10;
-                    line++;
-
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path Timescale:" + sb.CurrentPath.TimeScale.ToString( "0.00" ) );
-                    line++;
-                    sb.CurrentPath.TimeScale = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), sb.CurrentPath.TimeScale, 0.05f, 4f );
-                    sb.CurrentPath.TimeScale = Mathf.Round( sb.CurrentPath.TimeScale * 20 ) / 20;
+                    pb.CurrentPath.LerpRate = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), pb.CurrentPath.LerpRate, 1f, 15f );
+                    pb.CurrentPath.LerpRate = Mathf.Round( pb.CurrentPath.LerpRate * 10 ) / 10;
                     line++;
 
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path Frame:" + sb.CurrentPath.Frame.ToString() );
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path Timescale:" + pb.CurrentPath.TimeScale.ToString( "0.00" ) );
+                    line++;
+                    pb.CurrentPath.TimeScale = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), pb.CurrentPath.TimeScale, 0.05f, 4f );
+                    pb.CurrentPath.TimeScale = Mathf.Round( pb.CurrentPath.TimeScale * 20 ) / 20;
+                    line++;
+
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path Frame:" + pb.CurrentPath.Frame.ToString() );
                     line++;
                     if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
                     {
-                        sb.CurrentPath.Frame = Utils.CycleEnum( sb.CurrentPath.Frame, -1 );
+                        pb.CurrentPath.Frame = Utils.CycleEnum( pb.CurrentPath.Frame, -1 );
                     }
                     if( GUI.Button( new Rect( GUI_MARGIN + 25 + 4, contentTop + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), ">" ) )
                     {
-                        sb.CurrentPath.Frame = Utils.CycleEnum( sb.CurrentPath.Frame, 1 );
+                        pb.CurrentPath.Frame = Utils.CycleEnum( pb.CurrentPath.Frame, 1 );
                     }
                     line++;
 
-                    float viewHeight = Mathf.Max( 6 * ENTRY_HEIGHT, sb.CurrentPath.keyframeCount * ENTRY_HEIGHT );
+                    float viewHeight = Mathf.Max( 6 * ENTRY_HEIGHT, pb.CurrentPath.keyframeCount * ENTRY_HEIGHT );
                     Rect scrollRect = new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, 6 * ENTRY_HEIGHT );
                     GUI.Box( scrollRect, string.Empty );
 
@@ -261,12 +258,12 @@ namespace CameraToolsKatnissified
                     _pathScrollPosition = GUI.BeginScrollView( scrollRect, _pathScrollPosition, new Rect( 0, 0, viewContentWidth, viewHeight ) );
 
                     // Draw path keyframe list.
-                    if( sb.CurrentPath.keyframeCount > 0 )
+                    if( pb.CurrentPath.keyframeCount > 0 )
                     {
                         Color origGuiColor = GUI.color;
-                        for( int i = 0; i < sb.CurrentPath.keyframeCount; i++ )
+                        for( int i = 0; i < pb.CurrentPath.keyframeCount; i++ )
                         {
-                            if( sb.CurrentPath.GetKeyframe( i ) == sb.CurrentKeyframe )
+                            if( pb.CurrentPath.GetKeyframe( i ) == pb.CurrentKeyframe )
                             {
                                 GUI.color = Color.green;
                             }
@@ -274,14 +271,14 @@ namespace CameraToolsKatnissified
                             {
                                 GUI.color = origGuiColor;
                             }
-                            string kLabel = "#" + i.ToString() + ": " + sb.CurrentPath.GetKeyframe( i ).Time.ToString( "0.00" ) + "s";
+                            string kLabel = "#" + i.ToString() + ": " + pb.CurrentPath.GetKeyframe( i ).Time.ToString( "0.00" ) + "s";
                             if( GUI.Button( new Rect( 0, (i * ENTRY_HEIGHT), 3 * viewContentWidth / 4, ENTRY_HEIGHT ), kLabel ) )
                             {
-                                sb.SelectKeyframe( sb.CurrentPath.GetKeyframe( i ) );
+                                pb.SelectKeyframe( pb.CurrentPath.GetKeyframe( i ) );
                             }
                             if( GUI.Button( new Rect( (3 * contentWidth / 4), (i * ENTRY_HEIGHT), (viewContentWidth / 4) - 20, ENTRY_HEIGHT ), "X" ) )
                             {
-                                sb.DeleteKeyframe( sb.CurrentPath.GetKeyframe( i ) );
+                                pb.DeleteKeyframe( pb.CurrentPath.GetKeyframe( i ) );
                                 break;
                             }
                         }
@@ -292,7 +289,7 @@ namespace CameraToolsKatnissified
                     line += 6.5f;
                     if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), 3 * contentWidth / 4, ENTRY_HEIGHT ), "New Key" ) )
                     {
-                        sb.CreateNewKeyframe();
+                        pb.CreateNewKeyframe();
                     }
                 }
             }

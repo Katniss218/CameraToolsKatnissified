@@ -93,11 +93,16 @@ namespace CameraToolsKatnissified.Cameras
                     }
                     cameraBeh.FlightCamera.transform.position += cameraVelocity * Time.fixedDeltaTime;
                 }
-#warning TODO - add the velocity direction mode here.
             }
 
             //mouse panning, moving
             Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, cameraBeh.UpDirection ) * cameraBeh.FlightCamera.transform.right).normalized;
+
+
+#warning TODO - this panning and stuff would be a separate controller, playercamera, which could be locked from the playing behaviour, e.g. preventing you from moving a path camera.
+            // add the velocity direction mode there too.
+            // this user controller would interact with a dedicated user offset gameobject.
+
 
             if( Input.GetKey( KeyCode.Mouse1 ) ) // right mouse
             {

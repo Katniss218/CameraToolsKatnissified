@@ -211,7 +211,7 @@ namespace CameraToolsKatnissified.Cameras
         public void CreateNewKeyframe()
         {
             cameraBeh.CurrentBehaviour.StopPlaying();
-            cameraBeh.CurrentCameraMode = CameraMode.PathCamera;
+            cameraBeh.SetBehaviour<PathCameraBehaviour>();
             cameraBeh.CurrentBehaviour.StartPlaying();
 
             cameraBeh.PathWindowVisible = false;
@@ -242,13 +242,15 @@ namespace CameraToolsKatnissified.Cameras
         public void ViewKeyframe( CameraKeyframe keyframe )
         {
             cameraBeh.CurrentBehaviour.StopPlaying();
-            cameraBeh.CurrentCameraMode = CameraMode.PathCamera;
+            cameraBeh.SetBehaviour<PathCameraBehaviour>();
             cameraBeh.CurrentBehaviour.StartPlaying();
 
             cameraBeh.FlightCamera.transform.localPosition = keyframe.Position;
             cameraBeh.FlightCamera.transform.localRotation = keyframe.Rotation;
             cameraBeh.Zoom = keyframe.Zoom;
         }
+
+#warning TODO - pathing camera variant with a target object instead of rotation key. (the key could still exist, but setting target overrides it).
 
 
         public void DrawKeyframeEditorWindow()

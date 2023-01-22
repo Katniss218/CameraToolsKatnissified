@@ -31,16 +31,40 @@ namespace CameraToolsKatnissified
         static bool _uiVisible = true;
 
         [field: PersistentField]
-        public CameraMode CurrentCameraMode { get; set; } = CameraMode.StationaryCamera;
+        private int _currentBehaviourIndex = 0;
 
-        public CameraBehaviour CurrentBehaviour { get => _behaviours[CurrentCameraMode]; }
+        public CameraBehaviour CurrentBehaviour { get => _behaviours[_currentBehaviourIndex]; }
 
-        Dictionary<CameraMode, CameraBehaviour> _behaviours = new Dictionary<CameraMode, CameraBehaviour>();
+        CameraBehaviour[] _behaviours;
+
+        public T GetBehaviour<T>() where T : CameraBehaviour
+        {
+            foreach( var b in _behaviours )
+            {
+                if( b is T bt )
+                {
+                    return bt;
+                }
+            }
+            return null;
+        }
+
+        public void SetBehaviour<T>() where T : CameraBehaviour
+        {
+            for( int i = 0; i < _behaviours.Length; i++ )
+            {
+                if( _behaviours[i] is T )
+                {
+                    _currentBehaviourIndex = i;
+                    return;
+                }
+            }
+        }
 
         /// <summary>
         /// True if the CameraTools camera is active.
         /// </summary>
-        public bool CameraToolsActive => _behaviours[CurrentCameraMode].enabled && _behaviours[CurrentCameraMode].IsPlaying;
+        public bool CameraToolsActive => CurrentBehaviour.enabled && CurrentBehaviour.IsPlaying;
 
         [field: PersistentField]
         public CameraReference CurrentReferenceMode { get; set; } = CameraReference.Surface;
@@ -132,6 +156,12 @@ namespace CameraToolsKatnissified
             }
         }
 
+        //      new
+        // Root - Usually goes with the vessel, or remains static. Depends on the behaviour.
+        // - ControllerOffset - Offset as a result of the controller (path camera's velocity). Depends on the behaviour.
+        // - - PlayerOffset - Offset as a result of moving the mouse around. Depends on the player.
+        // - - - Camera - Contains the camera.
+
         void Awake()
         {
             SetBehaviours();
@@ -180,9 +210,9 @@ namespace CameraToolsKatnissified
             if( Input.GetKeyDown( KeyCode.Home ) )
             {
                 StartCamera();
-                if( CurrentCameraMode == CameraMode.PathCamera )
+                if( CurrentBehaviour is PathCameraBehaviour p )
                 {
-                    ((PathCameraBehaviour)_behaviours[CurrentCameraMode]).StartPlayingPath();
+                    p.StartPlayingPath();
                 }
             }
             if( Input.GetKeyDown( KeyCode.End ) )
@@ -203,7 +233,7 @@ namespace CameraToolsKatnissified
                 Part newTarget = Utils.GetPartFromMouse();
                 if( newTarget != null )
                 {
-                    ((StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera]).Target = newTarget;
+                    GetBehaviour<StationaryCameraBehaviour>().Target = newTarget;
                 }
             }
 
@@ -215,7 +245,7 @@ namespace CameraToolsKatnissified
                 Vector3? newPosition = Utils.GetPosFromMouse();
                 if( newPosition != null )
                 {
-                    ((StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera]).CameraPosition = newPosition;
+                    GetBehaviour<StationaryCameraBehaviour>().CameraPosition = newPosition;
                 }
             }
         }
@@ -282,7 +312,7 @@ namespace CameraToolsKatnissified
                 }
             }
 
-            _behaviours[CurrentCameraMode].StartPlaying();
+            CurrentBehaviour.StartPlaying();
         }
 
         /// <summary>
@@ -305,7 +335,7 @@ namespace CameraToolsKatnissified
             FlightCamera.ActivateUpdate();
             CurrentFov = 60;
 
-            _behaviours[CurrentCameraMode].StopPlaying();
+            CurrentBehaviour.StopPlaying();
         }
 
         void TogglePathList()
@@ -402,7 +432,7 @@ namespace CameraToolsKatnissified
         {
             Serializer.SaveFields();
 
-            foreach( var beh in _behaviours.Values )
+            foreach( var beh in _behaviours )
             {
                 beh.OnSave( null );
             }
@@ -412,7 +442,7 @@ namespace CameraToolsKatnissified
         {
             Serializer.LoadFields();
 
-            foreach( var beh in _behaviours.Values )
+            foreach( var beh in _behaviours )
             {
                 beh.OnLoad( null );
             }
@@ -464,18 +494,12 @@ namespace CameraToolsKatnissified
 
         void CycleToolMode( int step )
         {
-            int length = Enum.GetValues( typeof( CameraMode ) ).Length;
+#warning TODO - switch to reflection.
+            int length = 2;
 
-            _behaviours[CurrentCameraMode].StopPlaying();
+            CurrentBehaviour.StopPlaying();
 
-            CurrentCameraMode = (CameraMode)(((int)CurrentCameraMode + step + length) % length); // adding length unfucks negative modulo
-        }
-
-        void CycleReferenceMode( int step )
-        {
-            int length = Enum.GetValues( typeof( CameraReference ) ).Length;
-
-            CurrentReferenceMode = (CameraReference)(((int)CurrentReferenceMode + step + length) % length); // adding length unfucks negative modulo
+            _currentBehaviourIndex = (_currentBehaviourIndex + step + length) % length; // adding length unfucks negative modulo
         }
 
         void SetBehaviours()
@@ -485,8 +509,11 @@ namespace CameraToolsKatnissified
             PathCameraBehaviour b2 = this.gameObject.AddComponent<PathCameraBehaviour>();
             b1.enabled = false;
 
-            _behaviours[CameraMode.StationaryCamera] = b1;
-            _behaviours[CameraMode.PathCamera] = b2;
+            _behaviours = new CameraBehaviour[]
+            {
+                b1,
+                b2
+            };
         }
 
         /*OnFloatingOriginShift( Vector3d offset, Vector3d data1 )
