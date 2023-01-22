@@ -10,7 +10,7 @@ namespace CameraToolsKatnissified.Cameras
         /// </summary>
         public bool IsPlayingPath { get; set; } = false;
 
-        protected override void OnStart()
+        protected override void OnStartPlaying()
         {
             Debug.Log( "[CTK] Path Camera Active" );
             if( FlightGlobals.ActiveVessel != null )
@@ -41,7 +41,7 @@ namespace CameraToolsKatnissified.Cameras
 
             //if( !cameraBeh.CameraToolsActive )
             //{
-                OnStart();
+                OnStartPlaying();
            // }
 
             CameraTransformation firstFrame = cameraBeh.CurrentCameraPath.Evaulate( 0 );
@@ -56,7 +56,7 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.CameraPivot.transform.rotation = cameraBeh.ActiveVessel.transform.rotation;
         }
 
-        protected override void OnUpdate()
+        protected override void OnPlaying()
         {
             // Update the frame of reference's position to follow the vessel.
             cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position + cameraBeh.ActiveVessel.rb_velocity * Time.fixedDeltaTime;
@@ -108,7 +108,7 @@ namespace CameraToolsKatnissified.Cameras
             }
         }
 
-        protected override void OnStop()
+        protected override void OnStopPlaying()
         {
             IsPlayingPath = false;
         }

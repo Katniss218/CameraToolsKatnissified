@@ -9,7 +9,15 @@ namespace CameraToolsKatnissified.Cameras
 {
     public sealed class StationaryCameraBehaviour : CameraBehaviour
     {
-        protected override void OnStart()
+
+        public Vector3? StationaryCameraPosition { get; set; } = null;
+        public bool HasPosition => StationaryCameraPosition != null;
+
+        public Part StationaryCameraTarget { get; set; } = null;
+        public bool HasTarget => StationaryCameraTarget != null;
+
+
+        protected override void OnStartPlaying()
         {
             Debug.Log( "[CTK] Stationary Camera Active" );
             Debug.Log( "flightCamera position init: " + cameraBeh.FlightCamera.transform.position );
@@ -23,9 +31,9 @@ namespace CameraToolsKatnissified.Cameras
                 cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position + cameraBeh.ActiveVessel.rb_velocity * Time.fixedDeltaTime;
                 cameraBeh.ManualPosition = Vector3.zero;
 
-                if( cameraBeh.HasPosition )
+                if( HasPosition )
                 {
-                    cameraBeh.FlightCamera.transform.position = cameraBeh.StationaryCameraPosition.Value;
+                    cameraBeh.FlightCamera.transform.position = StationaryCameraPosition.Value;
                 }
 
                 cameraBeh.InitialVelocity = cameraBeh.ActiveVessel.srf_velocity;
@@ -41,16 +49,16 @@ namespace CameraToolsKatnissified.Cameras
             Debug.Log( "flightCamera position post init: " + cameraBeh.FlightCamera.transform.position );
         }
 
-        protected override void OnUpdate()
+        protected override void OnPlaying()
         {
             if( cameraBeh.FlightCamera.Target != null )
             {
                 cameraBeh.FlightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
             }
 
-            if( cameraBeh.HasTarget )
+            if( HasTarget )
             {
-                Vector3 toTargetDirection = (cameraBeh.StationaryCameraTarget.transform.position - cameraBeh.FlightCamera.transform.position).normalized;
+                Vector3 toTargetDirection = (StationaryCameraTarget.transform.position - cameraBeh.FlightCamera.transform.position).normalized;
 
                 cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( toTargetDirection, cameraBeh.UpDirection );
             }
@@ -94,7 +102,7 @@ namespace CameraToolsKatnissified.Cameras
             {
                 // No target - should turn the camera like a tripod.
                 // Has target - should orbit the target.
-                if( !cameraBeh.HasTarget )
+                if( !HasTarget )
                 {
                     cameraBeh.FlightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up );
                     cameraBeh.FlightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
@@ -104,8 +112,8 @@ namespace CameraToolsKatnissified.Cameras
                 {
                     var verticalaxis = cameraBeh.FlightCamera.transform.TransformDirection( Vector3.up );
                     var horizontalaxis = cameraBeh.FlightCamera.transform.TransformDirection( Vector3.right );
-                    cameraBeh.FlightCamera.transform.RotateAround( cameraBeh.StationaryCameraTarget.transform.position, verticalaxis, Input.GetAxis( "Mouse X" ) * 1.7f );
-                    cameraBeh.FlightCamera.transform.RotateAround( cameraBeh.StationaryCameraTarget.transform.position, horizontalaxis, -Input.GetAxis( "Mouse Y" ) * 1.7f );
+                    cameraBeh.FlightCamera.transform.RotateAround( StationaryCameraTarget.transform.position, verticalaxis, Input.GetAxis( "Mouse X" ) * 1.7f );
+                    cameraBeh.FlightCamera.transform.RotateAround( StationaryCameraTarget.transform.position, horizontalaxis, -Input.GetAxis( "Mouse Y" ) * 1.7f );
                     cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( cameraBeh.FlightCamera.transform.forward, cameraBeh.UpDirection );
                 }
             }
@@ -119,9 +127,9 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.ManualPosition += cameraBeh.UpDirection * CameraToolsBehaviour.SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
 
             // autoFov
-            if( cameraBeh.HasTarget && cameraBeh.UseAutoZoom )
+            if( HasTarget && cameraBeh.UseAutoZoom )
             {
-                float cameraDistance = Vector3.Distance( cameraBeh.StationaryCameraTarget.transform.position, cameraBeh.FlightCamera.transform.position );
+                float cameraDistance = Vector3.Distance( StationaryCameraTarget.transform.position, cameraBeh.FlightCamera.transform.position );
 
                 float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + cameraBeh.AutoZoomMargin, 2, 60 );
 
@@ -167,7 +175,7 @@ namespace CameraToolsKatnissified.Cameras
             }
         }
 
-        protected override void OnStop()
+        protected override void OnStopPlaying()
         {
 
         }

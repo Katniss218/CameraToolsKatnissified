@@ -15,9 +15,9 @@ namespace CameraToolsKatnissified.Cameras
 
         public bool IsPlaying { get => isPlaying; }
 
-        protected abstract void OnStart();
-        protected abstract void OnUpdate();
-        protected abstract void OnStop();
+        protected abstract void OnStartPlaying();
+        protected abstract void OnPlaying();
+        protected abstract void OnStopPlaying();
 
         protected virtual void Awake()
         {
@@ -29,21 +29,21 @@ namespace CameraToolsKatnissified.Cameras
             this.enabled = true;
             Debug.Log( "[CTK] StartPlaying was called." );
             isPlaying = true;
-            OnStart();
+            OnStartPlaying();
         }
 
         public void StopPlaying()
         {
             this.enabled = false;
             isPlaying = false;
-            OnStop();
+            OnStopPlaying();
         }
 
         protected virtual void FixedUpdate()
         {
             if( isPlaying )
             {
-                OnUpdate();
+                OnPlaying();
             }
         }
     }

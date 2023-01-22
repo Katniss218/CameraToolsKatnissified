@@ -155,12 +155,6 @@ namespace CameraToolsKatnissified
         bool _settingPositionEnabled;
         bool _settingTargetEnabled;
 
-        public Vector3? StationaryCameraPosition { get; set; } = null;
-        public bool HasPosition => StationaryCameraPosition != null;
-
-        public Part StationaryCameraTarget { get; set; } = null;
-        public bool HasTarget => StationaryCameraTarget != null;
-
         void Awake()
         {
             // Instance = the last CamTools object that has Awake called.
@@ -240,7 +234,7 @@ namespace CameraToolsKatnissified
                 Part newTarget = Utils.GetPartFromMouse();
                 if( newTarget != null )
                 {
-                    StationaryCameraTarget = newTarget;
+                    ((StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera]).StationaryCameraTarget = newTarget;
                 }
             }
 
@@ -252,7 +246,7 @@ namespace CameraToolsKatnissified
                 Vector3? newPosition = Utils.GetPosFromMouse();
                 if( newPosition != null )
                 {
-                    StationaryCameraPosition = newPosition;
+                    ((StationaryCameraBehaviour)_behaviours[CameraMode.StationaryCamera]).StationaryCameraPosition = newPosition;
                 }
             }
         }
