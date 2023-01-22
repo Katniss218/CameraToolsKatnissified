@@ -141,19 +141,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Distribution\GameData\CameraTools\Changelog.txt" />
-    <Content Include="Distribution\GameData\CameraTools\License.txt" />
-    <Content Include="Distribution\GameData\CameraTools\Plugins\CameraTools.dll" />
-    <Content Include="Distribution\GameData\CameraTools\Sounds\sonicBoom.wav" />
-    <Content Include="Distribution\GameData\CameraTools\Sounds\windhowl.wav" />
-    <Content Include="Distribution\GameData\CameraTools\Sounds\windloop.wav" />
-    <Content Include="Distribution\GameData\CameraTools\Sounds\windtear.wav" />
-    <Content Include="Distribution\GameData\CameraTools\Textures\icon.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="CameraToolsManager.GUI.cs" />
-    <None Include="Distribution\GameData\CameraTools\paths.cfg" />
-    <None Include="Distribution\GameData\CameraTools\settings.cfg" />
   </ItemGroup>
   <ItemGroup />
   <PropertyGroup>

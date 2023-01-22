@@ -11,13 +11,14 @@ namespace CameraToolsKatnissified
     /// The main class controlling the camera.
     /// </summary>
     [KSPAddon( KSPAddon.Startup.Flight, false )]
+    [DisallowMultipleComponent]
     public sealed partial class CameraToolsManager : MonoBehaviour
     {
         // This class should handle user input, and manage the camera behaviours.
+        // Also should manage the camera itself.
 
         public const string DIRECTORY_NAME = "CameraToolsKatnissified";
-        
-        // GUI
+
         /// <summary>
         /// True if the CameraTools window should be displayed.
         /// </summary>
@@ -32,7 +33,7 @@ namespace CameraToolsKatnissified
         [field: PersistentField]
         public CameraMode CurrentCameraMode { get; set; } = CameraMode.StationaryCamera;
 
-        public Dictionary<CameraMode, CameraBehaviour> Behaviours = new Dictionary<CameraMode, CameraBehaviour>();
+        public Dictionary<CameraMode, CameraBehaviour> Behaviours { get; private set; } = new Dictionary<CameraMode, CameraBehaviour>();
 
         /// <summary>
         /// True if the CameraTools camera is active.
@@ -79,15 +80,6 @@ namespace CameraToolsKatnissified
 
         public FlightCamera FlightCamera { get; set; }
 
-        float _startCameraTimestamp;
-        public float TimeSinceStart
-        {
-            get
-            {
-                return Time.time - _startCameraTimestamp;
-            }
-        }
-
         public Vessel ActiveVessel { get; set; }
 
         Vector3 _originalCameraPosition;
@@ -125,6 +117,15 @@ namespace CameraToolsKatnissified
 
         bool _settingPositionEnabled;
         bool _settingTargetEnabled;
+
+        float _startCameraTimestamp;
+        public float TimeSinceStart
+        {
+            get
+            {
+                return Time.time - _startCameraTimestamp;
+            }
+        }
 
         void Awake()
         {
@@ -197,7 +198,7 @@ namespace CameraToolsKatnissified
                 Part newTarget = Utils.GetPartFromMouse();
                 if( newTarget != null )
                 {
-                    ((StationaryCameraBehaviour)Behaviours[CameraMode.StationaryCamera]).StationaryCameraTarget = newTarget;
+                    ((StationaryCameraBehaviour)Behaviours[CameraMode.StationaryCamera]).Target = newTarget;
                 }
             }
 
@@ -209,7 +210,7 @@ namespace CameraToolsKatnissified
                 Vector3? newPosition = Utils.GetPosFromMouse();
                 if( newPosition != null )
                 {
-                    ((StationaryCameraBehaviour)Behaviours[CameraMode.StationaryCamera]).StationaryCameraPosition = newPosition;
+                    ((StationaryCameraBehaviour)Behaviours[CameraMode.StationaryCamera]).CameraPosition = newPosition;
                 }
             }
         }
@@ -333,7 +334,6 @@ namespace CameraToolsKatnissified
 
         public void DoCameraShake( Vessel vessel )
         {
-#warning TODO - change this to be simpler. it has no business being this complicated.
             //shake
             float camDistance = Vector3.Distance( FlightCamera.transform.position, vessel.CoM );
 
@@ -353,7 +353,7 @@ namespace CameraToolsKatnissified
             waveFrontFactor = Mathf.Clamp( waveFrontFactor * waveFrontFactor * waveFrontFactor, 0, 2 );
             if( vessel.srfSpeed > 330 )
             {
-                waveFrontFactor = (srfSpeed / (angleToCam) < 3.67f) ? srfSpeed / 15 : 0;
+                waveFrontFactor = ((srfSpeed / angleToCam) < 3.67f) ? (srfSpeed / 15.0f) : 0.0f;
             }
 
             lagAudioFactor *= waveFrontFactor;
@@ -396,7 +396,7 @@ namespace CameraToolsKatnissified
         void SaveAndSerialize()
         {
             Serializer.SaveFields();
-            
+
             foreach( var beh in Behaviours.Values )
             {
                 beh.OnSave( null );

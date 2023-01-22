@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -21,7 +22,7 @@ namespace CameraToolsKatnissified
             ConfigNode settings = fileNode.GetNode( "CToolsSettings" );
 
             CameraToolsManager ctb = Object.FindObjectOfType<CameraToolsManager>();
-            var fields = typeof( CameraToolsManager ).GetFields();
+            var fields = typeof( CameraToolsManager ).GetFields( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance );
 
             foreach( var field in fields )
             {
@@ -45,7 +46,7 @@ namespace CameraToolsKatnissified
             ConfigNode settings = fileNode.GetNode( "CToolsSettings" );
 
             CameraToolsManager ctb = Object.FindObjectOfType<CameraToolsManager>();
-            var fields = typeof( CameraToolsManager ).GetFields();
+            var fields = typeof( CameraToolsManager ).GetFields( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance );
 
             foreach( var field in fields )
             {

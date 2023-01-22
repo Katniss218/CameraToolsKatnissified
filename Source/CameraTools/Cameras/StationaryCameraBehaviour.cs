@@ -7,19 +7,16 @@ using UnityEngine;
 
 namespace CameraToolsKatnissified.Cameras
 {
+    [DisallowMultipleComponent]
     public sealed class StationaryCameraBehaviour : CameraBehaviour
     {
+        public Vector3? CameraPosition { get; set; } = null;
+
+        public Part Target { get; set; } = null;
+
         // Used for the Initial Velocity camera mode.
-        public Vector3 InitialVelocity { get; set; }
-        public Vector3 InitialPosition { get; set; }
-        public Orbit InitialOrbit { get; set; }
-
-        public Vector3? StationaryCameraPosition { get; set; } = null;
-        public bool HasPosition => StationaryCameraPosition != null;
-
-        public Part StationaryCameraTarget { get; set; } = null;
-        public bool HasTarget => StationaryCameraTarget != null;
-
+        Vector3 _initialVelocity;
+        Orbit _initialOrbit;
 
         protected override void OnStartPlaying()
         {
@@ -35,14 +32,14 @@ namespace CameraToolsKatnissified.Cameras
                 cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position + cameraBeh.ActiveVessel.rb_velocity * Time.fixedDeltaTime;
                 cameraBeh.ManualPosition = Vector3.zero;
 
-                if( HasPosition )
+                if( CameraPosition != null )
                 {
-                    cameraBeh.FlightCamera.transform.position = StationaryCameraPosition.Value;
+                    cameraBeh.FlightCamera.transform.position = CameraPosition.Value;
                 }
 
-                InitialVelocity = cameraBeh.ActiveVessel.srf_velocity;
-                InitialOrbit = new Orbit();
-                InitialOrbit.UpdateFromStateVectors( cameraBeh.ActiveVessel.orbit.pos, cameraBeh.ActiveVessel.orbit.vel, FlightGlobals.currentMainBody, Planetarium.GetUniversalTime() );
+                _initialVelocity = cameraBeh.ActiveVessel.srf_velocity;
+                _initialOrbit = new Orbit();
+                _initialOrbit.UpdateFromStateVectors( cameraBeh.ActiveVessel.orbit.pos, cameraBeh.ActiveVessel.orbit.vel, FlightGlobals.currentMainBody, Planetarium.GetUniversalTime() );
                 //_initialUT = Planetarium.GetUniversalTime();
             }
             else
@@ -60,9 +57,9 @@ namespace CameraToolsKatnissified.Cameras
                 cameraBeh.FlightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
             }
 
-            if( HasTarget )
+            if( Target != null )
             {
-                Vector3 toTargetDirection = (StationaryCameraTarget.transform.position - cameraBeh.FlightCamera.transform.position).normalized;
+                Vector3 toTargetDirection = (Target.transform.position - cameraBeh.FlightCamera.transform.position).normalized;
 
                 cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( toTargetDirection, cameraBeh.UpDirection );
             }
@@ -86,13 +83,13 @@ namespace CameraToolsKatnissified.Cameras
                 else if( cameraBeh.CurrentReferenceMode == CameraReference.InitialVelocity )
                 {
                     Vector3 camVelocity;
-                    if( cameraBeh.UseOrbitalInitialVelocity && InitialOrbit != null )
+                    if( cameraBeh.UseOrbitalInitialVelocity && _initialOrbit != null )
                     {
-                        camVelocity = InitialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - cameraBeh.ActiveVessel.GetObtVelocity();
+                        camVelocity = _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - cameraBeh.ActiveVessel.GetObtVelocity();
                     }
                     else
                     {
-                        camVelocity = InitialVelocity - cameraBeh.ActiveVessel.srf_velocity;
+                        camVelocity = _initialVelocity - cameraBeh.ActiveVessel.srf_velocity;
                     }
                     cameraBeh.FlightCamera.transform.position += camVelocity * Time.fixedDeltaTime;
                 }
@@ -106,7 +103,7 @@ namespace CameraToolsKatnissified.Cameras
             {
                 // No target - should turn the camera like a tripod.
                 // Has target - should orbit the target.
-                if( !HasTarget )
+                if( Target == null )
                 {
                     cameraBeh.FlightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up );
                     cameraBeh.FlightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
@@ -116,8 +113,8 @@ namespace CameraToolsKatnissified.Cameras
                 {
                     var verticalaxis = cameraBeh.FlightCamera.transform.TransformDirection( Vector3.up );
                     var horizontalaxis = cameraBeh.FlightCamera.transform.TransformDirection( Vector3.right );
-                    cameraBeh.FlightCamera.transform.RotateAround( StationaryCameraTarget.transform.position, verticalaxis, Input.GetAxis( "Mouse X" ) * 1.7f );
-                    cameraBeh.FlightCamera.transform.RotateAround( StationaryCameraTarget.transform.position, horizontalaxis, -Input.GetAxis( "Mouse Y" ) * 1.7f );
+                    cameraBeh.FlightCamera.transform.RotateAround( Target.transform.position, verticalaxis, Input.GetAxis( "Mouse X" ) * 1.7f );
+                    cameraBeh.FlightCamera.transform.RotateAround( Target.transform.position, horizontalaxis, -Input.GetAxis( "Mouse Y" ) * 1.7f );
                     cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( cameraBeh.FlightCamera.transform.forward, cameraBeh.UpDirection );
                 }
             }
@@ -131,11 +128,11 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.ManualPosition += cameraBeh.UpDirection * CameraToolsManager.SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
 
             // autoFov
-            if( HasTarget && cameraBeh.UseAutoZoom )
+            if( Target != null && cameraBeh.UseAutoZoom )
             {
 #warning TODO - change this to use the equation for constant angular size, possibly go through the parts in the vessel to determine its longest axis, or maybe there are bounds.
 
-                float cameraDistance = Vector3.Distance( StationaryCameraTarget.transform.position, cameraBeh.FlightCamera.transform.position );
+                float cameraDistance = Vector3.Distance( Target.transform.position, cameraBeh.FlightCamera.transform.position );
 
                 float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + cameraBeh.AutoZoomMargin, 2, 60 );
 

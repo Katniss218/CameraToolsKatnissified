@@ -42,7 +42,7 @@ namespace CameraToolsKatnissified.Animation
 
             float normTime = overTime / intervalTime;
 #warning TODO - slerp?
-            return Quaternion.Lerp( _rotations[startIndex], _rotations[nextIndex], normTime );
+            return Quaternion.Slerp( _rotations[startIndex], _rotations[nextIndex], normTime );
         }
     }
 }
