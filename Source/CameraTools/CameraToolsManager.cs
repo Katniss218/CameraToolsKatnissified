@@ -45,6 +45,9 @@ namespace CameraToolsKatnissified
         [field: PersistentField]
         public CameraReference CurrentReferenceMode { get; set; } = CameraReference.Surface;
 
+        /// <summary>
+        /// Uses auto-zoom with stationary camera.
+        /// </summary>
         [field: PersistentField]
         public bool UseAutoZoom { get; set; } = false;
 

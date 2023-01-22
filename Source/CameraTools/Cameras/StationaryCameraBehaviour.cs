@@ -73,25 +73,25 @@ namespace CameraToolsKatnissified.Cameras
                 if( cameraBeh.CurrentReferenceMode == CameraReference.Surface )
                 {
                     float magnitude = Mathf.Clamp( (float)cameraBeh.ActiveVessel.srf_velocity.magnitude, 0, cameraBeh.MaxRelativeVelocity );
-                    cameraBeh.FlightCamera.transform.position -= Time.fixedDeltaTime * magnitude * cameraBeh.ActiveVessel.srf_velocity.normalized;
+                    cameraBeh.FlightCamera.transform.position -= (magnitude * cameraBeh.ActiveVessel.srf_velocity.normalized) * Time.fixedDeltaTime;
                 }
                 else if( cameraBeh.CurrentReferenceMode == CameraReference.Orbit )
                 {
                     float magnitude = Mathf.Clamp( (float)cameraBeh.ActiveVessel.obt_velocity.magnitude, 0, cameraBeh.MaxRelativeVelocity );
-                    cameraBeh.FlightCamera.transform.position -= Time.fixedDeltaTime * magnitude * cameraBeh.ActiveVessel.obt_velocity.normalized;
+                    cameraBeh.FlightCamera.transform.position -= (magnitude * cameraBeh.ActiveVessel.obt_velocity.normalized) * Time.fixedDeltaTime;
                 }
                 else if( cameraBeh.CurrentReferenceMode == CameraReference.InitialVelocity )
                 {
-                    Vector3 camVelocity;
+                    Vector3 cameraVelocity;
                     if( cameraBeh.UseOrbitalInitialVelocity && _initialOrbit != null )
                     {
-                        camVelocity = _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - cameraBeh.ActiveVessel.GetObtVelocity();
+                        cameraVelocity = _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - cameraBeh.ActiveVessel.GetObtVelocity();
                     }
                     else
                     {
-                        camVelocity = _initialVelocity - cameraBeh.ActiveVessel.srf_velocity;
+                        cameraVelocity = _initialVelocity - cameraBeh.ActiveVessel.srf_velocity;
                     }
-                    cameraBeh.FlightCamera.transform.position += camVelocity * Time.fixedDeltaTime;
+                    cameraBeh.FlightCamera.transform.position += cameraVelocity * Time.fixedDeltaTime;
                 }
 #warning TODO - add the velocity direction mode here.
             }

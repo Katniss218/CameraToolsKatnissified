@@ -155,6 +155,22 @@ namespace CameraToolsKatnissified.Cameras
                 cameraBeh.CurrentFov = Mathf.Lerp( cameraBeh.CurrentFov, cameraBeh.ManualFov, 0.1f );
                 cameraBeh.FlightCamera.SetFoV( cameraBeh.CurrentFov );
             }
+
+            //vessel camera shake
+            if( cameraBeh.ShakeMultiplier > 0 )
+            {
+                foreach( var vessel in FlightGlobals.Vessels )
+                {
+                    if( !vessel || !vessel.loaded || vessel.packed )
+                    {
+                        continue;
+                    }
+
+                    cameraBeh.DoCameraShake( vessel );
+                }
+
+                cameraBeh.UpdateCameraShakeMagnitude();
+            }
         }
 
         protected override void OnStopPlaying()
