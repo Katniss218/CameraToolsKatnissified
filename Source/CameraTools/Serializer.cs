@@ -13,7 +13,7 @@ namespace CameraToolsKatnissified
         static string SETTINGS_PATH = $"GameData/{CameraToolsManager.DIRECTORY_NAME}/settings.cfg";
 
         /// <summary>
-        /// Saves the settings.
+        /// Saves the settings of the <see cref="CameraToolsManager"/>.
         /// </summary>
         public static void SaveFields()
         {
@@ -30,14 +30,14 @@ namespace CameraToolsKatnissified
                     continue;
                 }
 
-                settings.SetValue( field.Name, field.GetValue( ctb ).ToString(), true );
+                settings.SetValue( field.Name, Utils.ValueToString( field.GetValue( ctb ) ), true );
             }
 
             fileNode.Save( SETTINGS_PATH );
         }
 
         /// <summary>
-        /// Loads and deserialized the settings.
+        /// Loads and deserializes the settings of the <see cref="CameraToolsManager"/>.
         /// </summary>
         public static void LoadFields()
         {
@@ -56,43 +56,11 @@ namespace CameraToolsKatnissified
 
                 if( settings.HasValue( field.Name ) )
                 {
-                    object parsedValue = ParseAs( field.FieldType, settings.GetValue( field.Name ) );
+                    object parsedValue = Utils.StringToValue( field.FieldType, settings.GetValue( field.Name ) );
 
-                    if( parsedValue != null )
-                    {
-                        field.SetValue( ctb, parsedValue );
-                    }
+                    field.SetValue( ctb, parsedValue );
                 }
             }
-        }
-
-        /// <summary>
-        /// Converts a string value into an appropriate type.
-        /// </summary>
-        public static object ParseAs( Type type, string value )
-        {
-            if( type == typeof( string ) )
-            {
-                return value;
-            }
-
-            if( type == typeof( bool ) )
-            {
-                return bool.Parse( value );
-            }
-
-            if( type.IsEnum )
-            {
-                return Enum.Parse( type, value );
-            }
-
-            if( type == typeof( float ) )
-            {
-                return float.Parse( value );
-            }
-
-            Debug.LogError( $"CameraTools failed to parse field of type '{type}' and value '{value}'." );
-            return null;
         }
     }
 }

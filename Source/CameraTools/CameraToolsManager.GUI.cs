@@ -121,7 +121,7 @@ namespace CameraToolsKatnissified
             }
             line++;
 
-            GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera shake:" );
+            GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Shake:" );
             line++;
             ShakeMultiplier = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth - 45, ENTRY_HEIGHT ), ShakeMultiplier, 0.0f, 1.0f );
             GUI.Label( new Rect( GUI_MARGIN + contentWidth - 40, contentTop + ((line - 0.25f) * ENTRY_HEIGHT), 40, ENTRY_HEIGHT ), ShakeMultiplier.ToString( "0.00" ) + "x" );
@@ -135,7 +135,7 @@ namespace CameraToolsKatnissified
             {
                 StationaryCameraBehaviour sb = (StationaryCameraBehaviour)Behaviours[CameraMode.StationaryCamera];
 
-                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Frame of Reference: " + CurrentReferenceMode.ToString(), labelLeftStyle );
+                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Frame of Reference:" + CurrentReferenceMode.ToString(), labelLeftStyle );
                 line++;
                 if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
                 {
@@ -150,7 +150,7 @@ namespace CameraToolsKatnissified
 
                 if( CurrentReferenceMode == CameraReference.Surface || CurrentReferenceMode == CameraReference.Orbit )
                 {
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), "Max Rel. V: ", labelLeftStyle );
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), "Max Rel. V:", labelLeftStyle );
                     MaxRelativeVelocity = float.Parse( GUI.TextField( new Rect( GUI_MARGIN + contentWidth / 2, contentTop + (line * ENTRY_HEIGHT), contentWidth / 2, ENTRY_HEIGHT ), MaxRelativeVelocity.ToString() ) );
                 }
                 else if( CurrentReferenceMode == CameraReference.InitialVelocity )
@@ -163,7 +163,7 @@ namespace CameraToolsKatnissified
                 // Draw position buttons.
 
                 string positionButtonText = sb.HasPosition ? sb.StationaryCameraPosition.Value.ToString() : "None";
-                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Position: " + positionButtonText, labelLeftStyle );
+                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Position:" + positionButtonText, labelLeftStyle );
                 line++;
 
                 positionButtonText = _settingPositionEnabled ? "waiting..." : "Set Position";
@@ -182,7 +182,7 @@ namespace CameraToolsKatnissified
                 // Draw target buttons.
 
                 string targetButtonText = sb.HasTarget ? sb.StationaryCameraTarget.gameObject.name : "None";
-                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Target: " + targetButtonText, labelLeftStyle );
+                GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Camera Target:" + targetButtonText, labelLeftStyle );
                 line++;
 
                 targetButtonText = _settingTargetEnabled ? "waiting..." : "Set Target";
@@ -232,17 +232,28 @@ namespace CameraToolsKatnissified
 
                 if( sb.CurrentCameraPath != null )
                 {
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Interpolation rate: " + sb.CurrentCameraPath.LerpRate.ToString( "0.0" ) );
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Interpolation Rate:" + sb.CurrentCameraPath.LerpRate.ToString( "0.0" ) );
                     line++;
                     sb.CurrentCameraPath.LerpRate = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), sb.CurrentCameraPath.LerpRate, 1f, 15f );
                     sb.CurrentCameraPath.LerpRate = Mathf.Round( sb.CurrentCameraPath.LerpRate * 10 ) / 10;
                     line++;
 
-                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path timescale " + sb.CurrentCameraPath.TimeScale.ToString( "0.00" ) );
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path Timescale:" + sb.CurrentCameraPath.TimeScale.ToString( "0.00" ) );
                     line++;
-
                     sb.CurrentCameraPath.TimeScale = GUI.HorizontalSlider( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT) + 4, contentWidth - 50, ENTRY_HEIGHT ), sb.CurrentCameraPath.TimeScale, 0.05f, 4f );
                     sb.CurrentCameraPath.TimeScale = Mathf.Round( sb.CurrentCameraPath.TimeScale * 20 ) / 20;
+                    line++;
+
+                    GUI.Label( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), contentWidth, ENTRY_HEIGHT ), "Path Frame:" + sb.CurrentCameraPath.Frame.ToString(), labelLeftBoldStyle );
+                    line++;
+                    if( GUI.Button( new Rect( GUI_MARGIN, contentTop + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
+                    {
+                        sb.CurrentCameraPath.Frame = Utils.CycleEnum( sb.CurrentCameraPath.Frame, -1 );
+                    }
+                    if( GUI.Button( new Rect( GUI_MARGIN + 25 + 4, contentTop + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), ">" ) )
+                    {
+                        sb.CurrentCameraPath.Frame = Utils.CycleEnum( sb.CurrentCameraPath.Frame, 1 );
+                    }
                     line++;
 
                     float viewHeight = Mathf.Max( 6 * ENTRY_HEIGHT, sb.CurrentCameraPath.keyframeCount * ENTRY_HEIGHT );

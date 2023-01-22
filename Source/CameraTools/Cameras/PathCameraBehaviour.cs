@@ -6,6 +6,8 @@ namespace CameraToolsKatnissified.Cameras
 {
     public sealed class PathCameraBehaviour : CameraBehaviour
     {
+        public static string PATHS_FILE = $"GameData/{CameraToolsManager.DIRECTORY_NAME}/paths.cfg";
+
         /// <summary>
         /// If true, the camera is currently playing out a path, instead of setting it up in free mode.
         /// </summary>
@@ -16,11 +18,37 @@ namespace CameraToolsKatnissified.Cameras
 
         public CameraKeyframe currentKeyframe { get; private set; }
 
-        public void TemporaryResetBeforeLoad()
+        public override void OnLoad( ConfigNode node )
         {
-#warning TODO - move the load logic itself to here so we don't have to reset it from a different class.
+            base.OnLoad( node );
+
+            DeselectKeyframe();
             CurrentCameraPath = null;
             AvailableCameraPaths = new List<CameraPath>();
+
+            ConfigNode pathFileNode = ConfigNode.Load( PATHS_FILE );
+
+            foreach( var n in pathFileNode.GetNode( "CAMERAPATHS" ).GetNodes( "CAMERAPATH" ) )
+            {
+                AvailableCameraPaths.Add( CameraPath.LoadOld( n ) );
+            }
+        }
+
+        public override void OnSave( ConfigNode node )
+        {
+            base.OnSave( node );
+
+            ConfigNode pathFileNode = ConfigNode.Load( PATHS_FILE );
+
+            ConfigNode pathsNode = pathFileNode.GetNode( "CAMERAPATHS" );
+            pathsNode.RemoveNodes( "CAMERAPATH" );
+
+            foreach( var path in AvailableCameraPaths )
+            {
+                path.Save( pathsNode );
+            }
+
+            pathFileNode.Save( PATHS_FILE );
         }
 
         protected override void OnStartPlaying()
@@ -62,14 +90,29 @@ namespace CameraToolsKatnissified.Cameras
             IsPlayingPath = true;
 
             // initialize the rotation on start, but don't update it so if the rocket rolls, the camera won't follow it.
+            cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position;
             cameraBeh.CameraPivot.transform.rotation = cameraBeh.ActiveVessel.transform.rotation;
         }
 
         protected override void OnPlaying()
         {
             // Update the frame of reference's position to follow the vessel.
-            cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position + cameraBeh.ActiveVessel.rb_velocity * Time.fixedDeltaTime;
-            //_stationaryCameraParent.transform.rotation = _activeVessel.transform.rotation; // here to follow rotation.
+            if( CurrentCameraPath.Frame == CameraPath.ReferenceFrame.FixPosition )
+            {
+                cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position;
+            }
+            if( CurrentCameraPath.Frame == CameraPath.ReferenceFrame.FixRotation )
+            {
+                cameraBeh.CameraPivot.transform.rotation = cameraBeh.ActiveVessel.transform.rotation;
+            }
+            if( CurrentCameraPath.Frame == CameraPath.ReferenceFrame.FixPositionAndRotation )
+            {
+                cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position;
+                cameraBeh.CameraPivot.transform.rotation = cameraBeh.ActiveVessel.transform.rotation;
+            }
+
+            //cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position;// + cameraBeh.ActiveVessel.rb_velocity * Time.fixedDeltaTime;
+            //cameraBeh.CameraPivot.transform.rotation = cameraBeh.ActiveVessel.transform.rotation; // here to follow rotation.
 
             if( IsPlayingPath )
             {
@@ -161,7 +204,7 @@ namespace CameraToolsKatnissified.Cameras
 
             float time = CurrentCameraPath.keyframeCount > 0 ? CurrentCameraPath.GetKeyframe( CurrentCameraPath.keyframeCount - 1 ).Time + 1 : 0;
             CurrentCameraPath.AddTransform( cameraBeh.FlightCamera.transform, cameraBeh.Zoom, time );
-            SelectKeyframe( CurrentCameraPath.GetKeyframe(CurrentCameraPath.keyframeCount - 1) );
+            SelectKeyframe( CurrentCameraPath.GetKeyframe( CurrentCameraPath.keyframeCount - 1 ) );
 
             if( CurrentCameraPath.keyframeCount > 6 )
             {

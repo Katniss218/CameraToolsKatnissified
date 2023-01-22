@@ -16,9 +16,7 @@ namespace CameraToolsKatnissified
         // This class should handle user input, and manage the camera behaviours.
 
         public const string DIRECTORY_NAME = "CameraToolsKatnissified";
-
-        public static string pathSaveURL = $"GameData/{DIRECTORY_NAME}/paths.cfg";
-
+        
         // GUI
         /// <summary>
         /// True if the CameraTools window should be displayed.
@@ -398,34 +396,20 @@ namespace CameraToolsKatnissified
         void SaveAndSerialize()
         {
             Serializer.SaveFields();
-
-            ConfigNode pathFileNode = ConfigNode.Load( pathSaveURL );
-            ConfigNode pathsNode = pathFileNode.GetNode( "CAMERAPATHS" );
-            pathsNode.RemoveNodes( "CAMERAPATH" );
-
-#warning TODO - add a method like that to the camera behaviour instead.
-            var pathCam = (PathCameraBehaviour)Behaviours[CameraMode.PathCamera];
-
-            foreach( var path in pathCam.AvailableCameraPaths )
+            
+            foreach( var beh in Behaviours.Values )
             {
-                path.Save( pathsNode );
+                beh.OnSave( null );
             }
-            pathFileNode.Save( pathSaveURL );
         }
 
         void LoadAndDeserialize()
         {
             Serializer.LoadFields();
 
-            var pathCam = (PathCameraBehaviour)Behaviours[CameraMode.PathCamera];
-
-            pathCam.DeselectKeyframe();
-            pathCam.TemporaryResetBeforeLoad();
-            ConfigNode pathFileNode = ConfigNode.Load( pathSaveURL );
-
-            foreach( var node in pathFileNode.GetNode( "CAMERAPATHS" ).GetNodes( "CAMERAPATH" ) )
+            foreach( var beh in Behaviours.Values )
             {
-                pathCam.AvailableCameraPaths.Add( CameraPath.LoadOld( node ) );
+                beh.OnLoad( null );
             }
         }
 

@@ -9,6 +9,49 @@ namespace CameraToolsKatnissified
 {
     public static class Utils
     {
+
+        public static T CycleEnum<T>( T value, int step )
+        {
+            int length = Enum.GetValues( typeof( T ) ).Length;
+
+            return (T)(object)(((int)(object)value + step + length) % length); // adding length unfucks negative modulo
+        }
+
+
+        /// <summary>
+        /// Converts a string value into an appropriate type.
+        /// </summary>
+        public static object StringToValue( Type type, string value )
+        {
+            if( type == typeof( string ) )
+            {
+                return value;
+            }
+
+            if( type == typeof( bool ) )
+            {
+                return bool.Parse( value );
+            }
+
+            if( type.IsEnum )
+            {
+                return Enum.Parse( type, value );
+            }
+
+            if( type == typeof( float ) )
+            {
+                return float.Parse( value );
+            }
+
+            Debug.LogError( $"CameraTools failed to parse field of type '{type}' and value '{value}'." );
+            return null;
+        }
+
+        public static string ValueToString( object value )
+        {
+            return value.ToString();
+        }
+
         public static Part GetPartFromMouse()
         {
             Vector3 mouseAim = new Vector3( Input.mousePosition.x / Screen.width, Input.mousePosition.y / Screen.height, 0 );

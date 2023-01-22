@@ -33,6 +33,16 @@ namespace CameraToolsKatnissified.Cameras
         /// </summary>
         protected abstract void OnStopPlaying();
 
+        public virtual void OnLoad( ConfigNode node )
+        {
+
+        }
+
+        public virtual void OnSave( ConfigNode node )
+        {
+
+        }
+
         /// <summary>
         /// Call this to start playing the camera behaviour.
         /// </summary>
