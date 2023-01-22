@@ -37,7 +37,6 @@
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="Cameras\CameraBehaviour.cs" />
-    <Compile Include="CameraMode.cs" />
     <Compile Include="CameraReference.cs" />
     <Compile Include="CameraToolsManager.cs" />
     <Compile Include="Cameras\PathCameraBehaviour.cs" />

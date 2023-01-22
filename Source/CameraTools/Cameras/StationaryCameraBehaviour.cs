@@ -100,6 +100,7 @@ namespace CameraToolsKatnissified.Cameras
 
 
 #warning TODO - this panning and stuff would be a separate controller, playercamera, which could be locked from the playing behaviour, e.g. preventing you from moving a path camera.
+            // setting a path would use its own controls likely. you can also input the numbers by hand into the gui (rotation is eulers), but they are also inputted by moving the camera around
             // add the velocity direction mode there too.
             // this user controller would interact with a dedicated user offset gameobject.
 

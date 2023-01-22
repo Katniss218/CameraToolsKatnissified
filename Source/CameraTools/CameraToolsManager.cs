@@ -157,10 +157,11 @@ namespace CameraToolsKatnissified
         }
 
         //      new
-        // Root - Usually goes with the vessel, or remains static. Depends on the behaviour.
-        // - ControllerOffset - Offset as a result of the controller (path camera's velocity). Depends on the behaviour.
-        // - - PlayerOffset - Offset as a result of moving the mouse around. Depends on the player.
-        // - - - Camera - Contains the camera.
+        // Vessel - stationary follow, path, drone all move and rotate this obj
+        // - VesselOffset - stationary follow offset velocity moves this
+        // - - ForwardOffset - offset to make it orbit
+        // - - - Shake - shake shakes this
+        // - - - - Camera
 
         void Awake()
         {
