@@ -250,11 +250,115 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.Zoom = keyframe.Zoom;
         }
 
-#warning TODO - pathing camera variant with a target object instead of rotation key. (the key could still exist, but setting target overrides it).
+        void TogglePathList()
+        {
+            cameraBeh.PathKeyframeWindowVisible = false;
+            cameraBeh.PathWindowVisible = !cameraBeh.PathWindowVisible;
+        }
 
+        public override void DrawGui( ref float line )
+        {
+            if( CurrentPath != null )
+            {
+                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Path:" );
+                CurrentPath.PathName = GUI.TextField( new Rect( CameraToolsManager.GUI_MARGIN + 34, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH - 34, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.PathName );
+            }
+            else
+            {
+                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Path: None" );
+            }
+            line += 1.25f;
+
+            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Open Path" ) )
+            {
+                TogglePathList();
+            }
+            line++;
+
+            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT ), "New Path" ) )
+            {
+                CreateNewPath();
+            }
+            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN + (CameraToolsManager.CONTENT_WIDTH / 2), CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT ), "Delete Path" ) )
+            {
+                DeletePath( CurrentPath );
+            }
+            line++;
+
+            if( CurrentPath != null )
+            {
+                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Interpolation Rate:" + CurrentPath.LerpRate.ToString( "0.0" ) );
+                line++;
+                CurrentPath.LerpRate = GUI.HorizontalSlider( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT) + 4, CameraToolsManager.CONTENT_WIDTH - 50, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.LerpRate, 1f, 15f );
+                CurrentPath.LerpRate = Mathf.Round( CurrentPath.LerpRate * 10 ) / 10;
+                line++;
+
+                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Path Timescale:" + CurrentPath.TimeScale.ToString( "0.00" ) );
+                line++;
+                CurrentPath.TimeScale = GUI.HorizontalSlider( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT) + 4, CameraToolsManager.CONTENT_WIDTH - 50, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.TimeScale, 0.05f, 4f );
+                CurrentPath.TimeScale = Mathf.Round( CurrentPath.TimeScale * 20 ) / 20;
+                line++;
+
+                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Path Frame:" + CurrentPath.Frame.ToString() );
+                line++;
+                if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 25, CameraToolsManager.ENTRY_HEIGHT - 2 ), "<" ) )
+                {
+                    CurrentPath.Frame = Utils.CycleEnum( CurrentPath.Frame, -1 );
+                }
+                if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN + 25 + 4, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 25, CameraToolsManager.ENTRY_HEIGHT - 2 ), ">" ) )
+                {
+                    CurrentPath.Frame = Utils.CycleEnum( CurrentPath.Frame, 1 );
+                }
+                line++;
+
+                float viewHeight = Mathf.Max( 6 * CameraToolsManager.ENTRY_HEIGHT, CurrentPath.keyframeCount * CameraToolsManager.ENTRY_HEIGHT );
+                Rect scrollRect = new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, 6 * CameraToolsManager.ENTRY_HEIGHT );
+                GUI.Box( scrollRect, string.Empty );
+
+                float viewcontentWidth = CameraToolsManager.CONTENT_WIDTH - (2 * CameraToolsManager.GUI_MARGIN);
+                cameraBeh._pathScrollPosition = GUI.BeginScrollView( scrollRect, cameraBeh._pathScrollPosition, new Rect( 0, 0, viewcontentWidth, viewHeight ) );
+
+                // Draw path keyframe list.
+                if( CurrentPath.keyframeCount > 0 )
+                {
+                    Color origGuiColor = GUI.color;
+                    for( int i = 0; i < CurrentPath.keyframeCount; i++ )
+                    {
+                        if( CurrentPath.GetKeyframe( i ) == CurrentKeyframe )
+                        {
+                            GUI.color = Color.green;
+                        }
+                        else
+                        {
+                            GUI.color = origGuiColor;
+                        }
+                        string kLabel = "#" + i.ToString() + ": " + CurrentPath.GetKeyframe( i ).Time.ToString( "0.00" ) + "s";
+                        if( GUI.Button( new Rect( 0, (i * CameraToolsManager.ENTRY_HEIGHT), 3 * viewcontentWidth / 4, CameraToolsManager.ENTRY_HEIGHT ), kLabel ) )
+                        {
+                            SelectKeyframe( CurrentPath.GetKeyframe( i ) );
+                        }
+                        if( GUI.Button( new Rect( (3 * CameraToolsManager.CONTENT_WIDTH / 4), (i * CameraToolsManager.ENTRY_HEIGHT), (viewcontentWidth / 4) - 20, CameraToolsManager.ENTRY_HEIGHT ), "X" ) )
+                        {
+                            DeleteKeyframe( CurrentPath.GetKeyframe( i ) );
+                            break;
+                        }
+                    }
+                    GUI.color = origGuiColor;
+                }
+
+                GUI.EndScrollView();
+                line += 6.5f;
+                if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 3 * CameraToolsManager.CONTENT_WIDTH / 4, CameraToolsManager.ENTRY_HEIGHT ), "New Key" ) )
+                {
+                    CreateNewKeyframe();
+                }
+            }
+        }
 
         public void DrawKeyframeEditorWindow()
         {
+            Debug.Log( "draw keyframe editor" );
+
             float width = 300;
             float height = 130;
 

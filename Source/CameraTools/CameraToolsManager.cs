@@ -22,13 +22,13 @@ namespace CameraToolsKatnissified
         /// <summary>
         /// True if the CameraTools window should be displayed.
         /// </summary>
-        static bool _guiWindowVisible = false;
+        public static bool _guiWindowVisible = false;
         static bool _isToolbarButtonAdded = false;
 
         /// <summary>
         /// True if the player didn't hide the UI.
         /// </summary>
-        static bool _uiVisible = true;
+        public static bool _uiVisible = true;
 
         [field: PersistentField]
         private int _currentBehaviourIndex = 0;
@@ -137,15 +137,15 @@ namespace CameraToolsKatnissified
         /// <summary>
         /// This is set to false to prevent the selector triggering immediately after the gui button is pressed.
         /// </summary>
-        bool _wasMouseUp = false;
+        public bool _wasMouseUp { get; set; } = false;
 
         float _cameraShakeMagnitude = 0.0f;
 
         public bool PathWindowVisible { get; set; } = false;
         public bool PathKeyframeWindowVisible { get; set; } = false;
 
-        bool _settingPositionEnabled;
-        bool _settingTargetEnabled;
+        public bool _settingPositionEnabled { get; set; }
+        public bool _settingTargetEnabled { get; set; }
 
         float _startCameraTimestamp;
         public float TimeSinceStart
@@ -159,7 +159,7 @@ namespace CameraToolsKatnissified
         //      new
         // Vessel - stationary follow, path, drone all move and rotate this obj
         // - VesselOffset - stationary follow offset velocity moves this
-        // - - ForwardOffset - offset to make it orbit
+        // - - PlayerOffset - offset to make it orbit
         // - - - Shake - shake shakes this
         // - - - - Camera
 
@@ -337,12 +337,6 @@ namespace CameraToolsKatnissified
             CurrentFov = 60;
 
             CurrentBehaviour.StopPlaying();
-        }
-
-        void TogglePathList()
-        {
-            PathKeyframeWindowVisible = false;
-            PathWindowVisible = !PathWindowVisible;
         }
 
         void SaveOriginalCamera()

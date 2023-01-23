@@ -33,6 +33,8 @@ namespace CameraToolsKatnissified.Cameras
         /// </summary>
         protected abstract void OnStopPlaying();
 
+        public abstract void DrawGui( ref float line );
+
         public virtual void OnLoad( ConfigNode node )
         {
 
