@@ -19,6 +19,9 @@ namespace CameraToolsKatnissified.Cameras
 
         public CameraKeyframe CurrentKeyframe { get; private set; }
 
+        bool _pathWindowVisible = false;
+        bool _pathKeyframeWindowVisible = false;
+
         public override void OnLoad( ConfigNode node )
         {
             base.OnLoad( node );
@@ -181,7 +184,7 @@ namespace CameraToolsKatnissified.Cameras
 
         public void CreateNewPath()
         {
-            cameraBeh.PathKeyframeWindowVisible = false;
+            _pathKeyframeWindowVisible = false;
             CameraPath path = new CameraPath();
             AvailablePaths.Add( path );
             CurrentPath = path;
@@ -198,14 +201,14 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.CurrentBehaviour.StopPlaying();
 
             CurrentKeyframe = kf;
-            cameraBeh.PathKeyframeWindowVisible = true;
+            _pathKeyframeWindowVisible = true;
             ViewKeyframe( CurrentKeyframe );
         }
 
         public void DeselectKeyframe()
         {
             CurrentKeyframe = null;
-            cameraBeh.PathKeyframeWindowVisible = false;
+            _pathKeyframeWindowVisible = false;
         }
 
         public void CreateNewKeyframe()
@@ -214,7 +217,7 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.SetBehaviour<PathCameraBehaviour>();
             cameraBeh.CurrentBehaviour.StartPlaying();
 
-            cameraBeh.PathWindowVisible = false;
+            _pathWindowVisible = false;
 
             float time = CurrentPath.keyframeCount > 0 ? CurrentPath.GetKeyframe( CurrentPath.keyframeCount - 1 ).Time + 1 : 0;
             CurrentPath.AddTransform( cameraBeh.FlightCamera.transform, cameraBeh.Zoom, time );
@@ -241,7 +244,15 @@ namespace CameraToolsKatnissified.Cameras
         /// </summary>
         public void ViewKeyframe( CameraKeyframe keyframe )
         {
-            cameraBeh.CurrentBehaviour.StopPlaying();
+#warning TODO - probably a good idea to throw invalid operations if 'this' is not playing (active).
+            if( cameraBeh.CurrentBehaviour is PathCameraBehaviour pb )
+            {
+                pb.IsPlayingPath = false; // otherwise it deselects the current keyframe. Maybe it shouldn't, idk.
+            }
+            else
+            {
+                cameraBeh.CurrentBehaviour.StopPlaying();
+            }
             cameraBeh.SetBehaviour<PathCameraBehaviour>();
             cameraBeh.CurrentBehaviour.StartPlaying();
 
@@ -252,8 +263,26 @@ namespace CameraToolsKatnissified.Cameras
 
         void TogglePathList()
         {
-            cameraBeh.PathKeyframeWindowVisible = false;
-            cameraBeh.PathWindowVisible = !cameraBeh.PathWindowVisible;
+            _pathKeyframeWindowVisible = false;
+            _pathWindowVisible = !_pathWindowVisible;
+        }
+
+        /// <summary>
+        /// Unity Message - Draws GUI
+        /// </summary>
+        void OnGUI()
+        {
+            if( CameraToolsManager._guiWindowVisible && CameraToolsManager._uiVisible )
+            {
+                if( _pathKeyframeWindowVisible )
+                {
+                    DrawKeyframeEditorWindow();
+                }
+                if( _pathWindowVisible )
+                {
+                    DrawPathSelectorWindow();
+                }
+            }
         }
 
         public override void DrawGui( ref float line )
@@ -335,6 +364,7 @@ namespace CameraToolsKatnissified.Cameras
                         string kLabel = "#" + i.ToString() + ": " + CurrentPath.GetKeyframe( i ).Time.ToString( "0.00" ) + "s";
                         if( GUI.Button( new Rect( 0, (i * CameraToolsManager.ENTRY_HEIGHT), 3 * viewcontentWidth / 4, CameraToolsManager.ENTRY_HEIGHT ), kLabel ) )
                         {
+#warning TODO - for some reason, clicking this doesn't bring up the keyframe editor window.
                             SelectKeyframe( CurrentPath.GetKeyframe( i ) );
                         }
                         if( GUI.Button( new Rect( (3 * CameraToolsManager.CONTENT_WIDTH / 4), (i * CameraToolsManager.ENTRY_HEIGHT), (viewcontentWidth / 4) - 20, CameraToolsManager.ENTRY_HEIGHT ), "X" ) )
@@ -442,7 +472,7 @@ namespace CameraToolsKatnissified.Cameras
             GUI.EndGroup();
             if( isAnyPathSelected )
             {
-                cameraBeh.PathWindowVisible = false;
+                _pathWindowVisible = false;
             }
         }
     }

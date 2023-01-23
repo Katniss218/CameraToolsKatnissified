@@ -51,17 +51,6 @@ namespace CameraToolsKatnissified
             if( _guiWindowVisible && _uiVisible )
             {
                 _windowRect = GUI.Window( 320, _windowRect, DrawGuiWindow, "" );
-
-                Debug.Log( $"PathKeyframeWindowVisible: {PathKeyframeWindowVisible}, PathWindowVisible: {PathWindowVisible}" );
-                if( PathKeyframeWindowVisible )
-                {
-                    Debug.Log( "draw keyframe editor in onGUI func" );
-                    GetBehaviour<PathCameraBehaviour>().DrawKeyframeEditorWindow();
-                }
-                if( PathWindowVisible )
-                {
-                    GetBehaviour<PathCameraBehaviour>().DrawPathSelectorWindow();
-                }
             }
         }
 

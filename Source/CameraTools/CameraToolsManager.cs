@@ -66,9 +66,6 @@ namespace CameraToolsKatnissified
         /// </summary>
         public bool CameraToolsActive => CurrentBehaviour.enabled && CurrentBehaviour.IsPlaying;
 
-        [field: PersistentField]
-        public CameraReference CurrentReferenceMode { get; set; } = CameraReference.Surface;
-
         /// <summary>
         /// Uses auto-zoom with stationary camera.
         /// </summary>
@@ -140,12 +137,6 @@ namespace CameraToolsKatnissified
         public bool _wasMouseUp { get; set; } = false;
 
         float _cameraShakeMagnitude = 0.0f;
-
-        public bool PathWindowVisible { get; set; } = false;
-        public bool PathKeyframeWindowVisible { get; set; } = false;
-
-        public bool _settingPositionEnabled { get; set; }
-        public bool _settingTargetEnabled { get; set; }
 
         float _startCameraTimestamp;
         public float TimeSinceStart
@@ -219,35 +210,6 @@ namespace CameraToolsKatnissified
             if( Input.GetKeyDown( KeyCode.End ) )
             {
                 EndCamera();
-            }
-
-            if( Input.GetMouseButtonUp( 0 ) )
-            {
-                _wasMouseUp = true;
-            }
-
-            // Set target from a mouse raycast.
-            if( _settingTargetEnabled && _wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
-            {
-                _settingTargetEnabled = false;
-
-                Part newTarget = Utils.GetPartFromMouse();
-                if( newTarget != null )
-                {
-                    GetBehaviour<StationaryCameraBehaviour>().Target = newTarget;
-                }
-            }
-
-            // Set position from a mouse raycast
-            if( _settingPositionEnabled && _wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
-            {
-                _settingPositionEnabled = false;
-
-                Vector3? newPosition = Utils.GetPosFromMouse();
-                if( newPosition != null )
-                {
-                    GetBehaviour<StationaryCameraBehaviour>().CameraPosition = newPosition;
-                }
             }
         }
 
@@ -489,7 +451,7 @@ namespace CameraToolsKatnissified
 
         void CycleToolMode( int step )
         {
-#warning TODO - switch to reflection.
+#warning TODO - switch getting length to use reflection on number of types implementing x.
             int length = 2;
 
             CurrentBehaviour.StopPlaying();
