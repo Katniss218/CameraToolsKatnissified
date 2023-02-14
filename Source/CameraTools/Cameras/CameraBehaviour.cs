@@ -50,7 +50,7 @@ namespace CameraToolsKatnissified.Cameras
         /// </summary>
         public void StartPlaying()
         {
-            this.enabled = true;
+            //this.enabled = true;
             Debug.Log( "[CTK] StartPlaying was called." );
             IsPlaying = true;
             OnStartPlaying();
@@ -61,7 +61,7 @@ namespace CameraToolsKatnissified.Cameras
         /// </summary>
         public void StopPlaying()
         {
-            this.enabled = false;
+            //this.enabled = false;
             IsPlaying = false;
             OnStopPlaying();
         }

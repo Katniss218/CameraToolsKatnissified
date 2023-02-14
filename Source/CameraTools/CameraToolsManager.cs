@@ -399,6 +399,8 @@ namespace CameraToolsKatnissified
         {
             Serializer.LoadFields();
 
+            CurrentBehaviour.enabled = true;
+
             foreach( var beh in _behaviours )
             {
                 beh.OnLoad( null );
@@ -455,8 +457,10 @@ namespace CameraToolsKatnissified
             int length = 2;
 
             CurrentBehaviour.StopPlaying();
+            CurrentBehaviour.enabled = false; // enabled <=> selected.
 
             _currentBehaviourIndex = (_currentBehaviourIndex + step + length) % length; // adding length unfucks negative modulo
+            CurrentBehaviour.enabled = true; // enabled <=> selected.
         }
 
         void SetBehaviours()
