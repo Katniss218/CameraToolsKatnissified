@@ -272,6 +272,7 @@ namespace CameraToolsKatnissified.Cameras
             // Draw target buttons.
 
             string targetButtonText = Target == null ? "None" : Target.gameObject.name;
+            Debug.Log( "TARGET TEXT: " + targetButtonText );
             GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Camera Target:" + targetButtonText );
             line++;
 

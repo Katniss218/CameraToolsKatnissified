@@ -453,8 +453,7 @@ namespace CameraToolsKatnissified
 
         void CycleToolMode( int step )
         {
-#warning TODO - switch getting length to use reflection on number of types implementing x.
-            int length = 2;
+            int length = CameraBehaviour.GetBehaviourCountWithCache();
 
             CurrentBehaviour.StopPlaying();
             CurrentBehaviour.enabled = false; // enabled <=> selected.
@@ -465,16 +464,14 @@ namespace CameraToolsKatnissified
 
         void SetBehaviours()
         {
-            StationaryCameraBehaviour b1 = this.gameObject.AddComponent<StationaryCameraBehaviour>();
-            b1.enabled = false;
-            PathCameraBehaviour b2 = this.gameObject.AddComponent<PathCameraBehaviour>();
-            b1.enabled = false;
-
-            _behaviours = new CameraBehaviour[]
+            Type[] behaviourTypes = CameraBehaviour.GetBehaviourTypesWithCache();
+            _behaviours = new CameraBehaviour[behaviourTypes.Length];
+            for( int i = 0; i < behaviourTypes.Length; i++ )
             {
-                b1,
-                b2
-            };
+                CameraBehaviour beh = (CameraBehaviour)this.gameObject.AddComponent( behaviourTypes[i] );
+                beh.enabled = false;
+                _behaviours[i] = beh;
+            }
         }
 
         /*OnFloatingOriginShift( Vector3d offset, Vector3d data1 )

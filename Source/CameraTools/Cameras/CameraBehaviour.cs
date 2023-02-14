@@ -82,5 +82,35 @@ namespace CameraToolsKatnissified.Cameras
                 cameraBeh.LastCameraRotation = cameraBeh.FlightCamera.transform.rotation;
             }
         }
+
+        static Type[] cachedCameraTypes;
+
+        private static void CacheBehaviours()
+        {
+            Type cameraBehaviourType = typeof( CameraBehaviour );
+            cachedCameraTypes = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany( a => a.GetTypes() )
+                .Where( t => t != cameraBehaviourType && cameraBehaviourType.IsAssignableFrom( t ) ).ToArray();
+        }
+
+        public static int GetBehaviourCountWithCache()
+        {
+            if( cachedCameraTypes == null )
+            {
+                CacheBehaviours();
+            }
+
+            return cachedCameraTypes.Length;
+        }
+
+        public static Type[] GetBehaviourTypesWithCache()
+        {
+            if( cachedCameraTypes == null )
+            {
+                CacheBehaviours();
+            }
+
+            return cachedCameraTypes.ToArray(); // copy.
+        }
     }
 }
