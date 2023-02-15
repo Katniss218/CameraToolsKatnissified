@@ -104,6 +104,9 @@ namespace CameraToolsKatnissified
         /// </summary>
         public GameObject CameraPivot { get; set; }
 
+        /// <summary>
+        /// The main camera.
+        /// </summary>
         public FlightCamera FlightCamera { get; set; }
 
         public Vessel ActiveVessel { get; set; }

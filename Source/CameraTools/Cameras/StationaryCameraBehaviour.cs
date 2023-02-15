@@ -252,12 +252,12 @@ namespace CameraToolsKatnissified.Cameras
 
             // Draw position buttons.
 
-            string positionButtonText = CameraPosition == null ? "None" : CameraPosition.Value.ToString();
-            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Camera Position:" + positionButtonText );
+            string positionText = CameraPosition == null ? "None" : CameraPosition.Value.ToString();
+            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), $"Camera Position: {positionText}" );
             line++;
 
-            positionButtonText = _settingPositionEnabled ? "waiting..." : "Set Position";
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), positionButtonText ) )
+            positionText = _settingPositionEnabled ? "waiting..." : "Set Position";
+            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), positionText ) )
             {
                 _settingPositionEnabled = true;
                 cameraBeh._wasMouseUp = false;
@@ -271,13 +271,13 @@ namespace CameraToolsKatnissified.Cameras
 
             // Draw target buttons.
 
-            string targetButtonText = Target == null ? "None" : Target.gameObject.name;
-#warning TODO - for some reason, this label doesn't get drawn fully. It cuts itself in the middle of the string. (TOO LONG???)
-            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Camera Target:" + targetButtonText );
+            string targetText = Target == null ? "None" : Target.gameObject.name;
+#warning TODO - When the part name is too long, it cuts the word off.
+            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), $"Camera Target: {targetText}" );
             line++;
 
-            targetButtonText = _settingTargetEnabled ? "waiting..." : "Set Target";
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), targetButtonText ) )
+            targetText = _settingTargetEnabled ? "waiting..." : "Set Target";
+            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), targetText ) )
             {
                 _settingTargetEnabled = true;
                 cameraBeh._wasMouseUp = false;

@@ -22,6 +22,11 @@ namespace CameraToolsKatnissified.Cameras
         bool _pathWindowVisible = false;
         bool _pathKeyframeWindowVisible = false;
 
+        Vector3 _pivotPosition;
+        Quaternion _pivotRotation;
+        Matrix4x4 _pivotSpaceL2W;
+        Matrix4x4 _pivotSpaceW2L;
+
         public override void OnLoad( ConfigNode node )
         {
             base.OnLoad( node );
@@ -60,11 +65,13 @@ namespace CameraToolsKatnissified.Cameras
             Debug.Log( "[CTK] Path Camera Active" );
             if( FlightGlobals.ActiveVessel != null )
             {
-                cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position + cameraBeh.ActiveVessel.rb_velocity * Time.fixedDeltaTime;
-                cameraBeh.CameraPivot.transform.rotation = cameraBeh.ActiveVessel.transform.rotation;
+                _pivotPosition = cameraBeh.ActiveVessel.transform.position; // cache to use when setting path.
+                _pivotRotation = cameraBeh.ActiveVessel.transform.rotation;
+                _pivotSpaceL2W = Matrix4x4.TRS( _pivotPosition, _pivotRotation, new Vector3( 1, 1, 1 ) );
+                _pivotSpaceW2L = _pivotSpaceL2W.inverse;
 
                 cameraBeh.FlightCamera.SetTargetNone();
-                cameraBeh.FlightCamera.transform.parent = cameraBeh.CameraPivot.transform;
+                cameraBeh.FlightCamera.transform.SetParent( cameraBeh.CameraPivot.transform ); // this is apparently needed when viewing a single keyframe
                 cameraBeh.FlightCamera.DeactivateUpdate();
             }
             else
@@ -85,42 +92,54 @@ namespace CameraToolsKatnissified.Cameras
             DeselectKeyframe();
             OnStartPlaying();
 
+            // initialize the rotation on start, but don't update it so if the rocket rolls, the camera won't follow it.
+            _pivotPosition = cameraBeh.ActiveVessel.transform.position;
+            _pivotRotation = cameraBeh.ActiveVessel.transform.rotation;
+            _pivotSpaceL2W = Matrix4x4.TRS( _pivotPosition, _pivotRotation, new Vector3( 1, 1, 1 ) );
+            _pivotSpaceW2L = _pivotSpaceL2W.inverse;
+
             CameraTransformation firstFrame = CurrentPath.Evaulate( 0 );
-            cameraBeh.FlightCamera.transform.localPosition = firstFrame.position;
-            cameraBeh.FlightCamera.transform.localRotation = firstFrame.rotation;
+            cameraBeh.FlightCamera.transform.position = _pivotSpaceL2W.MultiplyPoint( firstFrame.position );
+            cameraBeh.FlightCamera.transform.rotation = _pivotRotation * firstFrame.rotation;
             cameraBeh.Zoom = firstFrame.zoom;
 
             IsPlaying = true;
             IsPlayingPath = true;
+        }
 
-            // initialize the rotation on start, but don't update it so if the rocket rolls, the camera won't follow it.
-            cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position;
-            cameraBeh.CameraPivot.transform.rotation = cameraBeh.ActiveVessel.transform.rotation;
+        private void UpdateRecalculatePivot()
+        {
+            // Update the frame of reference's position to follow the vessel.
+            //if( CurrentPath.Frame == CameraPath.ReferenceFrame.Free )
+            //{
+            //}
+            if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixPosition )
+            {
+                _pivotPosition = cameraBeh.ActiveVessel.transform.position;
+            }
+            if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixRotation )
+            {
+                _pivotRotation = cameraBeh.ActiveVessel.transform.rotation;
+            }
+            if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixPositionAndRotation )
+            {
+                _pivotPosition = cameraBeh.ActiveVessel.transform.position;
+                _pivotRotation = cameraBeh.ActiveVessel.transform.rotation;
+            }
+            _pivotSpaceL2W = Matrix4x4.TRS( _pivotPosition, _pivotRotation, new Vector3( 1, 1, 1 ) );
+            _pivotSpaceW2L = _pivotSpaceL2W.inverse;
         }
 
         protected override void OnPlaying()
         {
-            // Update the frame of reference's position to follow the vessel.
-            if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixPosition )
-            {
-                cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position;
-            }
-            if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixRotation )
-            {
-                cameraBeh.CameraPivot.transform.rotation = cameraBeh.ActiveVessel.transform.rotation;
-            }
-            if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixPositionAndRotation )
-            {
-                cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position;
-                cameraBeh.CameraPivot.transform.rotation = cameraBeh.ActiveVessel.transform.rotation;
-            }
+            UpdateRecalculatePivot();
 
             if( IsPlayingPath )
             {
-                CameraTransformation tf = CurrentPath.Evaulate( cameraBeh.TimeSinceStart * CurrentPath.TimeScale );
-                cameraBeh.FlightCamera.transform.localPosition = Vector3.Lerp( cameraBeh.FlightCamera.transform.localPosition, tf.position, CurrentPath.LerpRate * Time.fixedDeltaTime );
-                cameraBeh.FlightCamera.transform.localRotation = Quaternion.Slerp( cameraBeh.FlightCamera.transform.localRotation, tf.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
-                cameraBeh.Zoom = Mathf.Lerp( cameraBeh.Zoom, tf.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
+                CameraTransformation camTransf = CurrentPath.Evaulate( cameraBeh.TimeSinceStart * CurrentPath.TimeScale );
+                cameraBeh.FlightCamera.transform.position = _pivotSpaceL2W.MultiplyPoint( Vector3.Lerp( _pivotSpaceW2L.MultiplyPoint( cameraBeh.FlightCamera.transform.position ), camTransf.position, CurrentPath.LerpRate * Time.fixedDeltaTime ) );
+                cameraBeh.FlightCamera.transform.rotation = _pivotRotation * Quaternion.Slerp( Quaternion.Inverse( _pivotRotation ) * cameraBeh.FlightCamera.transform.rotation, camTransf.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
+                cameraBeh.Zoom = Mathf.Lerp( cameraBeh.Zoom, camTransf.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
             }
             else // this is to set up the path.
             {
@@ -256,8 +275,9 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.SetBehaviour<PathCameraBehaviour>();
             cameraBeh.CurrentBehaviour.StartPlaying();
 
-            cameraBeh.FlightCamera.transform.localPosition = keyframe.Position;
-            cameraBeh.FlightCamera.transform.localRotation = keyframe.Rotation;
+            Debug.Log( $"Pos: {keyframe.Position}, Rot: {keyframe.Rotation}" );
+            cameraBeh.FlightCamera.transform.position = _pivotSpaceL2W.MultiplyPoint( keyframe.Position );
+            cameraBeh.FlightCamera.transform.rotation = _pivotRotation * keyframe.Rotation;
             cameraBeh.Zoom = keyframe.Zoom;
         }
 
