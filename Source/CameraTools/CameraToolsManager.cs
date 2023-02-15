@@ -64,7 +64,7 @@ namespace CameraToolsKatnissified
         /// <summary>
         /// True if the CameraTools camera is active.
         /// </summary>
-        public bool CameraToolsActive => CurrentBehaviour.enabled && CurrentBehaviour.IsPlaying;
+        bool CameraToolsActive => CurrentBehaviour.enabled && CurrentBehaviour.IsPlaying;
 
         /// <summary>
         /// Uses auto-zoom with stationary camera.
@@ -83,18 +83,6 @@ namespace CameraToolsKatnissified
         /// </summary>
         [field: PersistentField]
         public float AutoZoomMargin { get; set; } = 20.0f;
-
-        /// <summary>
-        /// Maximum velocity of the target relative to the camera. Can be negative to reverse the camera direction.
-        /// </summary>
-        [field: PersistentField]
-        public float MaxRelativeVelocity { get; set; } = 250.0f;
-
-        /// <summary>
-        /// Whether or not to use orbital velocity as reference. True - uses orbital velocity, False - uses surface velocity.
-        /// </summary>
-        [field: PersistentField]
-        public bool UseOrbitalInitialVelocity { get; set; } = false;
 
         [field: PersistentField]
         public float ShakeMultiplier { get; set; } = 0.0f;
@@ -116,12 +104,8 @@ namespace CameraToolsKatnissified
         Transform _originalCameraParent;
         float _originalCameraNearClip;
 
-        public Vector3 UpDirection { get; set; } = Vector3.up;
-
         public float ManualFov { get; set; } = 60;
         public float CurrentFov { get; set; } = 60;
-
-        public Vector3 ManualPosition { get; set; } = Vector3.zero; // offset from moving the camera manually.
 
         public float ZoomFactor { get; set; } = 1;
 
@@ -233,6 +217,9 @@ namespace CameraToolsKatnissified
 
         void FixedUpdate()
         {
+            LastCameraPosition = FlightCamera.transform.position; // was in stationary camera only.
+            LastCameraRotation = FlightCamera.transform.rotation;
+
             if( !FlightGlobals.ready )
             {
                 return;
@@ -271,11 +258,6 @@ namespace CameraToolsKatnissified
             if( FlightGlobals.ActiveVessel != null )
             {
                 ActiveVessel = FlightGlobals.ActiveVessel;
-                UpDirection = -FlightGlobals.getGeeForceAtPosition( ActiveVessel.GetWorldPos3D() ).normalized;
-                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( ActiveVessel ) == FlightCamera.Modes.ORBITAL) )
-                {
-                    UpDirection = Vector3.up;
-                }
             }
 
             CurrentBehaviour.StartPlaying();

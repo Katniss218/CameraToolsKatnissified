@@ -77,9 +77,6 @@ namespace CameraToolsKatnissified.Cameras
             if( IsPlaying )
             {
                 OnPlaying();
-
-                cameraBeh.LastCameraPosition = cameraBeh.FlightCamera.transform.position; // was in stationary camera only.
-                cameraBeh.LastCameraRotation = cameraBeh.FlightCamera.transform.rotation;
             }
         }
 

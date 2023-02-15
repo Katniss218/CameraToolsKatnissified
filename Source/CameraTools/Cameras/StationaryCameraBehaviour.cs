@@ -16,12 +16,29 @@ namespace CameraToolsKatnissified.Cameras
 
         public CameraReference CurrentReferenceMode { get; private set; } = CameraReference.Surface;
 
+        public Vector3 ManualOffset { get; set; } = Vector3.zero; // offset from moving the camera manually.
+
+        public Vector3 UpDirection { get; set; } = Vector3.up;
+
+        /// <summary>
+        /// Whether or not to use orbital velocity as reference. True - uses orbital velocity, False - uses surface velocity.
+        /// </summary>
+        public bool UseOrbitalInitialVelocity { get; set; } = false;
+
+        /// <summary>
+        /// Maximum velocity of the target relative to the camera. Can be negative to reverse the camera direction.
+        /// </summary>
+        public float MaxRelativeVelocity { get; set; } = 250.0f;
+
         // Used for the Initial Velocity camera mode.
         Vector3 _initialVelocity;
         Orbit _initialOrbit;
 
         bool _settingPositionEnabled;
         bool _settingTargetEnabled;
+
+        Vector3 _initialOffset = Vector3.zero;
+        Vector3 _accumulatedPosition = Vector3.zero;
 
         void Update()
         {
@@ -62,18 +79,29 @@ namespace CameraToolsKatnissified.Cameras
 
             if( FlightGlobals.ActiveVessel != null )
             {
+                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( cameraBeh.ActiveVessel ) == FlightCamera.Modes.ORBITAL) )
+                {
+                    UpDirection = Vector3.up;
+                }
+                else
+                {
+                    UpDirection = -FlightGlobals.getGeeForceAtPosition( cameraBeh.ActiveVessel.GetWorldPos3D() ).normalized;
+                }
+
+                _initialOffset = cameraBeh.FlightCamera.transform.position - cameraBeh.ActiveVessel.transform.position;
+
                 cameraBeh.FlightCamera.SetTargetNone();
-                cameraBeh.FlightCamera.transform.parent = cameraBeh.CameraPivot.transform;
+                cameraBeh.FlightCamera.transform.SetParent( cameraBeh.CameraPivot.transform ); // Apparently this is not assigned by the global when starting playing.
                 cameraBeh.FlightCamera.DeactivateUpdate();
 
-                cameraBeh.CameraPivot.transform.position = cameraBeh.ActiveVessel.transform.position + cameraBeh.ActiveVessel.rb_velocity * Time.fixedDeltaTime;
-                cameraBeh.ManualPosition = Vector3.zero;
+                ManualOffset = Vector3.zero;
 
                 if( CameraPosition != null )
                 {
                     cameraBeh.FlightCamera.transform.position = CameraPosition.Value;
                 }
 
+                _accumulatedPosition = Vector3.zero;
                 _initialVelocity = cameraBeh.ActiveVessel.srf_velocity;
                 _initialOrbit = new Orbit();
                 _initialOrbit.UpdateFromStateVectors( cameraBeh.ActiveVessel.orbit.pos, cameraBeh.ActiveVessel.orbit.vel, FlightGlobals.currentMainBody, Planetarium.GetUniversalTime() );
@@ -98,29 +126,29 @@ namespace CameraToolsKatnissified.Cameras
             {
                 Vector3 toTargetDirection = (Target.transform.position - cameraBeh.FlightCamera.transform.position).normalized;
 
-                cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( toTargetDirection, cameraBeh.UpDirection );
+                cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( toTargetDirection, UpDirection );
             }
 
             if( cameraBeh.ActiveVessel != null )
             {
                 // Parent follows the vessel.
-                cameraBeh.CameraPivot.transform.position = cameraBeh.ManualPosition + cameraBeh.ActiveVessel.transform.position;
+                cameraBeh.FlightCamera.transform.position = ManualOffset + cameraBeh.ActiveVessel.transform.position + _initialOffset;
 
                 // Camera itself accumulates the inverse of the vessel movement.
                 if( CurrentReferenceMode == CameraReference.Surface )
                 {
-                    float magnitude = Mathf.Clamp( (float)cameraBeh.ActiveVessel.srf_velocity.magnitude, 0, cameraBeh.MaxRelativeVelocity );
-                    cameraBeh.FlightCamera.transform.position -= (magnitude * cameraBeh.ActiveVessel.srf_velocity.normalized) * Time.fixedDeltaTime;
+                    float magnitude = Mathf.Clamp( (float)cameraBeh.ActiveVessel.srf_velocity.magnitude, 0, MaxRelativeVelocity );
+                    _accumulatedPosition -= (magnitude * cameraBeh.ActiveVessel.srf_velocity.normalized) * Time.fixedDeltaTime;
                 }
                 else if( CurrentReferenceMode == CameraReference.Orbit )
                 {
-                    float magnitude = Mathf.Clamp( (float)cameraBeh.ActiveVessel.obt_velocity.magnitude, 0, cameraBeh.MaxRelativeVelocity );
-                    cameraBeh.FlightCamera.transform.position -= (magnitude * cameraBeh.ActiveVessel.obt_velocity.normalized) * Time.fixedDeltaTime;
+                    float magnitude = Mathf.Clamp( (float)cameraBeh.ActiveVessel.obt_velocity.magnitude, 0, MaxRelativeVelocity );
+                    _accumulatedPosition -= (magnitude * cameraBeh.ActiveVessel.obt_velocity.normalized) * Time.fixedDeltaTime;
                 }
                 else if( CurrentReferenceMode == CameraReference.InitialVelocity )
                 {
                     Vector3 cameraVelocity;
-                    if( cameraBeh.UseOrbitalInitialVelocity && _initialOrbit != null )
+                    if( UseOrbitalInitialVelocity && _initialOrbit != null )
                     {
                         cameraVelocity = _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - cameraBeh.ActiveVessel.GetObtVelocity();
                     }
@@ -128,20 +156,20 @@ namespace CameraToolsKatnissified.Cameras
                     {
                         cameraVelocity = _initialVelocity - cameraBeh.ActiveVessel.srf_velocity;
                     }
-                    cameraBeh.FlightCamera.transform.position += cameraVelocity * Time.fixedDeltaTime;
+
+                    _accumulatedPosition += cameraVelocity * Time.fixedDeltaTime;
                 }
+                cameraBeh.FlightCamera.transform.position += _accumulatedPosition;
             }
 
             //mouse panning, moving
-            Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, cameraBeh.UpDirection ) * cameraBeh.FlightCamera.transform.right).normalized;
+            Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, UpDirection ) * cameraBeh.FlightCamera.transform.right).normalized;
 
 
 #warning TODO - this panning and stuff would be a separate controller, playercamera, which could be locked from the playing behaviour, e.g. preventing you from moving a path camera.
             // setting a path would use its own controls likely. you can also input the numbers by hand into the gui (rotation is eulers), but they are also inputted by moving the camera around
             // add the velocity direction mode there too.
             // this user controller would interact with a dedicated user offset gameobject.
-
-
             if( Input.GetKey( KeyCode.Mouse1 ) ) // right mouse
             {
                 // No target - should turn the camera like a tripod.
@@ -150,25 +178,30 @@ namespace CameraToolsKatnissified.Cameras
                 {
                     cameraBeh.FlightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up );
                     cameraBeh.FlightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
-                    cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( cameraBeh.FlightCamera.transform.forward, cameraBeh.UpDirection );
+                    cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( cameraBeh.FlightCamera.transform.forward, UpDirection );
                 }
                 else
                 {
+                    Vector3 cachePos = cameraBeh.FlightCamera.transform.position;
+
                     var verticalaxis = cameraBeh.FlightCamera.transform.TransformDirection( Vector3.up );
                     var horizontalaxis = cameraBeh.FlightCamera.transform.TransformDirection( Vector3.right );
                     cameraBeh.FlightCamera.transform.RotateAround( Target.transform.position, verticalaxis, Input.GetAxis( "Mouse X" ) * 1.7f );
                     cameraBeh.FlightCamera.transform.RotateAround( Target.transform.position, horizontalaxis, -Input.GetAxis( "Mouse Y" ) * 1.7f );
-                    cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( cameraBeh.FlightCamera.transform.forward, cameraBeh.UpDirection );
+                    cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( cameraBeh.FlightCamera.transform.forward, UpDirection );
+
+                    ManualOffset += (cameraBeh.FlightCamera.transform.position - cachePos); // allow movement (temporary until separate controllers).
+                    cameraBeh.FlightCamera.transform.position = cachePos; // stop flickering (sortof).
                 }
             }
 
             if( Input.GetKey( KeyCode.Mouse2 ) ) // middle mouse
             {
-                cameraBeh.ManualPosition += cameraBeh.FlightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
-                cameraBeh.ManualPosition += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
+                ManualOffset += cameraBeh.FlightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
+                ManualOffset += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
             }
 
-            cameraBeh.ManualPosition += cameraBeh.UpDirection * CameraToolsManager.SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
+            ManualOffset += UpDirection * CameraToolsManager.SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
 
             // autoFov
             if( Target != null && cameraBeh.UseAutoZoom )
@@ -241,11 +274,11 @@ namespace CameraToolsKatnissified.Cameras
             if( CurrentReferenceMode == CameraReference.Surface || CurrentReferenceMode == CameraReference.Orbit )
             {
                 GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT ), "Max Rel. V:" );
-                cameraBeh.MaxRelativeVelocity = float.Parse( GUI.TextField( new Rect( CameraToolsManager.GUI_MARGIN + CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT ), cameraBeh.MaxRelativeVelocity.ToString() ) );
+                MaxRelativeVelocity = float.Parse( GUI.TextField( new Rect( CameraToolsManager.GUI_MARGIN + CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT ), MaxRelativeVelocity.ToString() ) );
             }
             else if( CurrentReferenceMode == CameraReference.InitialVelocity )
             {
-                cameraBeh.UseOrbitalInitialVelocity = GUI.Toggle( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), cameraBeh.UseOrbitalInitialVelocity, " Orbital" );
+                UseOrbitalInitialVelocity = GUI.Toggle( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), UseOrbitalInitialVelocity, " Orbital" );
             }
             line++;
             line++;

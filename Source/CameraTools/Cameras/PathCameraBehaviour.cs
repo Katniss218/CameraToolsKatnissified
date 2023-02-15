@@ -71,7 +71,7 @@ namespace CameraToolsKatnissified.Cameras
                 _pivotSpaceW2L = _pivotSpaceL2W.inverse;
 
                 cameraBeh.FlightCamera.SetTargetNone();
-                cameraBeh.FlightCamera.transform.SetParent( cameraBeh.CameraPivot.transform ); // this is apparently needed when viewing a single keyframe
+                cameraBeh.FlightCamera.transform.SetParent( cameraBeh.CameraPivot.transform ); // Apparently this is not assigned by the global when starting playing. Needed when viewing a single keyframe
                 cameraBeh.FlightCamera.DeactivateUpdate();
             }
             else
