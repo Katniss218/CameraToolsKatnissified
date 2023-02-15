@@ -40,7 +40,12 @@ namespace CameraToolsKatnissified.Cameras
         Vector3 _initialOffset = Vector3.zero;
         Vector3 _accumulatedPosition = Vector3.zero;
 
-        void Update()
+        public StationaryCameraBehaviour( CameraToolsManager ctm ) : base( ctm )
+        {
+
+        }
+
+        public override void Update()
         {
             if( Input.GetMouseButtonUp( 0 ) || !Input.GetMouseButton( 0 ) )
             {

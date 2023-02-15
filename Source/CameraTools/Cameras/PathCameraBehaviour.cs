@@ -27,11 +27,16 @@ namespace CameraToolsKatnissified.Cameras
         Matrix4x4 _pivotSpaceL2W;
         Matrix4x4 _pivotSpaceW2L;
 
+        public PathCameraBehaviour( CameraToolsManager ctm ) : base( ctm )
+        {
+
+        }
+
         public override void OnLoad( ConfigNode node )
         {
             base.OnLoad( node );
 
-            DeselectKeyframe();
+           // DeselectKeyframe();
             CurrentPath = null;
             AvailablePaths = new List<CameraPath>();
 
@@ -89,7 +94,7 @@ namespace CameraToolsKatnissified.Cameras
                 return;
             }
 
-            DeselectKeyframe();
+           // DeselectKeyframe();
             OnStartPlaying();
 
             // initialize the rotation on start, but don't update it so if the rocket rolls, the camera won't follow it.
@@ -103,7 +108,7 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.FlightCamera.transform.rotation = _pivotRotation * firstFrame.rotation;
             cameraBeh.Zoom = firstFrame.zoom;
 
-            IsPlaying = true;
+            //IsPlaying = true;
             IsPlayingPath = true;
         }
 
@@ -198,9 +203,9 @@ namespace CameraToolsKatnissified.Cameras
         protected override void OnStopPlaying()
         {
             IsPlayingPath = false;
-            DeselectKeyframe();
+           // DeselectKeyframe();
         }
-
+        
         public void CreateNewPath()
         {
             _pathKeyframeWindowVisible = false;
@@ -214,7 +219,7 @@ namespace CameraToolsKatnissified.Cameras
             AvailablePaths.Remove( path );
             CurrentPath = null;
         }
-
+        /*
         public void SelectKeyframe( CameraKeyframe kf )
         {
             cameraBeh.CurrentBehaviour.StopPlaying();
@@ -222,14 +227,14 @@ namespace CameraToolsKatnissified.Cameras
             CurrentKeyframe = kf;
             _pathKeyframeWindowVisible = true;
             ViewKeyframe( CurrentKeyframe );
-        }
-
+        }*/
+        /*
         public void DeselectKeyframe()
         {
             CurrentKeyframe = null;
             _pathKeyframeWindowVisible = false;
-        }
-
+        }*/
+        /*
         public void CreateNewKeyframe()
         {
             cameraBeh.CurrentBehaviour.StopPlaying();
@@ -246,8 +251,8 @@ namespace CameraToolsKatnissified.Cameras
             {
                 cameraBeh._pathScrollPosition.y += CameraToolsManager.ENTRY_HEIGHT;
             }
-        }
-
+        }*/
+        /*
         public void DeleteKeyframe( CameraKeyframe keyframe )
         {
             CurrentPath.RemoveKeyframe( keyframe );
@@ -256,22 +261,22 @@ namespace CameraToolsKatnissified.Cameras
                 DeselectKeyframe();
                 SelectKeyframe( CurrentPath.GetKeyframe( 0 ) );
             }
-        }
-
+        }*/
+        /*
         /// <summary>
         /// Positions the camera at a keyframe.
         /// </summary>
         public void ViewKeyframe( CameraKeyframe keyframe )
         {
-#warning TODO - probably a good idea to throw invalid operations if 'this' is not playing (active).
             if( cameraBeh.CurrentBehaviour is PathCameraBehaviour pb )
             {
                 pb.IsPlayingPath = false; // otherwise it deselects the current keyframe. Maybe it shouldn't, idk.
             }
             else
             {
-                cameraBeh.CurrentBehaviour.StopPlaying();
+                cameraBeh.EndCamera();
             }
+#warning TODO - the path editor previewing cam needs to be its own thing.
             cameraBeh.SetBehaviour<PathCameraBehaviour>();
             cameraBeh.CurrentBehaviour.StartPlaying();
 
@@ -280,17 +285,14 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.FlightCamera.transform.rotation = _pivotRotation * keyframe.Rotation;
             cameraBeh.Zoom = keyframe.Zoom;
         }
-
+        */
         void TogglePathList()
         {
             _pathKeyframeWindowVisible = false;
             _pathWindowVisible = !_pathWindowVisible;
         }
 
-        /// <summary>
-        /// Unity Message - Draws GUI
-        /// </summary>
-        void OnGUI()
+        public override void DrawGui( ref float line )
         {
             if( CameraToolsManager._guiWindowVisible && CameraToolsManager._uiVisible )
             {
@@ -303,10 +305,7 @@ namespace CameraToolsKatnissified.Cameras
                     DrawPathSelectorWindow();
                 }
             }
-        }
 
-        public override void DrawGui( ref float line )
-        {
             if( CurrentPath != null )
             {
                 GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Path:" );
@@ -385,11 +384,11 @@ namespace CameraToolsKatnissified.Cameras
                         if( GUI.Button( new Rect( 0, (i * CameraToolsManager.ENTRY_HEIGHT), 3 * viewcontentWidth / 4, CameraToolsManager.ENTRY_HEIGHT ), kLabel ) )
                         {
 #warning TODO - for some reason, clicking this doesn't bring up the keyframe editor window.
-                            SelectKeyframe( CurrentPath.GetKeyframe( i ) );
+                            //SelectKeyframe( CurrentPath.GetKeyframe( i ) );
                         }
                         if( GUI.Button( new Rect( (3 * CameraToolsManager.CONTENT_WIDTH / 4), (i * CameraToolsManager.ENTRY_HEIGHT), (viewcontentWidth / 4) - 20, CameraToolsManager.ENTRY_HEIGHT ), "X" ) )
                         {
-                            DeleteKeyframe( CurrentPath.GetKeyframe( i ) );
+                            //DeleteKeyframe( CurrentPath.GetKeyframe( i ) );
                             break;
                         }
                     }
@@ -400,7 +399,7 @@ namespace CameraToolsKatnissified.Cameras
                 line += 6.5f;
                 if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 3 * CameraToolsManager.CONTENT_WIDTH / 4, CameraToolsManager.ENTRY_HEIGHT ), "New Key" ) )
                 {
-                    CreateNewKeyframe();
+                    //CreateNewKeyframe();
                 }
             }
         }
@@ -421,7 +420,7 @@ namespace CameraToolsKatnissified.Cameras
 
             if( GUI.Button( new Rect( 105, 5, 180, 25 ), "Revert Pos" ) )
             {
-                ViewKeyframe( CurrentKeyframe );
+               // ViewKeyframe( CurrentKeyframe );
             }
 
             GUI.Label( new Rect( 5, 35, 80, 25 ), "Time: " );
@@ -450,7 +449,7 @@ namespace CameraToolsKatnissified.Cameras
 
             if( isApplied )
             {
-                DeselectKeyframe();
+               // DeselectKeyframe();
             }
         }
 

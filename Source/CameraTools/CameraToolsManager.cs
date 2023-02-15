@@ -33,38 +33,12 @@ namespace CameraToolsKatnissified
         [field: PersistentField]
         private int _currentBehaviourIndex = 0;
 
-        public CameraBehaviour CurrentBehaviour { get => _behaviours[_currentBehaviourIndex]; }
-
-        CameraBehaviour[] _behaviours;
-
-        public T GetBehaviour<T>() where T : CameraBehaviour
-        {
-            foreach( var b in _behaviours )
-            {
-                if( b is T bt )
-                {
-                    return bt;
-                }
-            }
-            return null;
-        }
-
-        public void SetBehaviour<T>() where T : CameraBehaviour
-        {
-            for( int i = 0; i < _behaviours.Length; i++ )
-            {
-                if( _behaviours[i] is T )
-                {
-                    _currentBehaviourIndex = i;
-                    return;
-                }
-            }
-        }
+        List<CameraBehaviour> _behaviours = new List<CameraBehaviour>();
 
         /// <summary>
         /// True if the CameraTools camera is active.
         /// </summary>
-        bool CameraToolsActive => CurrentBehaviour.enabled && CurrentBehaviour.IsPlaying;
+        public bool CameraToolsActive { get; set; }
 
         /// <summary>
         /// Uses auto-zoom with stationary camera.
@@ -143,8 +117,6 @@ namespace CameraToolsKatnissified
 
         void Awake()
         {
-            SetBehaviours();
-
             LoadAndDeserialize();
         }
 
@@ -189,11 +161,17 @@ namespace CameraToolsKatnissified
             if( Input.GetKeyDown( KeyCode.Home ) )
             {
                 StartCamera();
-                if( CurrentBehaviour is PathCameraBehaviour p )
+                if( _behaviours[0] is PathCameraBehaviour p )
                 {
                     p.StartPlayingPath();
                 }
             }
+
+            foreach( var beh in _behaviours )
+            {
+                beh.Update();
+            }
+
             if( Input.GetKeyDown( KeyCode.End ) )
             {
                 EndCamera();
@@ -217,9 +195,6 @@ namespace CameraToolsKatnissified
 
         void FixedUpdate()
         {
-            LastCameraPosition = FlightCamera.transform.position; // was in stationary camera only.
-            LastCameraRotation = FlightCamera.transform.rotation;
-
             if( !FlightGlobals.ready )
             {
                 return;
@@ -235,6 +210,14 @@ namespace CameraToolsKatnissified
                 ZoomFactor = Mathf.Exp( Zoom ) / Mathf.Exp( 1 );
             }
 
+            foreach( var beh in _behaviours )
+            {
+                beh.FixedUpdate();
+            }
+
+            LastCameraPosition = FlightCamera.transform.position; // was in stationary camera only.
+            LastCameraRotation = FlightCamera.transform.rotation;
+
             if( _hasDied && Time.time - _diedTime > 2 )
             {
                 EndCamera();
@@ -246,6 +229,7 @@ namespace CameraToolsKatnissified
         /// </summary>
         private void StartCamera()
         {
+            CameraToolsActive = true;
             _startCameraTimestamp = Time.time;
 
             if( !CameraToolsActive )
@@ -260,7 +244,10 @@ namespace CameraToolsKatnissified
                 ActiveVessel = FlightGlobals.ActiveVessel;
             }
 
-            CurrentBehaviour.StartPlaying();
+            foreach( var beh in _behaviours )
+            {
+                beh.StartPlaying();
+            }
         }
 
         /// <summary>
@@ -269,6 +256,11 @@ namespace CameraToolsKatnissified
         public void EndCamera()
         {
             _hasDied = false;
+
+            foreach( var beh in _behaviours )
+            {
+                beh.StopPlaying();
+            }
 
             if( FlightGlobals.ActiveVessel != null && HighLogic.LoadedScene == GameScenes.FLIGHT )
             {
@@ -283,7 +275,7 @@ namespace CameraToolsKatnissified
             FlightCamera.ActivateUpdate();
             CurrentFov = 60;
 
-            CurrentBehaviour.StopPlaying();
+            CameraToolsActive = false;
         }
 
         void SaveOriginalCamera()
@@ -384,7 +376,8 @@ namespace CameraToolsKatnissified
         {
             Serializer.LoadFields();
 
-            CurrentBehaviour.enabled = true;
+            _behaviours = new List<CameraBehaviour>();
+            _behaviours.Add( new StationaryCameraBehaviour( this ) );
 
             foreach( var beh in _behaviours )
             {
@@ -436,27 +429,24 @@ namespace CameraToolsKatnissified
             _uiVisible = false;
         }
 
-        void CycleToolMode( int step )
+        void CycleToolMode( int behaviourIndex, int step )
         {
-            int length = CameraBehaviour.GetBehaviourCountWithCache();
-
-            CurrentBehaviour.StopPlaying();
-            CurrentBehaviour.enabled = false; // enabled <=> selected.
-
-            _currentBehaviourIndex = (_currentBehaviourIndex + step + length) % length; // adding length unfucks negative modulo
-            CurrentBehaviour.enabled = true; // enabled <=> selected.
-        }
-
-        void SetBehaviours()
-        {
-            Type[] behaviourTypes = CameraBehaviour.GetBehaviourTypesWithCache();
-            _behaviours = new CameraBehaviour[behaviourTypes.Length];
-            for( int i = 0; i < behaviourTypes.Length; i++ )
+            if( behaviourIndex < 0 || behaviourIndex >= _behaviours.Count )
             {
-                CameraBehaviour beh = (CameraBehaviour)this.gameObject.AddComponent( behaviourTypes[i] );
-                beh.enabled = false;
-                _behaviours[i] = beh;
+                throw new ArgumentOutOfRangeException( "Behaviour Index must be within the behaviours array", nameof( behaviourIndex ) );
             }
+            if( CameraToolsActive )
+            {
+                EndCamera();
+            }
+
+            Type[] types = CameraBehaviour.GetBehaviourTypesWithCache();
+            Type thisType = _behaviours[behaviourIndex].GetType();
+            int typeIndex = types.IndexOf( thisType );
+
+            int newTypeIndex = (typeIndex + step + types.Length) % types.Length; // adding length unfucks negative modulo
+
+            _behaviours[behaviourIndex] = (CameraBehaviour)Activator.CreateInstance( types[newTypeIndex], new object[] { this } );
         }
 
         /*OnFloatingOriginShift( Vector3d offset, Vector3d data1 )

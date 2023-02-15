@@ -70,17 +70,17 @@ namespace CameraToolsKatnissified
             line++;
 
             //tool mode switcher
-            GUI.Label( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, ENTRY_HEIGHT ), $"Tool: {CurrentBehaviour.GetType().Name}", HeaderStyle );
+            GUI.Label( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, ENTRY_HEIGHT ), $"Tool: {_behaviours[0].GetType().Name}", HeaderStyle );
             line++;
             if( !CameraToolsActive )
             {
                 if( GUI.Button( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
                 {
-                    CycleToolMode( -1 );
+                    CycleToolMode( 0, -1 );
                 }
                 if( GUI.Button( new Rect( GUI_MARGIN + 25 + 4, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), ">" ) )
                 {
-                    CycleToolMode( 1 );
+                    CycleToolMode( 0, 1 );
                 }
             }
 
@@ -102,7 +102,7 @@ namespace CameraToolsKatnissified
             }
             line++;
 
-            if( !(CurrentBehaviour is PathCameraBehaviour) )
+            if( !(_behaviours[0] is PathCameraBehaviour) )
             {
                 UseAutoZoom = GUI.Toggle( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, ENTRY_HEIGHT ), UseAutoZoom, "Auto Zoom" );
                 line++;
@@ -118,7 +118,7 @@ namespace CameraToolsKatnissified
             line++;
 
             // Draw Camera GUI
-            CurrentBehaviour.DrawGui( ref line );
+            _behaviours[0].DrawGui( ref line );
 
             line++;
             line++;

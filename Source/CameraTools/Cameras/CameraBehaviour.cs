@@ -7,16 +7,16 @@ using UnityEngine;
 
 namespace CameraToolsKatnissified.Cameras
 {
-    public abstract class CameraBehaviour : MonoBehaviour
+    public abstract class CameraBehaviour
     {
         // This class should be a base camera behaviour that you can derive from to make new camera modes.
 
         protected CameraToolsManager cameraBeh;
 
-        /// <summary>
-        /// True if the camera behaviour is currently controlling the camera (playing). False otherwise.
-        /// </summary>
-        public bool IsPlaying { get; protected set; } = false;
+        public CameraBehaviour( CameraToolsManager ctm )
+        {
+            cameraBeh = ctm;
+        }
 
         /// <summary>
         /// Called when the camera behaviour starts playing. Use this to set the initial state.
@@ -52,33 +52,31 @@ namespace CameraToolsKatnissified.Cameras
         {
             //this.enabled = true;
             Debug.Log( "[CTK] StartPlaying was called." );
-            IsPlaying = true;
             OnStartPlaying();
         }
 
         /// <summary>
-        /// Call this to stop playing the camera behaviour.
+        /// Call this to stop playing this camera behaviour.
         /// </summary>
         public void StopPlaying()
         {
-            //this.enabled = false;
-            IsPlaying = false;
             OnStopPlaying();
         }
 
-
-        protected virtual void Awake()
+        public virtual void Update()
         {
-            cameraBeh = this.GetComponent<CameraToolsManager>();
+
         }
 
-        protected virtual void FixedUpdate()
+        public virtual void FixedUpdate()
         {
-            if( IsPlaying )
+            if( cameraBeh.CameraToolsActive )
             {
                 OnPlaying();
             }
         }
+
+        // -------
 
         static Type[] cachedCameraTypes;
 
