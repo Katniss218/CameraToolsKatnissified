@@ -18,6 +18,13 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh = ctm;
         }
 
+        public Transform Pivot { get; private set; }
+
+        public void SetTransform( Transform pivot )
+        {
+            Pivot = pivot;
+        }
+
         /// <summary>
         /// Called when the camera behaviour starts playing. Use this to set the initial state.
         /// </summary>
@@ -33,7 +40,9 @@ namespace CameraToolsKatnissified.Cameras
         /// </summary>
         protected abstract void OnStopPlaying();
 
-        public abstract void DrawGui( ref float line );
+        public virtual void OnGUI() { }
+
+        public abstract void DrawGui( float viewcontentWidth, ref float line );
 
         public virtual void OnLoad( ConfigNode node )
         {

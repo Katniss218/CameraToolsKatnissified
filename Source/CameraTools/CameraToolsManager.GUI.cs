@@ -43,6 +43,8 @@ namespace CameraToolsKatnissified
         public Vector2 _pathScrollPosition;
         public Vector2 _pathSelectScrollPos;
 
+        public Vector2 _behaviourScrollPos;
+
         /// <summary>
         /// Unity Message - Draws GUI
         /// </summary>
@@ -51,6 +53,10 @@ namespace CameraToolsKatnissified
             if( _guiWindowVisible && _uiVisible )
             {
                 _windowRect = GUI.Window( 320, _windowRect, DrawGuiWindow, "" );
+            }
+            foreach( var beh in _behaviours )
+            {
+                beh.OnGUI();
             }
         }
 
@@ -69,20 +75,6 @@ namespace CameraToolsKatnissified
             GUI.Label( new Rect( 0, CONTENT_TOP, WINDOW_WIDTH, 40 ), "Camera Tools", TitleStyle );
             line++;
 
-            //tool mode switcher
-            GUI.Label( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, ENTRY_HEIGHT ), $"Tool: {_behaviours[0].GetType().Name}", HeaderStyle );
-            line++;
-            if( !CameraToolsActive )
-            {
-                if( GUI.Button( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
-                {
-                    CycleToolMode( 0, -1 );
-                }
-                if( GUI.Button( new Rect( GUI_MARGIN + 25 + 4, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), ">" ) )
-                {
-                    CycleToolMode( 0, 1 );
-                }
-            }
 
             line++;
             line++;
@@ -113,12 +105,53 @@ namespace CameraToolsKatnissified
             line++;
             ShakeMultiplier = GUI.HorizontalSlider( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH - 45, ENTRY_HEIGHT ), ShakeMultiplier, 0.0f, 1.0f );
             GUI.Label( new Rect( GUI_MARGIN + CONTENT_WIDTH - 40, CONTENT_TOP + ((line - 0.25f) * ENTRY_HEIGHT), 40, ENTRY_HEIGHT ), ShakeMultiplier.ToString( "0.00" ) + "x" );
+
+#warning TODO - GUI layout framework, grid-based with custom cell size, with integer values as inputs into overloaded functions.
+
+            //Rect scrollRect = new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, 6 * ENTRY_HEIGHT );
+            //GUI.Box( scrollRect, string.Empty );
+
+            float viewcontentWidth = CONTENT_WIDTH - (2 * GUI_MARGIN);
+            //float viewHeight = Mathf.Max( 6 * ENTRY_HEIGHT, 10 * _behaviours.Count * ENTRY_HEIGHT ); // needs a method in the behaviours that returns the GUI height for each behaviour.
+            //_pathScrollPosition = GUI.BeginScrollView( scrollRect, _behaviourScrollPos, new Rect( 0, 0, viewcontentWidth, viewHeight ) );
+
+            for( int i = 0; i < _behaviours.Count; i++ )
+            {
+                line++;
+                //tool mode switcher
+                GUI.Label( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), viewcontentWidth, ENTRY_HEIGHT ), $"Tool: {_behaviours[i].GetType().Name}", HeaderStyle );
+                line++;
+                if( !CameraToolsActive )
+                {
+                    if( GUI.Button( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
+                    {
+                        CycleToolMode( i, -1 );
+                    }
+                    if( GUI.Button( new Rect( GUI_MARGIN + 25 + 4, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), ">" ) )
+                    {
+                        CycleToolMode( i, 1 );
+                    }
+                }
+
+                line++;
+
+                // Draw Camera GUI
+                _behaviours[i].DrawGui( viewcontentWidth, ref line );
+                line++;
+            }
+
+            //GUI.EndScrollView();
             line++;
 
+            if( GUI.Button( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "+" ) )
+            {
+                _behaviours.Add( new PathCameraBehaviour( this ) );
+            }
+            if( GUI.Button( new Rect( GUI_MARGIN + 20, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "-" ) )
+            {
+                _behaviours.RemoveAt( _behaviours.Count - 1 );
+            }
             line++;
-
-            // Draw Camera GUI
-            _behaviours[0].DrawGui( ref line );
 
             line++;
             line++;

@@ -30,9 +30,6 @@ namespace CameraToolsKatnissified
         /// </summary>
         public static bool _uiVisible = true;
 
-        [field: PersistentField]
-        private int _currentBehaviourIndex = 0;
-
         List<CameraBehaviour> _behaviours = new List<CameraBehaviour>();
 
         /// <summary>
@@ -60,11 +57,6 @@ namespace CameraToolsKatnissified
 
         [field: PersistentField]
         public float ShakeMultiplier { get; set; } = 0.0f;
-
-        /// <summary>
-        /// Pivot used as a parent for the camera.
-        /// </summary>
-        public GameObject CameraPivot { get; set; }
 
         /// <summary>
         /// The main camera.
@@ -108,6 +100,8 @@ namespace CameraToolsKatnissified
             }
         }
 
+        List<GameObject> pivots = new List<GameObject>();
+
         //      new
         // Vessel - stationary follow, path, drone all move and rotate this obj
         // - VesselOffset - stationary follow offset velocity moves this
@@ -135,12 +129,9 @@ namespace CameraToolsKatnissified
             GameEvents.onGameSceneLoadRequested.Add( PostDeathRevert );
             //GameEvents.onFloatingOriginShift.Add( OnFloatingOriginShift );
 
-            CameraPivot = new GameObject( "StationaryCameraParent" );
-
             if( FlightGlobals.ActiveVessel != null )
             {
                 ActiveVessel = FlightGlobals.ActiveVessel;
-                CameraPivot.transform.position = FlightGlobals.ActiveVessel.transform.position;
             }
 
             GameEvents.onVesselChange.Add( SwitchToVessel );
@@ -182,7 +173,7 @@ namespace CameraToolsKatnissified
         {
             // Retain pos and rot after vessel destruction
             // This will fuck the camera is called when CT is not supposed to be active.
-            if( CameraToolsActive && FlightCamera.transform.parent != CameraPivot.transform )
+            if( CameraToolsActive && FlightCamera.transform.parent != _behaviours[_behaviours.Count - 1].Pivot )
             {
                 FlightCamera.SetTargetNone();
                 FlightCamera.transform.parent = null;
@@ -224,6 +215,25 @@ namespace CameraToolsKatnissified
             }
         }
 
+        void ResetPivots()
+        {
+            Transform parent = null;
+            foreach( var pivot in pivots )
+            {
+                Destroy( pivot );
+            }
+
+            foreach( var beh in _behaviours )
+            {
+                GameObject go = new GameObject( $"Camera Pivot - {beh.GetType().FullName}" );
+                go.transform.SetParent( parent );
+
+                beh.SetTransform( go.transform );
+
+                parent = go.transform;
+            }
+        }
+
         /// <summary>
         /// Starts the CameraTools camera with the current settings.
         /// </summary>
@@ -243,6 +253,8 @@ namespace CameraToolsKatnissified
             {
                 ActiveVessel = FlightGlobals.ActiveVessel;
             }
+
+            ResetPivots();
 
             foreach( var beh in _behaviours )
             {
@@ -447,6 +459,7 @@ namespace CameraToolsKatnissified
             int newTypeIndex = (typeIndex + step + types.Length) % types.Length; // adding length unfucks negative modulo
 
             _behaviours[behaviourIndex] = (CameraBehaviour)Activator.CreateInstance( types[newTypeIndex], new object[] { this } );
+            _behaviours[behaviourIndex].OnLoad( null ); // loads the path list.
         }
 
         /*OnFloatingOriginShift( Vector3d offset, Vector3d data1 )

@@ -76,7 +76,7 @@ namespace CameraToolsKatnissified.Cameras
                 _pivotSpaceW2L = _pivotSpaceL2W.inverse;
 
                 cameraBeh.FlightCamera.SetTargetNone();
-                cameraBeh.FlightCamera.transform.SetParent( cameraBeh.CameraPivot.transform ); // Apparently this is not assigned by the global when starting playing. Needed when viewing a single keyframe
+                //cameraBeh.FlightCamera.transform.SetParent( cameraBeh.CameraPivot.transform ); // Apparently this is not assigned by the global when starting playing. Needed when viewing a single keyframe
                 cameraBeh.FlightCamera.DeactivateUpdate();
             }
             else
@@ -292,7 +292,7 @@ namespace CameraToolsKatnissified.Cameras
             _pathWindowVisible = !_pathWindowVisible;
         }
 
-        public override void DrawGui( ref float line )
+        public override void OnGUI()
         {
             if( CameraToolsManager._guiWindowVisible && CameraToolsManager._uiVisible )
             {
@@ -305,29 +305,32 @@ namespace CameraToolsKatnissified.Cameras
                     DrawPathSelectorWindow();
                 }
             }
+        }
 
+        public override void DrawGui( float contentWidth, ref float line )
+        {
             if( CurrentPath != null )
             {
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Path:" );
-                CurrentPath.PathName = GUI.TextField( new Rect( CameraToolsManager.GUI_MARGIN + 34, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH - 34, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.PathName );
+                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Path:" );
+                CurrentPath.PathName = GUI.TextField( new Rect( CameraToolsManager.GUI_MARGIN + 34, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth - 34, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.PathName );
             }
             else
             {
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Path: None" );
+                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Path: None" );
             }
             line += 1.25f;
 
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Open Path" ) )
+            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Open Path" ) )
             {
                 TogglePathList();
             }
             line++;
 
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT ), "New Path" ) )
+            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT ), "New Path" ) )
             {
                 CreateNewPath();
             }
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN + (CameraToolsManager.CONTENT_WIDTH / 2), CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT ), "Delete Path" ) )
+            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN + (contentWidth / 2), CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT ), "Delete Path" ) )
             {
                 DeletePath( CurrentPath );
             }
@@ -335,19 +338,19 @@ namespace CameraToolsKatnissified.Cameras
 
             if( CurrentPath != null )
             {
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Interpolation Rate:" + CurrentPath.LerpRate.ToString( "0.0" ) );
+                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Interpolation Rate:" + CurrentPath.LerpRate.ToString( "0.0" ) );
                 line++;
-                CurrentPath.LerpRate = GUI.HorizontalSlider( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT) + 4, CameraToolsManager.CONTENT_WIDTH - 50, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.LerpRate, 1f, 15f );
+                CurrentPath.LerpRate = GUI.HorizontalSlider( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT) + 4, contentWidth - 50, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.LerpRate, 1f, 15f );
                 CurrentPath.LerpRate = Mathf.Round( CurrentPath.LerpRate * 10 ) / 10;
                 line++;
 
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Path Timescale:" + CurrentPath.TimeScale.ToString( "0.00" ) );
+                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Path Timescale:" + CurrentPath.TimeScale.ToString( "0.00" ) );
                 line++;
-                CurrentPath.TimeScale = GUI.HorizontalSlider( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT) + 4, CameraToolsManager.CONTENT_WIDTH - 50, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.TimeScale, 0.05f, 4f );
+                CurrentPath.TimeScale = GUI.HorizontalSlider( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT) + 4, contentWidth - 50, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.TimeScale, 0.05f, 4f );
                 CurrentPath.TimeScale = Mathf.Round( CurrentPath.TimeScale * 20 ) / 20;
                 line++;
 
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), "Path Frame:" + CurrentPath.Frame.ToString() );
+                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Path Frame:" + CurrentPath.Frame.ToString() );
                 line++;
                 if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 25, CameraToolsManager.ENTRY_HEIGHT - 2 ), "<" ) )
                 {
@@ -360,10 +363,10 @@ namespace CameraToolsKatnissified.Cameras
                 line++;
 
                 float viewHeight = Mathf.Max( 6 * CameraToolsManager.ENTRY_HEIGHT, CurrentPath.keyframeCount * CameraToolsManager.ENTRY_HEIGHT );
-                Rect scrollRect = new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, 6 * CameraToolsManager.ENTRY_HEIGHT );
+                Rect scrollRect = new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, 6 * CameraToolsManager.ENTRY_HEIGHT );
                 GUI.Box( scrollRect, string.Empty );
 
-                float viewcontentWidth = CameraToolsManager.CONTENT_WIDTH - (2 * CameraToolsManager.GUI_MARGIN);
+                float viewcontentWidth = contentWidth - (2 * CameraToolsManager.GUI_MARGIN);
                 cameraBeh._pathScrollPosition = GUI.BeginScrollView( scrollRect, cameraBeh._pathScrollPosition, new Rect( 0, 0, viewcontentWidth, viewHeight ) );
 
                 // Draw path keyframe list.
@@ -386,7 +389,7 @@ namespace CameraToolsKatnissified.Cameras
 #warning TODO - for some reason, clicking this doesn't bring up the keyframe editor window.
                             //SelectKeyframe( CurrentPath.GetKeyframe( i ) );
                         }
-                        if( GUI.Button( new Rect( (3 * CameraToolsManager.CONTENT_WIDTH / 4), (i * CameraToolsManager.ENTRY_HEIGHT), (viewcontentWidth / 4) - 20, CameraToolsManager.ENTRY_HEIGHT ), "X" ) )
+                        if( GUI.Button( new Rect( (3 * contentWidth / 4), (i * CameraToolsManager.ENTRY_HEIGHT), (viewcontentWidth / 4) - 20, CameraToolsManager.ENTRY_HEIGHT ), "X" ) )
                         {
                             //DeleteKeyframe( CurrentPath.GetKeyframe( i ) );
                             break;
@@ -397,7 +400,7 @@ namespace CameraToolsKatnissified.Cameras
 
                 GUI.EndScrollView();
                 line += 6.5f;
-                if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 3 * CameraToolsManager.CONTENT_WIDTH / 4, CameraToolsManager.ENTRY_HEIGHT ), "New Key" ) )
+                if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 3 * contentWidth / 4, CameraToolsManager.ENTRY_HEIGHT ), "New Key" ) )
                 {
                     //CreateNewKeyframe();
                 }

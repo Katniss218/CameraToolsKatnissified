@@ -96,7 +96,7 @@ namespace CameraToolsKatnissified.Cameras
                 _initialOffset = cameraBeh.FlightCamera.transform.position - cameraBeh.ActiveVessel.transform.position;
 
                 cameraBeh.FlightCamera.SetTargetNone();
-                cameraBeh.FlightCamera.transform.SetParent( cameraBeh.CameraPivot.transform ); // Apparently this is not assigned by the global when starting playing.
+                //cameraBeh.FlightCamera.transform.SetParent( cameraBeh.CameraPivot.transform ); // Apparently this is not assigned by the global when starting playing.
                 cameraBeh.FlightCamera.DeactivateUpdate();
 
                 ManualOffset = Vector3.zero;
@@ -261,9 +261,9 @@ namespace CameraToolsKatnissified.Cameras
 
         }
 
-        public override void DrawGui( ref float line )
+        public override void DrawGui( float contentWidth, ref float line )
         {
-            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), $"Frame of Reference: {CurrentReferenceMode}" );
+            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), $"Frame of Reference: {CurrentReferenceMode}" );
             line++;
             if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 25, CameraToolsManager.ENTRY_HEIGHT - 2 ), "<" ) )
             {
@@ -278,12 +278,12 @@ namespace CameraToolsKatnissified.Cameras
 
             if( CurrentReferenceMode == CameraReference.Surface || CurrentReferenceMode == CameraReference.Orbit )
             {
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT ), "Max Rel. V:" );
-                MaxRelativeVelocity = float.Parse( GUI.TextField( new Rect( CameraToolsManager.GUI_MARGIN + CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT ), MaxRelativeVelocity.ToString() ) );
+                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT ), "Max Rel. V:" );
+                MaxRelativeVelocity = float.Parse( GUI.TextField( new Rect( CameraToolsManager.GUI_MARGIN + contentWidth / 2, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT ), MaxRelativeVelocity.ToString() ) );
             }
             else if( CurrentReferenceMode == CameraReference.InitialVelocity )
             {
-                UseOrbitalInitialVelocity = GUI.Toggle( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), UseOrbitalInitialVelocity, " Orbital" );
+                UseOrbitalInitialVelocity = GUI.Toggle( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), UseOrbitalInitialVelocity, " Orbital" );
             }
             line++;
             line++;
@@ -291,16 +291,16 @@ namespace CameraToolsKatnissified.Cameras
             // Draw position buttons.
 
             string positionText = CameraPosition == null ? "None" : CameraPosition.Value.ToString();
-            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), $"Camera Position: {positionText}" );
+            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), $"Camera Position: {positionText}" );
             line++;
 
             positionText = _settingPositionEnabled ? "waiting..." : "Set Position";
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), positionText ) )
+            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), positionText ) )
             {
                 _settingPositionEnabled = true;
                 cameraBeh._wasMouseUp = false;
             }
-            if( GUI.Button( new Rect( 2 + CameraToolsManager.GUI_MARGIN + CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), (CameraToolsManager.CONTENT_WIDTH / 2) - 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), "Clear Position" ) )
+            if( GUI.Button( new Rect( 2 + CameraToolsManager.GUI_MARGIN + contentWidth / 2, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), (contentWidth / 2) - 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), "Clear Position" ) )
             {
                 CameraPosition = null;
             }
@@ -311,16 +311,16 @@ namespace CameraToolsKatnissified.Cameras
 
             string targetText = Target == null ? "None" : Target.gameObject.name;
 #warning TODO - When the part name is too long, it cuts the word off.
-            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH, CameraToolsManager.ENTRY_HEIGHT ), $"Camera Target: {targetText}" );
+            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), $"Camera Target: {targetText}" );
             line++;
 
             targetText = _settingTargetEnabled ? "waiting..." : "Set Target";
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), targetText ) )
+            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), targetText ) )
             {
                 _settingTargetEnabled = true;
                 cameraBeh._wasMouseUp = false;
             }
-            if( GUI.Button( new Rect( 2 + CameraToolsManager.GUI_MARGIN + CameraToolsManager.CONTENT_WIDTH / 2, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), (CameraToolsManager.CONTENT_WIDTH / 2) - 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), "Clear Target" ) )
+            if( GUI.Button( new Rect( 2 + CameraToolsManager.GUI_MARGIN + contentWidth / 2, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), (contentWidth / 2) - 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), "Clear Target" ) )
             {
                 Target = null;
             }
