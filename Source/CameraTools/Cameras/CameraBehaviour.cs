@@ -42,7 +42,7 @@ namespace CameraToolsKatnissified.Cameras
 
         public virtual void OnGUI() { }
 
-        public abstract void DrawGui( float viewcontentWidth, ref float line );
+        public abstract void DrawGui( float viewcontentWidth, ref int line );
 
         public virtual void OnLoad( ConfigNode node )
         {

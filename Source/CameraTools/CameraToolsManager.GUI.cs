@@ -1,4 +1,5 @@
 ﻿using CameraToolsKatnissified.Cameras;
+using CameraToolsKatnissified.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,13 +11,13 @@ namespace CameraToolsKatnissified
 {
     public sealed partial class CameraToolsManager
     {
-        public const float WINDOW_WIDTH = 250;
-        public const float GUI_MARGIN = 12;
-        public const float ENTRY_HEIGHT = 20;
+        // public const float WINDOW_WIDTH = 250;
+        // public const float GUI_MARGIN = 12;
+        // public const float ENTRY_HEIGHT = 20;
 
         public static readonly GUIStyle TitleStyle = new GUIStyle()
         {
-            fontSize = 24,
+            fontSize = 20,
             alignment = TextAnchor.MiddleCenter,
             normal = new GUIStyleState()
             {
@@ -60,58 +61,52 @@ namespace CameraToolsKatnissified
             }
         }
 
-        public const float CONTENT_WIDTH = WINDOW_WIDTH - (2 * GUI_MARGIN);
-        public const float CONTENT_TOP = 20;
+        // public const float CONTENT_WIDTH = WINDOW_WIDTH - (2 * GUI_MARGIN);
+        // public const float CONTENT_TOP = 20;
 
         /// <summary>
         /// Controls how the camera Tools GUI window looks.
         /// </summary>
         void DrawGuiWindow( int windowId )
         {
-            GUI.DragWindow( new Rect( 0, 0, WINDOW_WIDTH, _draggableHeight ) );
+            GUI.DragWindow( UILayout.SetWindow( 12, 2, 12, 20 ) );
 
-            float line = 1; // Used to calculate the position of the next line of the GUI.
+            GUI.Label( UILayout.GetRect( 0, 0, 11, 1 ), "Camera Tools", TitleStyle );
 
-            GUI.Label( new Rect( 0, CONTENT_TOP, WINDOW_WIDTH, 40 ), "Camera Tools", TitleStyle );
-            line++;
+            int line = 2; // Used to calculate the position of the next line of the GUI.
 
-
-            line++;
-            line++;
             if( UseAutoZoom )
             {
-                GUI.Label( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH / 2, ENTRY_HEIGHT ), "Autozoom Margin:" );
+                GUI.Label( UILayout.GetRectX( line ), "Autozoom Margin:" );
                 line++;
-                AutoZoomMargin = GUI.HorizontalSlider( new Rect( GUI_MARGIN, CONTENT_TOP + ((line) * ENTRY_HEIGHT), CONTENT_WIDTH - 45, ENTRY_HEIGHT ), AutoZoomMargin, 0.0f, 50.0f );
-                GUI.Label( new Rect( GUI_MARGIN + CONTENT_WIDTH - 40, CONTENT_TOP + ((line - 0.15f) * ENTRY_HEIGHT), 40, ENTRY_HEIGHT ), AutoZoomMargin.ToString( "0.0" ) );
+
+                AutoZoomMargin = GUI.HorizontalSlider( UILayout.GetRectX( line, 0, 9 ), AutoZoomMargin, 1.0f, 75.0f );
+                GUI.Label( UILayout.GetRectX( line, 9, 11 ), AutoZoomMargin.ToString( "0.0" ) );
             }
             else
             {
-                GUI.Label( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, ENTRY_HEIGHT ), "Zoom:" );
+                GUI.Label( UILayout.GetRectX( line ), "Zoom:" );
                 line++;
-                Zoom = GUI.HorizontalSlider( new Rect( GUI_MARGIN, CONTENT_TOP + ((line) * ENTRY_HEIGHT), CONTENT_WIDTH - 45, ENTRY_HEIGHT ), Zoom, 1.0f, 8.0f );
-                GUI.Label( new Rect( GUI_MARGIN + CONTENT_WIDTH - 40, CONTENT_TOP + ((line - 0.15f) * ENTRY_HEIGHT), 40, ENTRY_HEIGHT ), ZoomFactor.ToString( "0.0" ) + "x" );
+
+                Zoom = GUI.HorizontalSlider( UILayout.GetRectX( line, 0, 9 ), Zoom, 1.0f, 8.0f );
+                GUI.Label( UILayout.GetRectX( line, 9, 11 ), ZoomFactor.ToString( "0.0" ) + "x" );
             }
             line++;
 
-            if( !(_behaviours[0] is PathCameraBehaviour) )
-            {
-                UseAutoZoom = GUI.Toggle( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, ENTRY_HEIGHT ), UseAutoZoom, "Auto Zoom" );
-                line++;
-            }
+            UseAutoZoom = GUI.Toggle( UILayout.GetRectX( line ), UseAutoZoom, "Auto Zoom" );
+            line++;
             line++;
 
-            GUI.Label( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, ENTRY_HEIGHT ), "Camera Shake:" );
+            GUI.Label( UILayout.GetRectX( line ), "Camera Shake:" );
             line++;
-            ShakeMultiplier = GUI.HorizontalSlider( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH - 45, ENTRY_HEIGHT ), ShakeMultiplier, 0.0f, 1.0f );
-            GUI.Label( new Rect( GUI_MARGIN + CONTENT_WIDTH - 40, CONTENT_TOP + ((line - 0.25f) * ENTRY_HEIGHT), 40, ENTRY_HEIGHT ), ShakeMultiplier.ToString( "0.00" ) + "x" );
 
-#warning TODO - GUI layout framework, grid-based with custom cell size, with integer values as inputs into overloaded functions.
+            ShakeMultiplier = GUI.HorizontalSlider( UILayout.GetRectX( line, 0, 9 ), ShakeMultiplier, 0.0f, 1.0f );
+            GUI.Label( UILayout.GetRectX( line, 9, 11 ), ShakeMultiplier.ToString( "0.00" ) + "x" );
 
             //Rect scrollRect = new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, 6 * ENTRY_HEIGHT );
             //GUI.Box( scrollRect, string.Empty );
 
-            float viewcontentWidth = CONTENT_WIDTH - (2 * GUI_MARGIN);
+            // float viewcontentWidth = CONTENT_WIDTH - (2 * GUI_MARGIN);
             //float viewHeight = Mathf.Max( 6 * ENTRY_HEIGHT, 10 * _behaviours.Count * ENTRY_HEIGHT ); // needs a method in the behaviours that returns the GUI height for each behaviour.
             //_pathScrollPosition = GUI.BeginScrollView( scrollRect, _behaviourScrollPos, new Rect( 0, 0, viewcontentWidth, viewHeight ) );
 
@@ -119,15 +114,15 @@ namespace CameraToolsKatnissified
             {
                 line++;
                 //tool mode switcher
-                GUI.Label( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), viewcontentWidth, ENTRY_HEIGHT ), $"Tool: {_behaviours[i].GetType().Name}", HeaderStyle );
+                GUI.Label( UILayout.GetRectX( line ), $"Tool: {_behaviours[i].GetType().Name}", HeaderStyle );
                 line++;
                 if( !CameraToolsActive )
                 {
-                    if( GUI.Button( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "<" ) )
+                    if( GUI.Button( UILayout.GetRect( 0, line ), "<" ) )
                     {
                         CycleToolMode( i, -1 );
                     }
-                    if( GUI.Button( new Rect( GUI_MARGIN + 25 + 4, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), ">" ) )
+                    if( GUI.Button( UILayout.GetRect( 1, line ), ">" ) )
                     {
                         CycleToolMode( i, 1 );
                     }
@@ -136,40 +131,36 @@ namespace CameraToolsKatnissified
                 line++;
 
                 // Draw Camera GUI
-                _behaviours[i].DrawGui( viewcontentWidth, ref line );
+                _behaviours[i].DrawGui( 12 * 20, ref line );
                 line++;
             }
 
             //GUI.EndScrollView();
-            line++;
 
-            if( GUI.Button( new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "+" ) )
+            line++;
+            if( GUI.Button( UILayout.GetRect( 0, line ), "+" ) )
             {
                 _behaviours.Add( new PathCameraBehaviour( this ) );
             }
-            if( GUI.Button( new Rect( GUI_MARGIN + 20, CONTENT_TOP + (line * ENTRY_HEIGHT), 25, ENTRY_HEIGHT - 2 ), "-" ) )
+            if( GUI.Button( UILayout.GetRect( 1, line ), "-" ) )
             {
                 _behaviours.RemoveAt( _behaviours.Count - 1 );
             }
             line++;
+            line++;
 
-            line++;
-            line++;
-            Rect saveRect = new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH / 2, ENTRY_HEIGHT );
-            if( GUI.Button( saveRect, "Save" ) )
+            if( GUI.Button( UILayout.GetRectX( line, 0, 6 ), "Save" ) )
             {
                 SaveAndSerialize();
             }
 
-            Rect loadRect = new Rect( saveRect );
-            loadRect.x += CONTENT_WIDTH / 2;
-            if( GUI.Button( loadRect, "Reload" ) )
+            if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Reload" ) )
             {
                 LoadAndDeserialize();
             }
 
             // fix length
-            _windowHeight = CONTENT_TOP + (line * ENTRY_HEIGHT) + ENTRY_HEIGHT + ENTRY_HEIGHT;
+            (_, _windowHeight) = UILayout.GetFullPixelSize();// CONTENT_TOP + (line * ENTRY_HEIGHT) + ENTRY_HEIGHT + ENTRY_HEIGHT;
             _windowRect.height = _windowHeight;
         }
     }

@@ -1,4 +1,5 @@
 ﻿using CameraToolsKatnissified.Animation;
+using CameraToolsKatnissified.UI;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -36,7 +37,7 @@ namespace CameraToolsKatnissified.Cameras
         {
             base.OnLoad( node );
 
-           // DeselectKeyframe();
+            // DeselectKeyframe();
             CurrentPath = null;
             AvailablePaths = new List<CameraPath>();
 
@@ -94,7 +95,7 @@ namespace CameraToolsKatnissified.Cameras
                 return;
             }
 
-           // DeselectKeyframe();
+            // DeselectKeyframe();
             OnStartPlaying();
 
             // initialize the rotation on start, but don't update it so if the rocket rolls, the camera won't follow it.
@@ -104,8 +105,8 @@ namespace CameraToolsKatnissified.Cameras
             _pivotSpaceW2L = _pivotSpaceL2W.inverse;
 
             CameraTransformation firstFrame = CurrentPath.Evaulate( 0 );
-            cameraBeh.FlightCamera.transform.position = _pivotSpaceL2W.MultiplyPoint( firstFrame.position );
-            cameraBeh.FlightCamera.transform.rotation = _pivotRotation * firstFrame.rotation;
+            this.Pivot.transform.position = _pivotSpaceL2W.MultiplyPoint( firstFrame.position );
+            this.Pivot.transform.rotation = _pivotRotation * firstFrame.rotation;
             cameraBeh.Zoom = firstFrame.zoom;
 
             //IsPlaying = true;
@@ -142,34 +143,34 @@ namespace CameraToolsKatnissified.Cameras
             if( IsPlayingPath )
             {
                 CameraTransformation camTransf = CurrentPath.Evaulate( cameraBeh.TimeSinceStart * CurrentPath.TimeScale );
-                cameraBeh.FlightCamera.transform.position = _pivotSpaceL2W.MultiplyPoint( Vector3.Lerp( _pivotSpaceW2L.MultiplyPoint( cameraBeh.FlightCamera.transform.position ), camTransf.position, CurrentPath.LerpRate * Time.fixedDeltaTime ) );
-                cameraBeh.FlightCamera.transform.rotation = _pivotRotation * Quaternion.Slerp( Quaternion.Inverse( _pivotRotation ) * cameraBeh.FlightCamera.transform.rotation, camTransf.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
+                this.Pivot.transform.localPosition = _pivotSpaceL2W.MultiplyPoint( Vector3.Lerp( _pivotSpaceW2L.MultiplyPoint( this.Pivot.transform.localPosition ), camTransf.position, CurrentPath.LerpRate * Time.fixedDeltaTime ) );
+                this.Pivot.transform.localRotation = _pivotRotation * Quaternion.Slerp( Quaternion.Inverse( _pivotRotation ) * this.Pivot.transform.localRotation, camTransf.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
                 cameraBeh.Zoom = Mathf.Lerp( cameraBeh.Zoom, camTransf.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
             }
             else // this is to set up the path.
             {
                 //mouse panning, moving
-                Vector3 forwardLevelAxis = cameraBeh.FlightCamera.transform.forward;
+                Vector3 forwardLevelAxis = this.Pivot.transform.forward;
 
                 if( Input.GetKey( KeyCode.Mouse1 ) && Input.GetKey( KeyCode.Mouse2 ) )
                 {
-                    cameraBeh.FlightCamera.transform.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, cameraBeh.FlightCamera.transform.forward ) * cameraBeh.FlightCamera.transform.rotation;
+                    this.Pivot.transform.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, this.Pivot.transform.forward ) * this.Pivot.transform.rotation;
                 }
                 else
                 {
                     if( Input.GetKey( KeyCode.Mouse1 ) )
                     {
-                        cameraBeh.FlightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (cameraBeh.Zoom * cameraBeh.Zoom), Vector3.up );
-                        cameraBeh.FlightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (cameraBeh.Zoom * cameraBeh.Zoom), Vector3.right );
-                        cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( cameraBeh.FlightCamera.transform.forward, cameraBeh.FlightCamera.transform.up );
+                        this.Pivot.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (cameraBeh.Zoom * cameraBeh.Zoom), Vector3.up );
+                        this.Pivot.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (cameraBeh.Zoom * cameraBeh.Zoom), Vector3.right );
+                        this.Pivot.transform.rotation = Quaternion.LookRotation( this.Pivot.transform.forward, this.Pivot.transform.up );
                     }
                     if( Input.GetKey( KeyCode.Mouse2 ) )
                     {
-                        cameraBeh.FlightCamera.transform.position += cameraBeh.FlightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
-                        cameraBeh.FlightCamera.transform.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
+                        this.Pivot.transform.position += this.Pivot.transform.right * Input.GetAxis( "Mouse X" ) * 2;
+                        this.Pivot.transform.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
                     }
                 }
-                cameraBeh.FlightCamera.transform.position += cameraBeh.FlightCamera.transform.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
+                this.Pivot.transform.position += this.Pivot.transform.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
 
             }
 
@@ -203,9 +204,9 @@ namespace CameraToolsKatnissified.Cameras
         protected override void OnStopPlaying()
         {
             IsPlayingPath = false;
-           // DeselectKeyframe();
+            // DeselectKeyframe();
         }
-        
+
         public void CreateNewPath()
         {
             _pathKeyframeWindowVisible = false;
@@ -307,30 +308,30 @@ namespace CameraToolsKatnissified.Cameras
             }
         }
 
-        public override void DrawGui( float contentWidth, ref float line )
+        public override void DrawGui( float contentWidth, ref int line )
         {
             if( CurrentPath != null )
             {
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Path:" );
-                CurrentPath.PathName = GUI.TextField( new Rect( CameraToolsManager.GUI_MARGIN + 34, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth - 34, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.PathName );
+                GUI.Label( UILayout.GetRectX( line, 1, 3 ), "Path:" );
+                CurrentPath.PathName = GUI.TextField( UILayout.GetRectX( line, 4, 11 ), CurrentPath.PathName );
             }
             else
             {
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Path: None" );
+                GUI.Label( UILayout.GetRectX( line, 1, 11 ), "Path: None" );
             }
-            line += 1.25f;
+            line++;
 
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Open Path" ) )
+            if( GUI.Button( UILayout.GetRectX( line, 1, 11 ), "Open Path" ) )
             {
                 TogglePathList();
             }
             line++;
 
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT ), "New Path" ) )
+            if( GUI.Button( UILayout.GetRectX( line, 1, 5 ), "New Path" ) )
             {
                 CreateNewPath();
             }
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN + (contentWidth / 2), CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT ), "Delete Path" ) )
+            if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Delete Path" ) )
             {
                 DeletePath( CurrentPath );
             }
@@ -338,37 +339,38 @@ namespace CameraToolsKatnissified.Cameras
 
             if( CurrentPath != null )
             {
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Interpolation Rate:" + CurrentPath.LerpRate.ToString( "0.0" ) );
+                GUI.Label( UILayout.GetRectX( line, 1, 11 ), "Interpolation Rate:" + CurrentPath.LerpRate.ToString( "0.0" ) );
                 line++;
-                CurrentPath.LerpRate = GUI.HorizontalSlider( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT) + 4, contentWidth - 50, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.LerpRate, 1f, 15f );
+                CurrentPath.LerpRate = GUI.HorizontalSlider( UILayout.GetRectX( line, 1, 11 ), CurrentPath.LerpRate, 1f, 15f );
                 CurrentPath.LerpRate = Mathf.Round( CurrentPath.LerpRate * 10 ) / 10;
                 line++;
 
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Path Timescale:" + CurrentPath.TimeScale.ToString( "0.00" ) );
+                GUI.Label( UILayout.GetRectX( line, 1, 11 ), "Path Timescale:" + CurrentPath.TimeScale.ToString( "0.00" ) );
                 line++;
-                CurrentPath.TimeScale = GUI.HorizontalSlider( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT) + 4, contentWidth - 50, CameraToolsManager.ENTRY_HEIGHT ), CurrentPath.TimeScale, 0.05f, 4f );
+                CurrentPath.TimeScale = GUI.HorizontalSlider( UILayout.GetRectX( line, 1, 11 ), CurrentPath.TimeScale, 0.05f, 4f );
                 CurrentPath.TimeScale = Mathf.Round( CurrentPath.TimeScale * 20 ) / 20;
                 line++;
 
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), "Path Frame:" + CurrentPath.Frame.ToString() );
+                GUI.Label( UILayout.GetRectX( line, 1, 11 ), "Path Frame:" + CurrentPath.Frame.ToString() );
                 line++;
-                if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 25, CameraToolsManager.ENTRY_HEIGHT - 2 ), "<" ) )
+                if( GUI.Button( UILayout.GetRect( 1, line ), "<" ) )
                 {
                     CurrentPath.Frame = Utils.CycleEnum( CurrentPath.Frame, -1 );
                 }
-                if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN + 25 + 4, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 25, CameraToolsManager.ENTRY_HEIGHT - 2 ), ">" ) )
+                if( GUI.Button( UILayout.GetRect( 2, line ), ">" ) )
                 {
                     CurrentPath.Frame = Utils.CycleEnum( CurrentPath.Frame, 1 );
                 }
                 line++;
 
+                /*
                 float viewHeight = Mathf.Max( 6 * CameraToolsManager.ENTRY_HEIGHT, CurrentPath.keyframeCount * CameraToolsManager.ENTRY_HEIGHT );
                 Rect scrollRect = new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, 6 * CameraToolsManager.ENTRY_HEIGHT );
                 GUI.Box( scrollRect, string.Empty );
 
                 float viewcontentWidth = contentWidth - (2 * CameraToolsManager.GUI_MARGIN);
                 cameraBeh._pathScrollPosition = GUI.BeginScrollView( scrollRect, cameraBeh._pathScrollPosition, new Rect( 0, 0, viewcontentWidth, viewHeight ) );
-
+                
                 // Draw path keyframe list.
                 if( CurrentPath.keyframeCount > 0 )
                 {
@@ -398,9 +400,9 @@ namespace CameraToolsKatnissified.Cameras
                     GUI.color = origGuiColor;
                 }
 
-                GUI.EndScrollView();
-                line += 6.5f;
-                if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 3 * contentWidth / 4, CameraToolsManager.ENTRY_HEIGHT ), "New Key" ) )
+                GUI.EndScrollView();*/
+
+                if( GUI.Button( UILayout.GetRectX( line, 1, 11 ), "New Key" ) )
                 {
                     //CreateNewKeyframe();
                 }
@@ -423,7 +425,7 @@ namespace CameraToolsKatnissified.Cameras
 
             if( GUI.Button( new Rect( 105, 5, 180, 25 ), "Revert Pos" ) )
             {
-               // ViewKeyframe( CurrentKeyframe );
+                // ViewKeyframe( CurrentKeyframe );
             }
 
             GUI.Label( new Rect( 5, 35, 80, 25 ), "Time: " );
@@ -452,7 +454,7 @@ namespace CameraToolsKatnissified.Cameras
 
             if( isApplied )
             {
-               // DeselectKeyframe();
+                // DeselectKeyframe();
             }
         }
 
@@ -469,7 +471,7 @@ namespace CameraToolsKatnissified.Cameras
             GUI.BeginGroup( pSelectRect );
 
             Rect scrollRect = new Rect( indent, indent, scrollRectSize, scrollRectSize );
-            float scrollHeight = Mathf.Max( scrollRectSize, CameraToolsManager.ENTRY_HEIGHT * AvailablePaths.Count );
+            float scrollHeight = Mathf.Max( scrollRectSize, 20 * AvailablePaths.Count );
             Rect scrollViewRect = new Rect( 0, 0, scrollRectSize - 20, scrollHeight );
             cameraBeh._pathSelectScrollPos = GUI.BeginScrollView( scrollRect, cameraBeh._pathSelectScrollPos, scrollViewRect );
 
@@ -477,12 +479,12 @@ namespace CameraToolsKatnissified.Cameras
 
             for( int i = 0; i < AvailablePaths.Count; i++ )
             {
-                if( GUI.Button( new Rect( 0, i * CameraToolsManager.ENTRY_HEIGHT, scrollRectSize - 90, CameraToolsManager.ENTRY_HEIGHT ), AvailablePaths[i].PathName ) )
+                if( GUI.Button( new Rect( 0, i * 20, scrollRectSize - 90, 20 ), AvailablePaths[i].PathName ) )
                 {
                     CurrentPath = AvailablePaths[i];
                     isAnyPathSelected = true;
                 }
-                if( GUI.Button( new Rect( scrollRectSize - 80, i * CameraToolsManager.ENTRY_HEIGHT, 60, CameraToolsManager.ENTRY_HEIGHT ), "Delete" ) )
+                if( GUI.Button( new Rect( scrollRectSize - 80, i * 20, 60, 20 ), "Delete" ) )
                 {
                     DeletePath( AvailablePaths[i] );
                     break;

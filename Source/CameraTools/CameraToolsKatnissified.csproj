@@ -49,6 +49,7 @@
     <Compile Include="Serializer.cs" />
     <Compile Include="Animation\Vector3Curve.cs" />
     <Compile Include="Cameras\StationaryCameraBehaviour.cs" />
+    <Compile Include="UI\UILayout.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>

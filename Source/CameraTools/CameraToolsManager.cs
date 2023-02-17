@@ -81,8 +81,8 @@ namespace CameraToolsKatnissified
         public const float SCROLL_MULTIPLIER = 10.0f;
 
         // retaining position and rotation after vessel destruction
-        public Vector3 LastCameraPosition { get; set; }
-        public Quaternion LastCameraRotation { get; set; }
+        Vector3 LastCameraPosition { get; set; }
+        Quaternion LastCameraRotation { get; set; }
 
         /// <summary>
         /// This is set to false to prevent the selector triggering immediately after the gui button is pressed.
@@ -116,7 +116,7 @@ namespace CameraToolsKatnissified
 
         void Start()
         {
-            _windowRect = new Rect( Screen.width - WINDOW_WIDTH - 40, 0, WINDOW_WIDTH, _windowHeight );
+            _windowRect = new Rect( Screen.width - (12 * 20) - 40, 0, (12 * 20), _windowHeight );
             FlightCamera = FlightCamera.fetch;
 
             SaveOriginalCamera();
@@ -217,21 +217,26 @@ namespace CameraToolsKatnissified
 
         void ResetPivots()
         {
-            Transform parent = null;
             foreach( var pivot in pivots )
             {
                 Destroy( pivot );
             }
 
+            Transform parent = null;
+
             foreach( var beh in _behaviours )
             {
                 GameObject go = new GameObject( $"Camera Pivot - {beh.GetType().FullName}" );
                 go.transform.SetParent( parent );
+                go.transform.position = FlightCamera.transform.position;
+                go.transform.rotation = FlightCamera.transform.rotation;
 
                 beh.SetTransform( go.transform );
 
                 parent = go.transform;
             }
+
+            FlightCamera.transform.SetParent( parent );
         }
 
         /// <summary>

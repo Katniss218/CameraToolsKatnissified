@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CameraToolsKatnissified.UI;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -79,9 +80,6 @@ namespace CameraToolsKatnissified.Cameras
 
         protected override void OnStartPlaying()
         {
-            Debug.Log( "[CTK] Stationary Camera Active" );
-            Debug.Log( "flightCamera position init: " + cameraBeh.FlightCamera.transform.position );
-
             if( FlightGlobals.ActiveVessel != null )
             {
                 if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( cameraBeh.ActiveVessel ) == FlightCamera.Modes.ORBITAL) )
@@ -93,7 +91,7 @@ namespace CameraToolsKatnissified.Cameras
                     UpDirection = -FlightGlobals.getGeeForceAtPosition( cameraBeh.ActiveVessel.GetWorldPos3D() ).normalized;
                 }
 
-                _initialOffset = cameraBeh.FlightCamera.transform.position - cameraBeh.ActiveVessel.transform.position;
+                _initialOffset = this.Pivot.transform.position - cameraBeh.ActiveVessel.transform.position;
 
                 cameraBeh.FlightCamera.SetTargetNone();
                 //cameraBeh.FlightCamera.transform.SetParent( cameraBeh.CameraPivot.transform ); // Apparently this is not assigned by the global when starting playing.
@@ -103,7 +101,7 @@ namespace CameraToolsKatnissified.Cameras
 
                 if( CameraPosition != null )
                 {
-                    cameraBeh.FlightCamera.transform.position = CameraPosition.Value;
+                    this.Pivot.transform.position = CameraPosition.Value;
                 }
 
                 _accumulatedPosition = Vector3.zero;
@@ -116,8 +114,6 @@ namespace CameraToolsKatnissified.Cameras
             {
                 Debug.Log( "CameraTools: Stationary Camera failed. Active Vessel is null." );
             }
-
-            Debug.Log( "flightCamera position post init: " + cameraBeh.FlightCamera.transform.position );
         }
 
         protected override void OnPlaying()
@@ -129,15 +125,15 @@ namespace CameraToolsKatnissified.Cameras
 
             if( Target != null )
             {
-                Vector3 toTargetDirection = (Target.transform.position - cameraBeh.FlightCamera.transform.position).normalized;
+                Vector3 toTargetDirection = (Target.transform.position - this.Pivot.transform.position).normalized;
 
-                cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( toTargetDirection, UpDirection );
+                this.Pivot.transform.rotation = Quaternion.LookRotation( toTargetDirection, UpDirection );
             }
 
             if( cameraBeh.ActiveVessel != null )
             {
                 // Parent follows the vessel.
-                cameraBeh.FlightCamera.transform.position = ManualOffset + cameraBeh.ActiveVessel.transform.position + _initialOffset;
+                this.Pivot.transform.localPosition = ManualOffset + cameraBeh.ActiveVessel.transform.position + _initialOffset;
 
                 // Camera itself accumulates the inverse of the vessel movement.
                 if( CurrentReferenceMode == CameraReference.Surface )
@@ -164,11 +160,11 @@ namespace CameraToolsKatnissified.Cameras
 
                     _accumulatedPosition += cameraVelocity * Time.fixedDeltaTime;
                 }
-                cameraBeh.FlightCamera.transform.position += _accumulatedPosition;
+                this.Pivot.transform.localPosition += _accumulatedPosition;
             }
 
             //mouse panning, moving
-            Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, UpDirection ) * cameraBeh.FlightCamera.transform.right).normalized;
+            Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, UpDirection ) * this.Pivot.transform.right).normalized;
 
 
 #warning TODO - this panning and stuff would be a separate controller, playercamera, which could be locked from the playing behaviour, e.g. preventing you from moving a path camera.
@@ -181,28 +177,28 @@ namespace CameraToolsKatnissified.Cameras
                 // Has target - should orbit the target.
                 if( Target == null )
                 {
-                    cameraBeh.FlightCamera.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up );
-                    cameraBeh.FlightCamera.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
-                    cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( cameraBeh.FlightCamera.transform.forward, UpDirection );
+                    this.Pivot.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up );
+                    this.Pivot.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
+                    this.Pivot.transform.rotation = Quaternion.LookRotation( this.Pivot.transform.forward, UpDirection );
                 }
                 else
                 {
-                    Vector3 cachePos = cameraBeh.FlightCamera.transform.position;
+                    Vector3 cachePos = this.Pivot.transform.position;
 
-                    var verticalaxis = cameraBeh.FlightCamera.transform.TransformDirection( Vector3.up );
-                    var horizontalaxis = cameraBeh.FlightCamera.transform.TransformDirection( Vector3.right );
-                    cameraBeh.FlightCamera.transform.RotateAround( Target.transform.position, verticalaxis, Input.GetAxis( "Mouse X" ) * 1.7f );
-                    cameraBeh.FlightCamera.transform.RotateAround( Target.transform.position, horizontalaxis, -Input.GetAxis( "Mouse Y" ) * 1.7f );
-                    cameraBeh.FlightCamera.transform.rotation = Quaternion.LookRotation( cameraBeh.FlightCamera.transform.forward, UpDirection );
+                    var verticalaxis = this.Pivot.transform.TransformDirection( Vector3.up );
+                    var horizontalaxis = this.Pivot.transform.TransformDirection( Vector3.right );
+                    this.Pivot.transform.RotateAround( Target.transform.position, verticalaxis, Input.GetAxis( "Mouse X" ) * 1.7f );
+                    this.Pivot.transform.RotateAround( Target.transform.position, horizontalaxis, -Input.GetAxis( "Mouse Y" ) * 1.7f );
+                    this.Pivot.transform.rotation = Quaternion.LookRotation( cameraBeh.FlightCamera.transform.forward, UpDirection );
 
-                    ManualOffset += (cameraBeh.FlightCamera.transform.position - cachePos); // allow movement (temporary until separate controllers).
-                    cameraBeh.FlightCamera.transform.position = cachePos; // stop flickering (sortof).
+                    ManualOffset += (this.Pivot.transform.position - cachePos); // allow movement (temporary until separate controllers).
+                    this.Pivot.transform.position = cachePos; // stop flickering (sortof).
                 }
             }
 
             if( Input.GetKey( KeyCode.Mouse2 ) ) // middle mouse
             {
-                ManualOffset += cameraBeh.FlightCamera.transform.right * Input.GetAxis( "Mouse X" ) * 2;
+                ManualOffset += this.Pivot.transform.right * Input.GetAxis( "Mouse X" ) * 2;
                 ManualOffset += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
             }
 
@@ -213,7 +209,7 @@ namespace CameraToolsKatnissified.Cameras
             {
 #warning TODO - change this to use the equation for constant angular size, possibly go through the parts in the vessel to determine its longest axis, or maybe there are bounds.
 
-                float cameraDistance = Vector3.Distance( Target.transform.position, cameraBeh.FlightCamera.transform.position );
+                float cameraDistance = Vector3.Distance( Target.transform.position, this.Pivot.transform.position );
 
                 float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + cameraBeh.AutoZoomMargin, 2, 60 );
 
@@ -261,15 +257,15 @@ namespace CameraToolsKatnissified.Cameras
 
         }
 
-        public override void DrawGui( float contentWidth, ref float line )
+        public override void DrawGui( float contentWidth, ref int line )
         {
-            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), $"Frame of Reference: {CurrentReferenceMode}" );
+            GUI.Label( UILayout.GetRectX( line, 1, 11 ), $"Frame of Reference: {CurrentReferenceMode}" );
             line++;
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 25, CameraToolsManager.ENTRY_HEIGHT - 2 ), "<" ) )
+            if( GUI.Button( UILayout.GetRect( 1, line ), "<" ) )
             {
                 CurrentReferenceMode = Utils.CycleEnum( CurrentReferenceMode, -1 );
             }
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN + 25 + 4, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), 25, CameraToolsManager.ENTRY_HEIGHT - 2 ), ">" ) )
+            if( GUI.Button( UILayout.GetRect( 2, line ), ">" ) )
             {
                 CurrentReferenceMode = Utils.CycleEnum( CurrentReferenceMode, 1 );
             }
@@ -278,12 +274,12 @@ namespace CameraToolsKatnissified.Cameras
 
             if( CurrentReferenceMode == CameraReference.Surface || CurrentReferenceMode == CameraReference.Orbit )
             {
-                GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT ), "Max Rel. V:" );
-                MaxRelativeVelocity = float.Parse( GUI.TextField( new Rect( CameraToolsManager.GUI_MARGIN + contentWidth / 2, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT ), MaxRelativeVelocity.ToString() ) );
+                GUI.Label( UILayout.GetRectX( line, 1, 5 ), "Max Rel. V:" );
+                MaxRelativeVelocity = float.Parse( GUI.TextField( UILayout.GetRectX( line, 5, 11 ), MaxRelativeVelocity.ToString() ) );
             }
             else if( CurrentReferenceMode == CameraReference.InitialVelocity )
             {
-                UseOrbitalInitialVelocity = GUI.Toggle( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), UseOrbitalInitialVelocity, " Orbital" );
+                UseOrbitalInitialVelocity = GUI.Toggle( UILayout.GetRectX( line, 1, 11 ), UseOrbitalInitialVelocity, " Orbital" );
             }
             line++;
             line++;
@@ -291,16 +287,16 @@ namespace CameraToolsKatnissified.Cameras
             // Draw position buttons.
 
             string positionText = CameraPosition == null ? "None" : CameraPosition.Value.ToString();
-            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), $"Camera Position: {positionText}" );
+            GUI.Label( UILayout.GetRectX( line, 1, 11 ), $"Camera Position: {positionText}" );
             line++;
 
             positionText = _settingPositionEnabled ? "waiting..." : "Set Position";
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), positionText ) )
+            if( GUI.Button( UILayout.GetRectX( line, 1, 6 ), positionText ) )
             {
                 _settingPositionEnabled = true;
                 cameraBeh._wasMouseUp = false;
             }
-            if( GUI.Button( new Rect( 2 + CameraToolsManager.GUI_MARGIN + contentWidth / 2, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), (contentWidth / 2) - 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), "Clear Position" ) )
+            if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Clear Position" ) )
             {
                 CameraPosition = null;
             }
@@ -311,16 +307,16 @@ namespace CameraToolsKatnissified.Cameras
 
             string targetText = Target == null ? "None" : Target.gameObject.name;
 #warning TODO - When the part name is too long, it cuts the word off.
-            GUI.Label( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, CameraToolsManager.ENTRY_HEIGHT ), $"Camera Target: {targetText}" );
+            GUI.Label( UILayout.GetRectX( line, 1, 11 ), $"Camera Target: {targetText}" );
             line++;
 
             targetText = _settingTargetEnabled ? "waiting..." : "Set Target";
-            if( GUI.Button( new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth / 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), targetText ) )
+            if( GUI.Button( UILayout.GetRectX( line, 1, 6 ), targetText ) )
             {
                 _settingTargetEnabled = true;
                 cameraBeh._wasMouseUp = false;
             }
-            if( GUI.Button( new Rect( 2 + CameraToolsManager.GUI_MARGIN + contentWidth / 2, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), (contentWidth / 2) - 2, CameraToolsManager.ENTRY_HEIGHT - 2 ), "Clear Target" ) )
+            if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Clear Target" ) )
             {
                 Target = null;
             }
