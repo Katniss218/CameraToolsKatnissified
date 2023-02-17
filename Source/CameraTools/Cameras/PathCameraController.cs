@@ -128,6 +128,7 @@ namespace CameraToolsKatnissified.Cameras
                 _pivotPosition = cameraBeh.ActiveVessel.transform.position;
                 _pivotRotation = cameraBeh.ActiveVessel.transform.rotation;
             }
+#warning TODO - after flying high enough, the space switches to be vessel-centric. we need to catch that.
             _pivotSpaceL2W = Matrix4x4.TRS( _pivotPosition, _pivotRotation, new Vector3( 1, 1, 1 ) );
             _pivotSpaceW2L = _pivotSpaceL2W.inverse;
         }
