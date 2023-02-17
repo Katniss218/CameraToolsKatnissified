@@ -6,7 +6,7 @@ using UnityEngine;
 namespace CameraToolsKatnissified.Cameras
 {
     [DisallowMultipleComponent]
-    public sealed class PathCameraBehaviour : CameraBehaviour
+    public sealed class PathCameraController : CameraController
     {
         public static string PATHS_FILE = $"GameData/{CameraToolsManager.DIRECTORY_NAME}/paths.cfg";
 
@@ -28,7 +28,7 @@ namespace CameraToolsKatnissified.Cameras
         Matrix4x4 _pivotSpaceL2W;
         Matrix4x4 _pivotSpaceW2L;
 
-        public PathCameraBehaviour( CameraToolsManager ctm ) : base( ctm )
+        public PathCameraController( CameraToolsManager ctm ) : base( ctm )
         {
 
         }
@@ -75,10 +75,6 @@ namespace CameraToolsKatnissified.Cameras
                 _pivotRotation = cameraBeh.ActiveVessel.transform.rotation;
                 _pivotSpaceL2W = Matrix4x4.TRS( _pivotPosition, _pivotRotation, new Vector3( 1, 1, 1 ) );
                 _pivotSpaceW2L = _pivotSpaceL2W.inverse;
-
-                cameraBeh.FlightCamera.SetTargetNone();
-                //cameraBeh.FlightCamera.transform.SetParent( cameraBeh.CameraPivot.transform ); // Apparently this is not assigned by the global when starting playing. Needed when viewing a single keyframe
-                cameraBeh.FlightCamera.DeactivateUpdate();
             }
             else
             {
@@ -312,8 +308,8 @@ namespace CameraToolsKatnissified.Cameras
         {
             if( CurrentPath != null )
             {
-                GUI.Label( UILayout.GetRectX( line, 1, 3 ), "Path:" );
-                CurrentPath.PathName = GUI.TextField( UILayout.GetRectX( line, 4, 11 ), CurrentPath.PathName );
+                GUI.Label( UILayout.GetRectX( line, 1, 2 ), "Path:" );
+                CurrentPath.PathName = GUI.TextField( UILayout.GetRectX( line, 3, 11 ), CurrentPath.PathName );
             }
             else
             {
@@ -325,9 +321,9 @@ namespace CameraToolsKatnissified.Cameras
             {
                 TogglePathList();
             }
-            line++;
+            //line++;
 
-            if( GUI.Button( UILayout.GetRectX( line, 1, 5 ), "New Path" ) )
+            /*if( GUI.Button( UILayout.GetRectX( line, 1, 6 ), "New Path" ) )
             {
                 CreateNewPath();
             }
@@ -335,9 +331,9 @@ namespace CameraToolsKatnissified.Cameras
             {
                 DeletePath( CurrentPath );
             }
-            line++;
+            line++;*/
 
-            if( CurrentPath != null )
+            /*if( CurrentPath != null )
             {
                 GUI.Label( UILayout.GetRectX( line, 1, 11 ), "Interpolation Rate:" + CurrentPath.LerpRate.ToString( "0.0" ) );
                 line++;
@@ -363,7 +359,7 @@ namespace CameraToolsKatnissified.Cameras
                 }
                 line++;
 
-                /*
+                
                 float viewHeight = Mathf.Max( 6 * CameraToolsManager.ENTRY_HEIGHT, CurrentPath.keyframeCount * CameraToolsManager.ENTRY_HEIGHT );
                 Rect scrollRect = new Rect( CameraToolsManager.GUI_MARGIN, CameraToolsManager.CONTENT_TOP + (line * CameraToolsManager.ENTRY_HEIGHT), contentWidth, 6 * CameraToolsManager.ENTRY_HEIGHT );
                 GUI.Box( scrollRect, string.Empty );
@@ -400,13 +396,13 @@ namespace CameraToolsKatnissified.Cameras
                     GUI.color = origGuiColor;
                 }
 
-                GUI.EndScrollView();*/
+                GUI.EndScrollView();
 
                 if( GUI.Button( UILayout.GetRectX( line, 1, 11 ), "New Key" ) )
                 {
                     //CreateNewKeyframe();
                 }
-            }
+            }*/
         }
 
         public void DrawKeyframeEditorWindow()

@@ -30,7 +30,7 @@ namespace CameraToolsKatnissified
         /// </summary>
         public static bool _uiVisible = true;
 
-        List<CameraBehaviour> _behaviours = new List<CameraBehaviour>();
+        List<CameraController> _behaviours = new List<CameraController>();
 
         /// <summary>
         /// True if the CameraTools camera is active.
@@ -149,10 +149,15 @@ namespace CameraToolsKatnissified
                 _guiWindowVisible = !_guiWindowVisible;
             }
 
+            if( Input.GetMouseButtonUp( 0 ) || !Input.GetMouseButton( 0 ) )
+            {
+                _wasMouseUp = true;
+            }
+
             if( Input.GetKeyDown( KeyCode.Home ) )
             {
                 StartCamera();
-                if( _behaviours[0] is PathCameraBehaviour p )
+                if( _behaviours[0] is PathCameraController p )
                 {
                     p.StartPlayingPath();
                 }
@@ -260,6 +265,9 @@ namespace CameraToolsKatnissified
             }
 
             ResetPivots();
+
+            FlightCamera.SetTargetNone();
+            FlightCamera.DeactivateUpdate();
 
             foreach( var beh in _behaviours )
             {
@@ -393,8 +401,8 @@ namespace CameraToolsKatnissified
         {
             Serializer.LoadFields();
 
-            _behaviours = new List<CameraBehaviour>();
-            _behaviours.Add( new StationaryCameraBehaviour( this ) );
+            _behaviours = new List<CameraController>();
+            _behaviours.Add( new StationaryCameraController( this ) );
 
             foreach( var beh in _behaviours )
             {
@@ -457,13 +465,13 @@ namespace CameraToolsKatnissified
                 EndCamera();
             }
 
-            Type[] types = CameraBehaviour.GetBehaviourTypesWithCache();
+            Type[] types = CameraController.GetBehaviourTypesWithCache();
             Type thisType = _behaviours[behaviourIndex].GetType();
             int typeIndex = types.IndexOf( thisType );
 
             int newTypeIndex = (typeIndex + step + types.Length) % types.Length; // adding length unfucks negative modulo
 
-            _behaviours[behaviourIndex] = (CameraBehaviour)Activator.CreateInstance( types[newTypeIndex], new object[] { this } );
+            _behaviours[behaviourIndex] = (CameraController)Activator.CreateInstance( types[newTypeIndex], new object[] { this } );
             _behaviours[behaviourIndex].OnLoad( null ); // loads the path list.
         }
 

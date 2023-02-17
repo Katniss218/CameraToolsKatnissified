@@ -9,11 +9,9 @@ using UnityEngine;
 namespace CameraToolsKatnissified.Cameras
 {
     [DisallowMultipleComponent]
-    public sealed class StationaryCameraBehaviour : CameraBehaviour
+    public sealed class StationaryCameraController : CameraController
     {
         public Vector3? CameraPosition { get; private set; } = null;
-
-        public Part Target { get; private set; } = null;
 
         public CameraReference CurrentReferenceMode { get; private set; } = CameraReference.Surface;
 
@@ -36,35 +34,17 @@ namespace CameraToolsKatnissified.Cameras
         Orbit _initialOrbit;
 
         bool _settingPositionEnabled;
-        bool _settingTargetEnabled;
 
         Vector3 _initialOffset = Vector3.zero;
         Vector3 _accumulatedPosition = Vector3.zero;
 
-        public StationaryCameraBehaviour( CameraToolsManager ctm ) : base( ctm )
+        public StationaryCameraController( CameraToolsManager ctm ) : base( ctm )
         {
 
         }
 
         public override void Update()
         {
-            if( Input.GetMouseButtonUp( 0 ) || !Input.GetMouseButton( 0 ) )
-            {
-                cameraBeh._wasMouseUp = true;
-            }
-
-            // Set target from a mouse raycast.
-            if( _settingTargetEnabled && cameraBeh._wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
-            {
-                _settingTargetEnabled = false;
-
-                Part newTarget = Utils.GetPartFromMouse();
-                if( newTarget != null )
-                {
-                    Target = newTarget;
-                }
-            }
-
             // Set position from a mouse raycast
             if( _settingPositionEnabled && cameraBeh._wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
             {
@@ -93,10 +73,6 @@ namespace CameraToolsKatnissified.Cameras
 
                 _initialOffset = this.Pivot.transform.position - cameraBeh.ActiveVessel.transform.position;
 
-                cameraBeh.FlightCamera.SetTargetNone();
-                //cameraBeh.FlightCamera.transform.SetParent( cameraBeh.CameraPivot.transform ); // Apparently this is not assigned by the global when starting playing.
-                cameraBeh.FlightCamera.DeactivateUpdate();
-
                 ManualOffset = Vector3.zero;
 
                 if( CameraPosition != null )
@@ -121,13 +97,6 @@ namespace CameraToolsKatnissified.Cameras
             if( cameraBeh.FlightCamera.Target != null )
             {
                 cameraBeh.FlightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
-            }
-
-            if( Target != null )
-            {
-                Vector3 toTargetDirection = (Target.transform.position - this.Pivot.transform.position).normalized;
-
-                this.Pivot.transform.rotation = Quaternion.LookRotation( toTargetDirection, UpDirection );
             }
 
             if( cameraBeh.ActiveVessel != null )
@@ -171,7 +140,7 @@ namespace CameraToolsKatnissified.Cameras
             // setting a path would use its own controls likely. you can also input the numbers by hand into the gui (rotation is eulers), but they are also inputted by moving the camera around
             // add the velocity direction mode there too.
             // this user controller would interact with a dedicated user offset gameobject.
-            if( Input.GetKey( KeyCode.Mouse1 ) ) // right mouse
+            /*if( Input.GetKey( KeyCode.Mouse1 ) ) // right mouse
             {
                 // No target - should turn the camera like a tripod.
                 // Has target - should orbit the target.
@@ -194,7 +163,7 @@ namespace CameraToolsKatnissified.Cameras
                     ManualOffset += (this.Pivot.transform.position - cachePos); // allow movement (temporary until separate controllers).
                     this.Pivot.transform.position = cachePos; // stop flickering (sortof).
                 }
-            }
+            }*/
 
             if( Input.GetKey( KeyCode.Mouse2 ) ) // middle mouse
             {
@@ -205,7 +174,7 @@ namespace CameraToolsKatnissified.Cameras
             ManualOffset += UpDirection * CameraToolsManager.SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
 
             // autoFov
-            if( Target != null && cameraBeh.UseAutoZoom )
+            /*if( Target != null && cameraBeh.UseAutoZoom )
             {
 #warning TODO - change this to use the equation for constant angular size, possibly go through the parts in the vessel to determine its longest axis, or maybe there are bounds.
 
@@ -214,7 +183,7 @@ namespace CameraToolsKatnissified.Cameras
                 float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + cameraBeh.AutoZoomMargin, 2, 60 );
 
                 cameraBeh.ManualFov = targetFoV;
-            }
+            }*/
 
             //FOV
             if( !cameraBeh.UseAutoZoom )
@@ -259,13 +228,12 @@ namespace CameraToolsKatnissified.Cameras
 
         public override void DrawGui( float contentWidth, ref int line )
         {
-            GUI.Label( UILayout.GetRectX( line, 1, 11 ), $"Frame of Reference: {CurrentReferenceMode}" );
-            line++;
-            if( GUI.Button( UILayout.GetRect( 1, line ), "<" ) )
+            GUI.Label( UILayout.GetRectX( line, 1, 9 ), $"Frame of Reference: {CurrentReferenceMode}" );
+            if( GUI.Button( UILayout.GetRect( 10, line ), "<" ) )
             {
                 CurrentReferenceMode = Utils.CycleEnum( CurrentReferenceMode, -1 );
             }
-            if( GUI.Button( UILayout.GetRect( 2, line ), ">" ) )
+            if( GUI.Button( UILayout.GetRect( 11, line ), ">" ) )
             {
                 CurrentReferenceMode = Utils.CycleEnum( CurrentReferenceMode, 1 );
             }
@@ -274,7 +242,7 @@ namespace CameraToolsKatnissified.Cameras
 
             if( CurrentReferenceMode == CameraReference.Surface || CurrentReferenceMode == CameraReference.Orbit )
             {
-                GUI.Label( UILayout.GetRectX( line, 1, 5 ), "Max Rel. V:" );
+                GUI.Label( UILayout.GetRectX( line, 1, 4 ), "Max Rel. V:" );
                 MaxRelativeVelocity = float.Parse( GUI.TextField( UILayout.GetRectX( line, 5, 11 ), MaxRelativeVelocity.ToString() ) );
             }
             else if( CurrentReferenceMode == CameraReference.InitialVelocity )
@@ -291,7 +259,7 @@ namespace CameraToolsKatnissified.Cameras
             line++;
 
             positionText = _settingPositionEnabled ? "waiting..." : "Set Position";
-            if( GUI.Button( UILayout.GetRectX( line, 1, 6 ), positionText ) )
+            if( GUI.Button( UILayout.GetRectX( line, 1, 5 ), positionText ) )
             {
                 _settingPositionEnabled = true;
                 cameraBeh._wasMouseUp = false;
@@ -299,26 +267,6 @@ namespace CameraToolsKatnissified.Cameras
             if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Clear Position" ) )
             {
                 CameraPosition = null;
-            }
-            line++;
-            line++;
-
-            // Draw target buttons.
-
-            string targetText = Target == null ? "None" : Target.gameObject.name;
-#warning TODO - When the part name is too long, it cuts the word off.
-            GUI.Label( UILayout.GetRectX( line, 1, 11 ), $"Camera Target: {targetText}" );
-            line++;
-
-            targetText = _settingTargetEnabled ? "waiting..." : "Set Target";
-            if( GUI.Button( UILayout.GetRectX( line, 1, 6 ), targetText ) )
-            {
-                _settingTargetEnabled = true;
-                cameraBeh._wasMouseUp = false;
-            }
-            if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Clear Target" ) )
-            {
-                Target = null;
             }
         }
     }

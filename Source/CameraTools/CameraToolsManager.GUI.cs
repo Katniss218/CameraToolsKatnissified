@@ -77,19 +77,15 @@ namespace CameraToolsKatnissified
 
             if( UseAutoZoom )
             {
-                GUI.Label( UILayout.GetRectX( line ), "Autozoom Margin:" );
-                line++;
-
-                AutoZoomMargin = GUI.HorizontalSlider( UILayout.GetRectX( line, 0, 9 ), AutoZoomMargin, 1.0f, 75.0f );
-                GUI.Label( UILayout.GetRectX( line, 9, 11 ), AutoZoomMargin.ToString( "0.0" ) );
+                GUI.Label( UILayout.GetRectX( line, 0, 2 ), "Autozoom" );
+                AutoZoomMargin = GUI.HorizontalSlider( UILayout.GetRectX( line, 3, 9 ), AutoZoomMargin, 1.0f, 75.0f );
+                GUI.Label( UILayout.GetRectX( line, 10, 11 ), AutoZoomMargin.ToString( "0.0" ) );
             }
             else
             {
-                GUI.Label( UILayout.GetRectX( line ), "Zoom:" );
-                line++;
-
-                Zoom = GUI.HorizontalSlider( UILayout.GetRectX( line, 0, 9 ), Zoom, 1.0f, 8.0f );
-                GUI.Label( UILayout.GetRectX( line, 9, 11 ), ZoomFactor.ToString( "0.0" ) + "x" );
+                GUI.Label( UILayout.GetRectX( line, 0, 1 ), "Zoom" );
+                Zoom = GUI.HorizontalSlider( UILayout.GetRectX( line, 2, 9 ), Zoom, 1.0f, 8.0f );
+                GUI.Label( UILayout.GetRectX( line, 10, 11 ), ZoomFactor.ToString( "0.0" ) + "x" );
             }
             line++;
 
@@ -101,7 +97,7 @@ namespace CameraToolsKatnissified
             line++;
 
             ShakeMultiplier = GUI.HorizontalSlider( UILayout.GetRectX( line, 0, 9 ), ShakeMultiplier, 0.0f, 1.0f );
-            GUI.Label( UILayout.GetRectX( line, 9, 11 ), ShakeMultiplier.ToString( "0.00" ) + "x" );
+            GUI.Label( UILayout.GetRectX( line, 10, 11 ), ShakeMultiplier.ToString( "0.00" ) + "x" );
 
             //Rect scrollRect = new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, 6 * ENTRY_HEIGHT );
             //GUI.Box( scrollRect, string.Empty );
@@ -114,22 +110,20 @@ namespace CameraToolsKatnissified
             {
                 line++;
                 //tool mode switcher
-                GUI.Label( UILayout.GetRectX( line ), $"Tool: {_behaviours[i].GetType().Name}", HeaderStyle );
-                line++;
+                GUI.Label( UILayout.GetRectX( line, 0, 9 ), $"Tool: {_behaviours[i].GetType().Name}", HeaderStyle );
                 if( !CameraToolsActive )
                 {
-                    if( GUI.Button( UILayout.GetRect( 0, line ), "<" ) )
+                    if( GUI.Button( UILayout.GetRect( 10, line ), "<" ) )
                     {
                         CycleToolMode( i, -1 );
                     }
-                    if( GUI.Button( UILayout.GetRect( 1, line ), ">" ) )
+                    if( GUI.Button( UILayout.GetRect( 11, line ), ">" ) )
                     {
                         CycleToolMode( i, 1 );
                     }
                 }
 
                 line++;
-
                 // Draw Camera GUI
                 _behaviours[i].DrawGui( 12 * 20, ref line );
                 line++;
@@ -140,7 +134,8 @@ namespace CameraToolsKatnissified
             line++;
             if( GUI.Button( UILayout.GetRect( 0, line ), "+" ) )
             {
-                _behaviours.Add( new PathCameraBehaviour( this ) );
+#warning TODO - path needs to load on creation.
+                _behaviours.Add( new PathCameraController( this ) );
             }
             if( GUI.Button( UILayout.GetRect( 1, line ), "-" ) )
             {
@@ -149,7 +144,7 @@ namespace CameraToolsKatnissified
             line++;
             line++;
 
-            if( GUI.Button( UILayout.GetRectX( line, 0, 6 ), "Save" ) )
+            if( GUI.Button( UILayout.GetRectX( line, 0, 5 ), "Save" ) )
             {
                 SaveAndSerialize();
             }

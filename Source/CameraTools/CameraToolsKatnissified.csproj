@@ -36,10 +36,11 @@
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <Compile Include="Cameras\CameraBehaviour.cs" />
+    <Compile Include="Cameras\CameraController.cs" />
     <Compile Include="CameraReference.cs" />
+    <Compile Include="Cameras\PointAtTargetController.cs" />
     <Compile Include="CameraToolsManager.cs" />
-    <Compile Include="Cameras\PathCameraBehaviour.cs" />
+    <Compile Include="Cameras\PathCameraController.cs" />
     <Compile Include="PersistentField.cs" />
     <Compile Include="Animation\CameraTransformation.cs" />
     <Compile Include="Animation\CameraPath.cs" />
@@ -48,7 +49,7 @@
     <Compile Include="Animation\QuaternionCurve.cs" />
     <Compile Include="Serializer.cs" />
     <Compile Include="Animation\Vector3Curve.cs" />
-    <Compile Include="Cameras\StationaryCameraBehaviour.cs" />
+    <Compile Include="Cameras\StationaryCameraController.cs" />
     <Compile Include="UI\UILayout.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>

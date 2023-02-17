@@ -7,13 +7,13 @@ using UnityEngine;
 
 namespace CameraToolsKatnissified.Cameras
 {
-    public abstract class CameraBehaviour
+    public abstract class CameraController
     {
         // This class should be a base camera behaviour that you can derive from to make new camera modes.
 
         protected CameraToolsManager cameraBeh;
 
-        public CameraBehaviour( CameraToolsManager ctm )
+        public CameraController( CameraToolsManager ctm )
         {
             cameraBeh = ctm;
         }
@@ -91,7 +91,7 @@ namespace CameraToolsKatnissified.Cameras
 
         private static void CacheBehaviours()
         {
-            Type cameraBehaviourType = typeof( CameraBehaviour );
+            Type cameraBehaviourType = typeof( CameraController );
             cachedCameraTypes = AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany( a => a.GetTypes() )
                 .Where( t => t != cameraBehaviourType && cameraBehaviourType.IsAssignableFrom( t ) ).ToArray();

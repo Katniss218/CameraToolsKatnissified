@@ -29,7 +29,8 @@ namespace CameraToolsKatnissified.UI
 
         public static (float width, float height) GetFullPixelSize()
         {
-            return ((Width * CellSize) + (2 * Margin), (overwrittenHeight * CellSize) + (2 * Margin));
+#warning TODO - seems to be 1 grid cell to narrow on the right?
+            return ((Width * CellSize) + (2 * Margin) + CellSize, (overwrittenHeight * CellSize) + (2 * Margin) + CellSize); // +CellSize is to include last cell.
         }
 
         public static Rect SetWindow( int width, int height, float margins = 12.0f, float cellSize = 20.0f )
@@ -46,7 +47,7 @@ namespace CameraToolsKatnissified.UI
         {
             if( maxY > overwrittenHeight )
             {
-                overwrittenHeight = maxY + 1;
+                overwrittenHeight = maxY;
             }
             return new Rect( minX * CellSize + Margin, minY * CellSize + Margin, (maxX - minX) * CellSize, (maxY - minY) * CellSize );
         }
@@ -55,7 +56,7 @@ namespace CameraToolsKatnissified.UI
         {
             if( y > overwrittenHeight )
             {
-                overwrittenHeight = y + 1;
+                overwrittenHeight = y;
             }
             return new Rect( x * CellSize + Margin, y * CellSize + Margin, CellSize, CellSize );
         }
@@ -67,7 +68,7 @@ namespace CameraToolsKatnissified.UI
         {
             if( y > overwrittenHeight )
             {
-                overwrittenHeight = y + 1;
+                overwrittenHeight = y;
             }
             return new Rect( minX * CellSize + Margin, y * CellSize + Margin, (maxX - minX) * CellSize, CellSize );
         }
@@ -79,7 +80,7 @@ namespace CameraToolsKatnissified.UI
         {
             if( y > overwrittenHeight )
             {
-                overwrittenHeight = y + 1;
+                overwrittenHeight = y;
             }
             return new Rect( Margin, y * CellSize + Margin, Width * CellSize, CellSize );
         }
