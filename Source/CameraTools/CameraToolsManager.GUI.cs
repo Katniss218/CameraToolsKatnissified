@@ -73,24 +73,24 @@ namespace CameraToolsKatnissified
 
             GUI.Label( UILayout.GetRect( 0, 0, 11, 1 ), "Camera Tools", TitleStyle );
 
-            int line = 2; // Used to calculate the position of the next line of the GUI.
+            int line = 3; // Used to calculate the position of the next line of the GUI.
 
-            if( UseAutoZoom )
+            /*if( UseAutoZoom )
             {
                 GUI.Label( UILayout.GetRectX( line, 0, 2 ), "Autozoom" );
                 AutoZoomMargin = GUI.HorizontalSlider( UILayout.GetRectX( line, 3, 9 ), AutoZoomMargin, 1.0f, 75.0f );
                 GUI.Label( UILayout.GetRectX( line, 10, 11 ), AutoZoomMargin.ToString( "0.0" ) );
             }
             else
-            {
+            {*/
                 GUI.Label( UILayout.GetRectX( line, 0, 1 ), "Zoom" );
                 Zoom = GUI.HorizontalSlider( UILayout.GetRectX( line, 2, 9 ), Zoom, 1.0f, 8.0f );
-                GUI.Label( UILayout.GetRectX( line, 10, 11 ), ZoomFactor.ToString( "0.0" ) + "x" );
-            }
+                GUI.Label( UILayout.GetRectX( line, 10, 11 ), (Mathf.Exp( Zoom ) / Mathf.Exp( 1 )).ToString( "0.0" ) + "x" );
+            //}
             line++;
 
-            UseAutoZoom = GUI.Toggle( UILayout.GetRectX( line ), UseAutoZoom, "Auto Zoom" );
-            line++;
+            //UseAutoZoom = GUI.Toggle( UILayout.GetRectX( line ), UseAutoZoom, "Auto Zoom" );
+            //line++;
             line++;
 
             GUI.Label( UILayout.GetRectX( line ), "Camera Shake:" );
@@ -134,7 +134,6 @@ namespace CameraToolsKatnissified
             line++;
             if( GUI.Button( UILayout.GetRect( 0, line ), "+" ) )
             {
-#warning TODO - path needs to load on creation.
                 _behaviours.Add( new PathCameraController( this ) );
             }
             if( GUI.Button( UILayout.GetRect( 1, line ), "-" ) )
@@ -155,7 +154,9 @@ namespace CameraToolsKatnissified
             }
 
             // fix length
-            (_, _windowHeight) = UILayout.GetFullPixelSize();// CONTENT_TOP + (line * ENTRY_HEIGHT) + ENTRY_HEIGHT + ENTRY_HEIGHT;
+            float width;
+            (width, _windowHeight) = UILayout.GetFullPixelSize();// CONTENT_TOP + (line * ENTRY_HEIGHT) + ENTRY_HEIGHT + ENTRY_HEIGHT;
+            _windowRect.width = width;
             _windowRect.height = _windowHeight;
         }
     }

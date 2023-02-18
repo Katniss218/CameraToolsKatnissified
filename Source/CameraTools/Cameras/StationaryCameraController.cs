@@ -36,7 +36,7 @@ namespace CameraToolsKatnissified.Cameras
         bool _settingPositionEnabled;
 
         Vector3 _initialOffset = Vector3.zero;
-        Vector3 _accumulatedPosition = Vector3.zero;
+        Vector3 _accumulatedOffset = Vector3.zero;
 
         public StationaryCameraController( CameraToolsManager ctm ) : base( ctm )
         {
@@ -80,7 +80,7 @@ namespace CameraToolsKatnissified.Cameras
                     this.Pivot.transform.position = CameraPosition.Value;
                 }
 
-                _accumulatedPosition = Vector3.zero;
+                _accumulatedOffset = Vector3.zero;
                 _initialVelocity = cameraBeh.ActiveVessel.srf_velocity;
                 _initialOrbit = new Orbit();
                 _initialOrbit.UpdateFromStateVectors( cameraBeh.ActiveVessel.orbit.pos, cameraBeh.ActiveVessel.orbit.vel, FlightGlobals.currentMainBody, Planetarium.GetUniversalTime() );
@@ -92,7 +92,7 @@ namespace CameraToolsKatnissified.Cameras
             }
         }
 
-        protected override void OnPlaying()
+        protected override void OnPlayingFixedUpdate()
         {
             if( cameraBeh.FlightCamera.Target != null )
             {
@@ -108,12 +108,12 @@ namespace CameraToolsKatnissified.Cameras
                 if( CurrentReferenceMode == CameraReference.Surface )
                 {
                     float magnitude = Mathf.Clamp( (float)cameraBeh.ActiveVessel.srf_velocity.magnitude, 0, MaxRelativeVelocity );
-                    _accumulatedPosition -= (magnitude * cameraBeh.ActiveVessel.srf_velocity.normalized) * Time.fixedDeltaTime;
+                    _accumulatedOffset -= (magnitude * cameraBeh.ActiveVessel.srf_velocity.normalized) * Time.fixedDeltaTime;
                 }
                 else if( CurrentReferenceMode == CameraReference.Orbit )
                 {
                     float magnitude = Mathf.Clamp( (float)cameraBeh.ActiveVessel.obt_velocity.magnitude, 0, MaxRelativeVelocity );
-                    _accumulatedPosition -= (magnitude * cameraBeh.ActiveVessel.obt_velocity.normalized) * Time.fixedDeltaTime;
+                    _accumulatedOffset -= (magnitude * cameraBeh.ActiveVessel.obt_velocity.normalized) * Time.fixedDeltaTime;
                 }
                 else if( CurrentReferenceMode == CameraReference.InitialVelocity )
                 {
@@ -127,9 +127,9 @@ namespace CameraToolsKatnissified.Cameras
                         cameraVelocity = _initialVelocity - cameraBeh.ActiveVessel.srf_velocity;
                     }
 
-                    _accumulatedPosition += cameraVelocity * Time.fixedDeltaTime;
+                    _accumulatedOffset += cameraVelocity * Time.fixedDeltaTime;
                 }
-                this.Pivot.transform.localPosition += _accumulatedPosition;
+                this.Pivot.transform.localPosition += _accumulatedOffset;
             }
 
             //mouse panning, moving
@@ -165,11 +165,11 @@ namespace CameraToolsKatnissified.Cameras
                 }
             }*/
 
-            if( Input.GetKey( KeyCode.Mouse2 ) ) // middle mouse
+            /*if( Input.GetKey( KeyCode.Mouse2 ) ) // middle mouse
             {
                 ManualOffset += this.Pivot.transform.right * Input.GetAxis( "Mouse X" ) * 2;
                 ManualOffset += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
-            }
+            }*/
 
             ManualOffset += UpDirection * CameraToolsManager.SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
 
@@ -186,7 +186,7 @@ namespace CameraToolsKatnissified.Cameras
             }*/
 
             //FOV
-            if( !cameraBeh.UseAutoZoom )
+            /*if( !cameraBeh.UseAutoZoom )
             {
                 cameraBeh.ZoomFactor = Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 );
                 cameraBeh.ManualFov = 60 / cameraBeh.ZoomFactor;
@@ -202,22 +202,11 @@ namespace CameraToolsKatnissified.Cameras
                 cameraBeh.CurrentFov = Mathf.Lerp( cameraBeh.CurrentFov, cameraBeh.ManualFov, 0.1f );
                 cameraBeh.FlightCamera.SetFoV( cameraBeh.CurrentFov );
                 cameraBeh.ZoomFactor = 60 / cameraBeh.CurrentFov;
-            }
-
-            //vessel camera shake
-            if( cameraBeh.ShakeMultiplier > 0 )
+            }*/
+            float fov = 60 / (Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 ));
+            if( cameraBeh.FlightCamera.FieldOfView != fov )
             {
-                foreach( var vessel in FlightGlobals.Vessels )
-                {
-                    if( !vessel || !vessel.loaded || vessel.packed )
-                    {
-                        continue;
-                    }
-
-                    cameraBeh.DoCameraShake( vessel );
-                }
-
-                cameraBeh.UpdateCameraShakeMagnitude();
+                cameraBeh.FlightCamera.SetFoV( fov );
             }
         }
 

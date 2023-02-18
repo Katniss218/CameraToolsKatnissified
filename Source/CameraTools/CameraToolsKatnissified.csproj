@@ -46,9 +46,8 @@
     <Compile Include="Animation\CameraPath.cs" />
     <Compile Include="Animation\CameraKeyframe.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Animation\QuaternionCurve.cs" />
+    <Compile Include="Animation\Curve.cs" />
     <Compile Include="Serializer.cs" />
-    <Compile Include="Animation\Vector3Curve.cs" />
     <Compile Include="Cameras\StationaryCameraController.cs" />
     <Compile Include="UI\UILayout.cs" />
     <Compile Include="Utils.cs" />

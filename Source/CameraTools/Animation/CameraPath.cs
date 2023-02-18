@@ -19,17 +19,17 @@ namespace CameraToolsKatnissified.Animation
 
         public int keyframeCount => _keyframes.Count;
 
-        public float LerpRate { get; set; } = 15;
-        public float TimeScale { get; set; } = 1;
+        public float LerpRate { get; set; } = 2.0f;
+        public float TimeScale { get; set; } = 1.0f;
 
         public ReferenceFrame Frame { get; set; } = ReferenceFrame.FixPositionAndRotation;
 
         List<CameraKeyframe> _keyframes;
 
         // Internal variables for interpolation.
-        Vector3Curve _pointCurve;
-        QuaternionCurve _rotationCurve;
-        AnimationCurve _zoomCurve;
+        Curve<Vector3> _pointCurve;
+        Curve<Quaternion> _rotationCurve;
+        Curve<float> _zoomCurve;
 
         public CameraPath()
         {
@@ -161,21 +161,37 @@ namespace CameraToolsKatnissified.Animation
                 times.Add( kf.Time );
             }
 
-            _pointCurve = new Vector3Curve( points.ToArray(), times.ToArray() );
-            _rotationCurve = new QuaternionCurve( rotations.ToArray(), times.ToArray() );
-            _zoomCurve = new AnimationCurve();
-            for( int i = 0; i < zooms.Count; i++ )
-            {
-                _zoomCurve.AddKey( new Keyframe( times[i], zooms[i] ) );
-            }
+            _pointCurve = new Curve<Vector3>( points.ToArray(), times.ToArray() );
+            _rotationCurve = new Curve<Quaternion>( rotations.ToArray(), times.ToArray() );
+            _zoomCurve = new Curve<float>( zooms.ToArray(), times.ToArray() );
         }
 
         public CameraTransformation Evaulate( float time )
         {
+            const float TimeOffset = 0.5f;
+            float scaledTime = (time) * TimeScale;
+            float scaledTime1 = (time - TimeOffset) * TimeScale;
+            float scaledTime2 = (time + TimeOffset) * TimeScale;
+
+            /*CameraTransformation tf = new CameraTransformation();
+            Vector3 pos1 = _pointCurve.EvaluateLinearBezier( Vector3.Lerp, scaledTime1 );
+            Vector3 pos2 = _pointCurve.EvaluateLinearBezier( Vector3.Lerp, scaledTime2 );
+            tf.position = Vector3.Lerp( pos1, pos2, 0.5f );
+
+            Quaternion rot1 = _rotationCurve.EvaluateLinearBezier( Quaternion.Slerp, scaledTime1 );
+            Quaternion rot2 = _rotationCurve.EvaluateLinearBezier( Quaternion.Slerp, scaledTime2 );
+            tf.rotation = Quaternion.Slerp( rot1, rot2, 0.5f );
+
+            float zoom1 = _zoomCurve.EvaluateLinearBezier( Mathf.Lerp, scaledTime1 );
+            float zoom2 = _zoomCurve.EvaluateLinearBezier( Mathf.Lerp, scaledTime2 );
+            tf.zoom = Mathf.Lerp( zoom1, zoom2, 0.5f );*/
+
             CameraTransformation tf = new CameraTransformation();
-            tf.position = _pointCurve.Evaluate( time );
-            tf.rotation = _rotationCurve.Evaluate( time );
-            tf.zoom = _zoomCurve.Evaluate( time );
+            tf.position = _pointCurve.EvaluateLinearBezier( Vector3.Lerp, scaledTime );
+
+            tf.rotation = _rotationCurve.EvaluateLinearBezier( Quaternion.Slerp, scaledTime );
+
+            tf.zoom = _zoomCurve.EvaluateLinearBezier( Mathf.Lerp, scaledTime );
 
             return tf;
         }

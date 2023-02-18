@@ -21,16 +21,18 @@ namespace CameraToolsKatnissified.Cameras
         public CameraKeyframe CurrentKeyframe { get; private set; }
 
         bool _pathWindowVisible = false;
-        bool _pathKeyframeWindowVisible = false;
+        // bool _pathKeyframeWindowVisible = false;
 
-        Vector3 _pivotPosition;
-        Quaternion _pivotRotation;
-        Matrix4x4 _pivotSpaceL2W;
-        Matrix4x4 _pivotSpaceW2L;
+        Vector3 _pathRootPosition;
+        Quaternion _pathRootRotation;
+        Matrix4x4 _pathSpaceL2W;
+        Matrix4x4 _pathSpaceW2L;
+
+        Vector3 _accumulatedOffset;
 
         public PathCameraController( CameraToolsManager ctm ) : base( ctm )
         {
-
+            OnLoad( null );
         }
 
         public override void OnLoad( ConfigNode node )
@@ -71,10 +73,10 @@ namespace CameraToolsKatnissified.Cameras
             Debug.Log( "[CTK] Path Camera Active" );
             if( FlightGlobals.ActiveVessel != null )
             {
-                _pivotPosition = cameraBeh.ActiveVessel.transform.position; // cache to use when setting path.
-                _pivotRotation = cameraBeh.ActiveVessel.transform.rotation;
-                _pivotSpaceL2W = Matrix4x4.TRS( _pivotPosition, _pivotRotation, new Vector3( 1, 1, 1 ) );
-                _pivotSpaceW2L = _pivotSpaceL2W.inverse;
+                _pathRootPosition = cameraBeh.ActiveVessel.transform.position; // cache to use when setting path.
+                _pathRootRotation = cameraBeh.ActiveVessel.transform.rotation;
+                _pathSpaceL2W = Matrix4x4.TRS( _pathRootPosition, _pathRootRotation, new Vector3( 1, 1, 1 ) );
+                _pathSpaceW2L = _pathSpaceL2W.inverse;
             }
             else
             {
@@ -95,106 +97,115 @@ namespace CameraToolsKatnissified.Cameras
             OnStartPlaying();
 
             // initialize the rotation on start, but don't update it so if the rocket rolls, the camera won't follow it.
-            _pivotPosition = cameraBeh.ActiveVessel.transform.position;
-            _pivotRotation = cameraBeh.ActiveVessel.transform.rotation;
-            _pivotSpaceL2W = Matrix4x4.TRS( _pivotPosition, _pivotRotation, new Vector3( 1, 1, 1 ) );
-            _pivotSpaceW2L = _pivotSpaceL2W.inverse;
+            _pathRootPosition = cameraBeh.ActiveVessel.transform.position;
+            _pathRootRotation = cameraBeh.ActiveVessel.transform.rotation;
+            _pathSpaceL2W = Matrix4x4.TRS( _pathRootPosition, _pathRootRotation, new Vector3( 1, 1, 1 ) );
+            _pathSpaceW2L = _pathSpaceL2W.inverse;
 
             CameraTransformation firstFrame = CurrentPath.Evaulate( 0 );
-            this.Pivot.transform.position = _pivotSpaceL2W.MultiplyPoint( firstFrame.position );
-            this.Pivot.transform.rotation = _pivotRotation * firstFrame.rotation;
+            this.Pivot.transform.position = _pathSpaceL2W.MultiplyPoint( firstFrame.position );
+            this.Pivot.transform.rotation = _pathRootRotation * firstFrame.rotation;
             cameraBeh.Zoom = firstFrame.zoom;
 
-            //IsPlaying = true;
             IsPlayingPath = true;
         }
 
         private void UpdateRecalculatePivot()
         {
-            // Update the frame of reference's position to follow the vessel.
-            //if( CurrentPath.Frame == CameraPath.ReferenceFrame.Free )
-            //{
-            //}
+
             if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixPosition )
             {
-                _pivotPosition = cameraBeh.ActiveVessel.transform.position;
+                _pathRootPosition = cameraBeh.ActiveVessel.transform.position;
             }
             if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixRotation )
             {
-                _pivotRotation = cameraBeh.ActiveVessel.transform.rotation;
+                _pathRootRotation = cameraBeh.ActiveVessel.transform.rotation;
             }
             if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixPositionAndRotation )
             {
-                _pivotPosition = cameraBeh.ActiveVessel.transform.position;
-                _pivotRotation = cameraBeh.ActiveVessel.transform.rotation;
+                _pathRootPosition = cameraBeh.ActiveVessel.transform.position;
+                _pathRootRotation = cameraBeh.ActiveVessel.transform.rotation;
             }
-#warning TODO - after flying high enough, the space switches to be vessel-centric. we need to catch that.
-            _pivotSpaceL2W = Matrix4x4.TRS( _pivotPosition, _pivotRotation, new Vector3( 1, 1, 1 ) );
-            _pivotSpaceW2L = _pivotSpaceL2W.inverse;
+            _pathSpaceL2W = Matrix4x4.TRS( _pathRootPosition, _pathRootRotation, new Vector3( 1, 1, 1 ) );
+            _pathSpaceW2L = _pathSpaceL2W.inverse;
         }
 
-        protected override void OnPlaying()
+        protected override void OnPlayingFixedUpdate()
         {
-            UpdateRecalculatePivot();
-
-            if( IsPlayingPath )
+            if( cameraBeh.ActiveVessel != null )
             {
-                CameraTransformation camTransf = CurrentPath.Evaulate( cameraBeh.TimeSinceStart * CurrentPath.TimeScale );
-                this.Pivot.transform.localPosition = _pivotSpaceL2W.MultiplyPoint( Vector3.Lerp( _pivotSpaceW2L.MultiplyPoint( this.Pivot.transform.localPosition ), camTransf.position, CurrentPath.LerpRate * Time.fixedDeltaTime ) );
-                this.Pivot.transform.localRotation = _pivotRotation * Quaternion.Slerp( Quaternion.Inverse( _pivotRotation ) * this.Pivot.transform.localRotation, camTransf.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
-                cameraBeh.Zoom = Mathf.Lerp( cameraBeh.Zoom, camTransf.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
-            }
-            else // this is to set up the path.
-            {
-                //mouse panning, moving
-                Vector3 forwardLevelAxis = this.Pivot.transform.forward;
+                UpdateRecalculatePivot();
 
-                if( Input.GetKey( KeyCode.Mouse1 ) && Input.GetKey( KeyCode.Mouse2 ) )
+                // free camera - follow the vessel's position and apply accumulated offset.
+                // fix position - follow the vessel's position.
+                // fix rotation - follow the vessel's rotation and apply accumulated offset.
+                // fix position and rotation - follow the vessel's position and rotation
+
+                if( CurrentPath.Frame == CameraPath.ReferenceFrame.Free || CurrentPath.Frame == CameraPath.ReferenceFrame.FixRotation )
                 {
-                    this.Pivot.transform.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, this.Pivot.transform.forward ) * this.Pivot.transform.rotation;
-                }
-                else
-                {
-                    if( Input.GetKey( KeyCode.Mouse1 ) )
-                    {
-                        this.Pivot.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (cameraBeh.Zoom * cameraBeh.Zoom), Vector3.up );
-                        this.Pivot.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (cameraBeh.Zoom * cameraBeh.Zoom), Vector3.right );
-                        this.Pivot.transform.rotation = Quaternion.LookRotation( this.Pivot.transform.forward, this.Pivot.transform.up );
-                    }
-                    if( Input.GetKey( KeyCode.Mouse2 ) )
-                    {
-                        this.Pivot.transform.position += this.Pivot.transform.right * Input.GetAxis( "Mouse X" ) * 2;
-                        this.Pivot.transform.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
-                    }
-                }
-                this.Pivot.transform.position += this.Pivot.transform.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
+                    _accumulatedOffset -= cameraBeh.ActiveVessel.srf_velocity * Time.fixedDeltaTime; // vessel.rb_velocity is 0 after switching to vessel-centric
 
-            }
+                    // After flying high enough (~2500m), the space switches to be vessel-centric. we need to catch that. The rotation doesn't change I think.
+                    _pathRootPosition = cameraBeh.ActiveVessel.transform.position;
+                    _pathRootPosition += _accumulatedOffset;
 
-            //zoom
-            cameraBeh.ZoomFactor = Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 );
-            cameraBeh.ManualFov = 60 / cameraBeh.ZoomFactor;
-
-            if( cameraBeh.CurrentFov != cameraBeh.ManualFov )
-            {
-                cameraBeh.CurrentFov = Mathf.Lerp( cameraBeh.CurrentFov, cameraBeh.ManualFov, 0.1f );
-                cameraBeh.FlightCamera.SetFoV( cameraBeh.CurrentFov );
-            }
-
-            //vessel camera shake
-            if( cameraBeh.ShakeMultiplier > 0 )
-            {
-                foreach( var vessel in FlightGlobals.Vessels )
-                {
-                    if( !vessel || !vessel.loaded || vessel.packed )
-                    {
-                        continue;
-                    }
-
-                    cameraBeh.DoCameraShake( vessel );
+                    _pathSpaceL2W = Matrix4x4.TRS( _pathRootPosition, _pathRootRotation, new Vector3( 1, 1, 1 ) );
+                    _pathSpaceW2L = _pathSpaceL2W.inverse;
                 }
 
-                cameraBeh.UpdateCameraShakeMagnitude();
+                if( IsPlayingPath )
+                {
+                    CameraTransformation camTransformPath = CurrentPath.Evaulate( cameraBeh.TimeSinceStart );
+
+                    Vector3 pivotPositionPathSpace = _pathSpaceW2L.MultiplyPoint( this.Pivot.transform.localPosition );
+                    Quaternion pivotRotationPathSpace = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.transform.localRotation;
+
+                    // Pivot "follows" the curve transform. the lower the constant, the more smooth it feels.
+                    // whenever the frame switches to vessel-centric, it fucks itself and goes to space. I don't think this can be fixed while using this method.
+                    this.Pivot.transform.localPosition = _pathSpaceL2W.MultiplyPoint( Vector3.Lerp( pivotPositionPathSpace, camTransformPath.position, CurrentPath.LerpRate * Time.fixedDeltaTime ) ); // time deltatime because we're moving the position over time.
+                    this.Pivot.transform.localRotation = _pathRootRotation * Quaternion.Slerp( pivotRotationPathSpace, camTransformPath.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
+                    cameraBeh.Zoom = Mathf.Lerp( cameraBeh.Zoom, camTransformPath.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
+                }
+                /*else // this is to set up the path.
+                {
+                    //mouse panning, moving
+                    Vector3 forwardLevelAxis = this.Pivot.transform.forward;
+
+                    if( Input.GetKey( KeyCode.Mouse1 ) && Input.GetKey( KeyCode.Mouse2 ) )
+                    {
+                        this.Pivot.transform.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, this.Pivot.transform.forward ) * this.Pivot.transform.rotation;
+                    }
+                    else
+                    {
+                        if( Input.GetKey( KeyCode.Mouse1 ) )
+                        {
+                            this.Pivot.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (cameraBeh.Zoom * cameraBeh.Zoom), Vector3.up );
+                            this.Pivot.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (cameraBeh.Zoom * cameraBeh.Zoom), Vector3.right );
+                            this.Pivot.transform.rotation = Quaternion.LookRotation( this.Pivot.transform.forward, this.Pivot.transform.up );
+                        }
+                        if( Input.GetKey( KeyCode.Mouse2 ) )
+                        {
+                            this.Pivot.transform.position += this.Pivot.transform.right * Input.GetAxis( "Mouse X" ) * 2;
+                            this.Pivot.transform.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
+                        }
+                    }
+                    this.Pivot.transform.position += this.Pivot.transform.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
+
+                }*/
+
+                //zoom
+                //cameraBeh.ZoomFactor = Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 );
+                //cameraBeh.ManualFov = 60 / cameraBeh.ZoomFactor;
+
+                //if( cameraBeh.CurrentFov != cameraBeh.ManualFov )
+                //{
+                //   cameraBeh.CurrentFov = Mathf.Lerp( cameraBeh.CurrentFov, cameraBeh.ManualFov, 0.1f );
+                float fov = 60 / (Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 ));
+                if( cameraBeh.FlightCamera.FieldOfView != fov )
+                {
+                    cameraBeh.FlightCamera.SetFoV( fov );
+                }
+                //}
             }
         }
 
@@ -204,13 +215,13 @@ namespace CameraToolsKatnissified.Cameras
             // DeselectKeyframe();
         }
 
-        public void CreateNewPath()
+        /*public void CreateNewPath()
         {
             _pathKeyframeWindowVisible = false;
             CameraPath path = new CameraPath();
             AvailablePaths.Add( path );
             CurrentPath = path;
-        }
+        }*/
 
         public void DeletePath( CameraPath path )
         {
@@ -282,11 +293,11 @@ namespace CameraToolsKatnissified.Cameras
             cameraBeh.FlightCamera.transform.position = _pivotSpaceL2W.MultiplyPoint( keyframe.Position );
             cameraBeh.FlightCamera.transform.rotation = _pivotRotation * keyframe.Rotation;
             cameraBeh.Zoom = keyframe.Zoom;
-        }
-        */
+        }*/
+
         void TogglePathList()
         {
-            _pathKeyframeWindowVisible = false;
+            // _pathKeyframeWindowVisible = false;
             _pathWindowVisible = !_pathWindowVisible;
         }
 
@@ -294,10 +305,10 @@ namespace CameraToolsKatnissified.Cameras
         {
             if( CameraToolsManager._guiWindowVisible && CameraToolsManager._uiVisible )
             {
-                if( _pathKeyframeWindowVisible )
+                /*if( _pathKeyframeWindowVisible )
                 {
                     DrawKeyframeEditorWindow();
-                }
+                }*/
                 if( _pathWindowVisible )
                 {
                     DrawPathSelectorWindow();

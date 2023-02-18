@@ -33,7 +33,7 @@ namespace CameraToolsKatnissified.Cameras
         /// <summary>
         /// Called every frame while the camera behaviour is playing.
         /// </summary>
-        protected abstract void OnPlaying();
+        protected abstract void OnPlayingFixedUpdate();
 
         /// <summary>
         /// Called when the camera behaviour stops playing.
@@ -81,7 +81,7 @@ namespace CameraToolsKatnissified.Cameras
         {
             if( cameraBeh.CameraToolsActive )
             {
-                OnPlaying();
+                OnPlayingFixedUpdate();
             }
         }
 

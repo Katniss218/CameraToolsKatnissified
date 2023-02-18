@@ -30,7 +30,7 @@ namespace CameraToolsKatnissified.UI
         public static (float width, float height) GetFullPixelSize()
         {
 #warning TODO - seems to be 1 grid cell to narrow on the right?
-            return ((Width * CellSize) + (2 * Margin) + CellSize, (overwrittenHeight * CellSize) + (2 * Margin) + CellSize); // +CellSize is to include last cell.
+            return ((Width * CellSize) + (2 * Margin), (overwrittenHeight * CellSize) + (2 * Margin)); // +CellSize is to include last cell.
         }
 
         public static Rect SetWindow( int width, int height, float margins = 12.0f, float cellSize = 20.0f )
@@ -43,15 +43,22 @@ namespace CameraToolsKatnissified.UI
             return new Rect( 0, 0, Width * CellSize + 2 * margins, Height * CellSize + 2 * margins ); // margin, grid, margin
         }
 
+        /// <summary>
+        /// Rect arbitrary, takes up the specified grid cells.
+        /// </summary>
         public static Rect GetRect( int minX, int minY, int maxX, int maxY )
         {
             if( maxY > overwrittenHeight )
             {
                 overwrittenHeight = maxY;
             }
-            return new Rect( minX * CellSize + Margin, minY * CellSize + Margin, (maxX - minX) * CellSize, (maxY - minY) * CellSize );
+            // Without adding 1 to max, min = 1, max = 1 would result in 0-width.
+            return new Rect( minX * CellSize + Margin, minY * CellSize + Margin, ((maxX + 1) - minX) * CellSize, ((maxY + 1) - minY) * CellSize );
         }
 
+        /// <summary>
+        /// Single cell
+        /// </summary>
         public static Rect GetRect( int x, int y )
         {
             if( y > overwrittenHeight )
@@ -62,7 +69,7 @@ namespace CameraToolsKatnissified.UI
         }
 
         /// <summary>
-        /// Rect horizontal.
+        /// Rect horizontal, takes up the specified grid cells.
         /// </summary>
         public static Rect GetRectX( int y, int minX, int maxX )
         {
@@ -70,11 +77,12 @@ namespace CameraToolsKatnissified.UI
             {
                 overwrittenHeight = y;
             }
-            return new Rect( minX * CellSize + Margin, y * CellSize + Margin, (maxX - minX) * CellSize, CellSize );
+            // Without adding 1 to max, min = 1, max = 1 would result in 0-width.
+            return new Rect( minX * CellSize + Margin, y * CellSize + Margin, ((maxX + 1) - minX) * CellSize, CellSize );
         }
 
         /// <summary>
-        /// Rect horizontal.
+        /// Rect horizontal, takes up the entire grid width.
         /// </summary>
         public static Rect GetRectX( int y )
         {
@@ -86,7 +94,7 @@ namespace CameraToolsKatnissified.UI
         }
 
         /// <summary>
-        /// Rect vertical.
+        /// Rect vertical, takes up the entire grid height.
         /// </summary>
         public static Rect GetRectY( int x )
         {

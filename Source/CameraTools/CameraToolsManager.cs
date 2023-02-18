@@ -70,10 +70,10 @@ namespace CameraToolsKatnissified
         Transform _originalCameraParent;
         float _originalCameraNearClip;
 
-        public float ManualFov { get; set; } = 60;
-        public float CurrentFov { get; set; } = 60;
+        //public float ManualFov { get; set; } = 60;
+        //public float CurrentFov { get; set; } = 60;
 
-        public float ZoomFactor { get; set; } = 1;
+        //public float ZoomFactor { get; set; } = 1;
 
         bool _hasDied = false;
         float _diedTime = 0;
@@ -172,6 +172,22 @@ namespace CameraToolsKatnissified
             {
                 EndCamera();
             }
+
+            //vessel camera shake
+            if( ShakeMultiplier > 0 )
+            {
+                foreach( var vessel in FlightGlobals.Vessels )
+                {
+                    if( !vessel || !vessel.loaded || vessel.packed )
+                    {
+                        continue;
+                    }
+
+                    DoCameraShake( vessel );
+                }
+
+                UpdateCameraShakeMagnitude();
+            }
         }
 
         void LateUpdate()
@@ -201,10 +217,10 @@ namespace CameraToolsKatnissified
                 ActiveVessel = FlightGlobals.ActiveVessel;
             }
 
-            if( !CameraToolsActive && !UseAutoZoom )
-            {
-                ZoomFactor = Mathf.Exp( Zoom ) / Mathf.Exp( 1 );
-            }
+            //if( !CameraToolsActive && !UseAutoZoom )
+           // {
+            //    ZoomFactor = Mathf.Exp( Zoom ) / Mathf.Exp( 1 );
+            //}
 
             foreach( var beh in _behaviours )
             {
@@ -298,7 +314,7 @@ namespace CameraToolsKatnissified
 
             FlightCamera.SetFoV( 60 );
             FlightCamera.ActivateUpdate();
-            CurrentFov = 60;
+            //CurrentFov = 60;
 
             CameraToolsActive = false;
         }
@@ -332,7 +348,6 @@ namespace CameraToolsKatnissified
             float camDistance = Vector3.Distance( FlightCamera.transform.position, vessel.CoM );
 
             float distanceFactor = 50f / camDistance;
-            float fovFactor = 2f / ZoomFactor;
 
             float angleToCam = Vector3.Angle( vessel.srf_velocity, FlightCamera.fetch.mainCamera.transform.position - vessel.transform.position );
             angleToCam = Mathf.Clamp( angleToCam, 1, 180 );
@@ -352,11 +367,11 @@ namespace CameraToolsKatnissified
 
             lagAudioFactor *= waveFrontFactor;
 
-            lagAudioFactor = Mathf.Clamp01( lagAudioFactor ) * distanceFactor * fovFactor;
+            lagAudioFactor = Mathf.Clamp01( lagAudioFactor ) * distanceFactor;
 
             float shakeAtmPressureMultiplier = (float)vessel.dynamicPressurekPa / 2f * lagAudioFactor;
 
-            float shakeThrustFactor = GetTotalThrust() / 1000f * distanceFactor * fovFactor * lagAudioFactor;
+            float shakeThrustFactor = GetTotalThrust() / 1000f * distanceFactor * lagAudioFactor;
 
             ShakeCamera( shakeAtmPressureMultiplier + shakeThrustFactor );
         }

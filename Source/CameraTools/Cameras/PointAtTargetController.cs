@@ -56,7 +56,7 @@ namespace CameraToolsKatnissified.Cameras
             }
         }
 
-        protected override void OnPlaying()
+        protected override void OnPlayingFixedUpdate()
         {
             if( cameraBeh.FlightCamera.Target != null )
             {
@@ -69,6 +69,12 @@ namespace CameraToolsKatnissified.Cameras
 
                 this.Pivot.transform.rotation = Quaternion.LookRotation( toTargetDirection, UpDirection );
             }
+
+            float fov = 60 / (Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 ));
+            if( cameraBeh.FlightCamera.FieldOfView != fov )
+            {
+                cameraBeh.FlightCamera.SetFoV( fov );
+            }
         }
 
         protected override void OnStopPlaying()
@@ -78,13 +84,13 @@ namespace CameraToolsKatnissified.Cameras
 
         public override void DrawGui( float contentWidth, ref int line )
         {
-            GUI.Label( UILayout.GetRectX( line, 1, 10 ), $"Camera Target: {(Target == null ? "None" : Target.gameObject.name)}" );
-            if( GUI.Button( UILayout.GetRect( 10, line ), _settingTargetEnabled ? "waiting..." : "S" ) )
+            GUI.Label( UILayout.GetRectX( line, 1, 7 ), $"Target: {(Target == null ? "None" : Target.gameObject.name)}" );
+            if( GUI.Button( UILayout.GetRectX( line, 8, 9 ), _settingTargetEnabled ? "..." : "S" ) )
             {
                 _settingTargetEnabled = true;
                 cameraBeh._wasMouseUp = false;
             }
-            if( GUI.Button( UILayout.GetRect( 11, line ), "X" ) )
+            if( GUI.Button( UILayout.GetRectX( line, 10, 11 ), "X" ) )
             {
                 Target = null;
             }
