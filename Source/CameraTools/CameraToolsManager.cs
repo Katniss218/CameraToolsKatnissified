@@ -323,7 +323,15 @@ namespace CameraToolsKatnissified
             FlightCamera.SetTargetNone();
             FlightCamera.DeactivateUpdate();
 
+            GameObject go = new GameObject( $"Camera Pivot - patheditor" );
+            go.transform.SetParent( null );
+            go.transform.position = FlightCamera.transform.position;
+            go.transform.rotation = FlightCamera.transform.rotation;
+
+            FlightCamera.transform.SetParent( go.transform );
+
             _pathSetup = this.gameObject.AddComponent<PathSetupController>();
+            _pathSetup.Pivot = go.transform;
         }
 
         /// <summary>

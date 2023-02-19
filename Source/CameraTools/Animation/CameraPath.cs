@@ -103,9 +103,9 @@ namespace CameraToolsKatnissified.Animation
             pathNode.AddValue( "frame", this.Frame );
         }
 
-        public void AddTransform( Transform cameraTransform, float zoom, float time )
+        public void AddTransform( Vector3 position, Quaternion rotation, float zoom, float time )
         {
-            _keyframes.Add( new CameraKeyframe( cameraTransform.localPosition, cameraTransform.localRotation, zoom, time ) );
+            _keyframes.Add( new CameraKeyframe( position, rotation, zoom, time ) );
 
             SortAndUpdate();
         }

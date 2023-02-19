@@ -29,10 +29,8 @@ namespace CameraToolsKatnissified.Cameras
             OnLoad( null );
         }
 
-        public override void OnLoad( ConfigNode node )
+        void ReloadPaths()
         {
-            base.OnLoad( node );
-
             // DeselectKeyframe();
             CurrentPath = null;
             AvailablePaths = new List<CameraPath>();
@@ -43,6 +41,13 @@ namespace CameraToolsKatnissified.Cameras
             {
                 AvailablePaths.Add( CameraPath.LoadOld( n ) );
             }
+        }
+
+        public override void OnLoad( ConfigNode node )
+        {
+            base.OnLoad( node );
+
+            ReloadPaths();
         }
 
         public override void OnSave( ConfigNode node )
@@ -190,6 +195,7 @@ namespace CameraToolsKatnissified.Cameras
 
             if( GUI.Button( UILayout.GetRectX( line, 1, 11 ), "Open Path" ) )
             {
+                ReloadPaths();
                 TogglePathList();
             }
         }
