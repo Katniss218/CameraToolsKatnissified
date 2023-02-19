@@ -212,18 +212,9 @@ namespace CameraToolsKatnissified
 
         void LateUpdate()
         {
-            // Retain pos and rot after vessel destruction
-            // This will fuck the camera is called when CT is not supposed to be active.
-            if( (IsPlayingCT || IsEditingPathCT) && FlightCamera.transform.parent != _behaviours[_behaviours.Count - 1].Pivot )
+            if( IsPlayingCT && FlightCamera.transform.parent != _behaviours[_behaviours.Count - 1].Pivot )
             {
-                Debug.LogWarning( $"[CameraToolsKatnissified] Reverting camera to last known state." );
-
-                FlightCamera.SetTargetNone();
-                FlightCamera.transform.parent = null;
-                FlightCamera.transform.position = LastCameraPosition;
-                FlightCamera.transform.rotation = LastCameraRotation;
-                _hasDied = true;
-                _diedTime = Time.time;
+                OnKilled();
             }
         }
 
@@ -329,6 +320,9 @@ namespace CameraToolsKatnissified
 
             StopPlaying();
 
+            FlightCamera.SetTargetNone();
+            FlightCamera.DeactivateUpdate();
+
             _pathSetup = this.gameObject.AddComponent<PathSetupController>();
         }
 
@@ -351,6 +345,29 @@ namespace CameraToolsKatnissified
                 beh.StopPlaying();
             }
 
+            LoadLastKnownCameraState();
+
+            IsPlayingCT = false;
+        }
+
+        public void StopEditingPath()
+        {
+            Debug.Log( "[CameraToolsKatnissified] Stopping editing path." );
+
+            Destroy( _pathSetup ); // kill component.
+            LoadLastKnownCameraState();
+        }
+
+        void SaveOriginalCamera()
+        {
+            _originalCameraPosition = FlightCamera.transform.position;
+            _originalCameraRotation = FlightCamera.transform.localRotation;
+            _originalCameraParent = FlightCamera.transform.parent;
+            _originalCameraNearClip = Camera.main.nearClipPlane;
+        }
+
+        void LoadLastKnownCameraState()
+        {
             if( FlightGlobals.ActiveVessel != null && HighLogic.LoadedScene == GameScenes.FLIGHT )
             {
                 FlightCamera.SetTarget( FlightGlobals.ActiveVessel.transform, FlightCamera.TargetMode.Vessel );
@@ -362,24 +379,20 @@ namespace CameraToolsKatnissified
 
             FlightCamera.SetFoV( 60 );
             FlightCamera.ActivateUpdate();
-            //CurrentFov = 60;
-
-            IsPlayingCT = false;
         }
 
-        public void StopEditingPath()
+        void OnKilled()
         {
-            Debug.Log( "[CameraToolsKatnissified] Stopping editing path." );
+            // Retain pos and rot after vessel destruction
+            // This will fuck the camera if called when CT is not supposed to be active.
+            Debug.LogWarning( $"[CameraToolsKatnissified] Reverting camera to last known state." );
 
-            Destroy( _pathSetup ); // kill component.
-        }
-
-        void SaveOriginalCamera()
-        {
-            _originalCameraPosition = FlightCamera.transform.position;
-            _originalCameraRotation = FlightCamera.transform.localRotation;
-            _originalCameraParent = FlightCamera.transform.parent;
-            _originalCameraNearClip = Camera.main.nearClipPlane;
+            FlightCamera.SetTargetNone();
+            FlightCamera.transform.parent = null;
+            FlightCamera.transform.position = LastCameraPosition;
+            FlightCamera.transform.rotation = LastCameraRotation;
+            _hasDied = true;
+            _diedTime = Time.time;
         }
 
         public void ShakeCamera( float magnitude )

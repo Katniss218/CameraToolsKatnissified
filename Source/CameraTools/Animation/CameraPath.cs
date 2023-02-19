@@ -110,10 +110,10 @@ namespace CameraToolsKatnissified.Animation
             SortAndUpdate();
         }
 
-        public void SetTransform( CameraKeyframe keyframe, Transform cameraTransform, float zoom, float time )
+        public void SetTransform( CameraKeyframe keyframe, Vector3 position, Quaternion rotation, float zoom, float time )
         {
-            keyframe.Position = cameraTransform.localPosition;
-            keyframe.Rotation = cameraTransform.localRotation;
+            keyframe.Position = position;
+            keyframe.Rotation = rotation;
             keyframe.Zoom = zoom;
             keyframe.Time = time;
 

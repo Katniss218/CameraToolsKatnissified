@@ -92,8 +92,6 @@ namespace CameraToolsKatnissified
 
         public void SelectKeyframe( CameraKeyframe kf )
         {
-            UpdateRecalculatePivot();
-
             CurrentKeyframe = kf;
             _pathKeyframeWindowVisible = true;
             ViewKeyframe( CurrentKeyframe );
@@ -129,22 +127,10 @@ namespace CameraToolsKatnissified
             }
         }
 
-        private void UpdateRecalculatePivot()
+        private void InitializePivot()
         {
-
-            if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixPosition )
-            {
-                _pathRootPosition = _cameraBeh.ActiveVessel.transform.position;
-            }
-            if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixRotation )
-            {
-                _pathRootRotation = _cameraBeh.ActiveVessel.transform.rotation;
-            }
-            if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixPositionAndRotation )
-            {
-                _pathRootPosition = _cameraBeh.ActiveVessel.transform.position;
-                _pathRootRotation = _cameraBeh.ActiveVessel.transform.rotation;
-            }
+            _pathRootPosition = _cameraBeh.ActiveVessel.transform.position;
+            _pathRootRotation = _cameraBeh.ActiveVessel.transform.rotation;
             _pathSpaceL2W = Matrix4x4.TRS( _pathRootPosition, _pathRootRotation, new Vector3( 1, 1, 1 ) );
             _pathSpaceW2L = _pathSpaceL2W.inverse;
         }
@@ -155,9 +141,20 @@ namespace CameraToolsKatnissified
         public void ViewKeyframe( CameraKeyframe keyframe )
         {
             Debug.Log( $"[CameraToolsKatnissified] Viewing Keyframe: Pos: {keyframe.Position}, Rot: {keyframe.Rotation}" );
+
+            InitializePivot();
+
             _cameraBeh.FlightCamera.transform.position = _pathSpaceL2W.MultiplyPoint( keyframe.Position );
             _cameraBeh.FlightCamera.transform.rotation = _pathRootRotation * keyframe.Rotation;
             _cameraBeh.Zoom = keyframe.Zoom;
+        }
+
+        void SaveKeyframe(CameraKeyframe keyframe )
+        {
+            Vector3 localPosition = _pathSpaceW2L.MultiplyPoint( _cameraBeh.FlightCamera.transform.position );
+            Quaternion localRotation = Quaternion.Inverse( _pathRootRotation ) * _cameraBeh.FlightCamera.transform.rotation;
+
+            CurrentPath.SetTransform( keyframe, localPosition, localRotation, _cameraBeh.Zoom, CurrentKeyframe.Time );
         }
 
         void TogglePathList()
@@ -409,8 +406,8 @@ namespace CameraToolsKatnissified
 
             if( GUI.Button( new Rect( 100, 65, 195, 25 ), "Apply" ) )
             {
-                Debug.Log( $"Applying keyframe at time: {CurrentKeyframe.Time}" );
-                CurrentPath.SetTransform( CurrentKeyframe, _cameraBeh.FlightCamera.transform, _cameraBeh.Zoom, CurrentKeyframe.Time );
+                Debug.Log( $"[CameraToolsKatnissified] Applying keyframe at time: {CurrentKeyframe.Time}" );
+                SaveKeyframe( CurrentKeyframe );
                 isApplied = true;
             }
 
