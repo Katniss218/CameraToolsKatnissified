@@ -15,8 +15,6 @@ namespace CameraToolsKatnissified.Cameras
 
         public CameraReference CurrentReferenceMode { get; private set; } = CameraReference.Surface;
 
-        public Vector3 ManualOffset { get; set; } = Vector3.zero; // offset from moving the camera manually.
-
         public Vector3 UpDirection { get; set; } = Vector3.up;
 
         /// <summary>
@@ -71,13 +69,12 @@ namespace CameraToolsKatnissified.Cameras
                     UpDirection = -FlightGlobals.getGeeForceAtPosition( cameraBeh.ActiveVessel.GetWorldPos3D() ).normalized;
                 }
 
-                _initialOffset = this.Pivot.transform.position - cameraBeh.ActiveVessel.transform.position;
-
-                ManualOffset = Vector3.zero;
+                Debug.Log( this.Pivot.position );
+                _initialOffset = this.Pivot.position - cameraBeh.ActiveVessel.transform.position;
 
                 if( CameraPosition != null )
                 {
-                    this.Pivot.transform.position = CameraPosition.Value;
+                    this.Pivot.position = CameraPosition.Value;
                 }
 
                 _accumulatedOffset = Vector3.zero;
@@ -102,8 +99,9 @@ namespace CameraToolsKatnissified.Cameras
             if( cameraBeh.ActiveVessel != null )
             {
                 // Parent follows the vessel.
-                this.Pivot.transform.localPosition = ManualOffset + cameraBeh.ActiveVessel.transform.position + _initialOffset;
+                this.Pivot.localPosition = cameraBeh.ActiveVessel.transform.position + _initialOffset;
 
+                Debug.Log( this.Pivot.position );
                 // Camera itself accumulates the inverse of the vessel movement.
                 if( CurrentReferenceMode == CameraReference.Surface )
                 {
@@ -129,11 +127,10 @@ namespace CameraToolsKatnissified.Cameras
 
                     _accumulatedOffset += cameraVelocity * Time.fixedDeltaTime;
                 }
-                this.Pivot.transform.localPosition += _accumulatedOffset;
+                this.Pivot.localPosition += _accumulatedOffset;
             }
-
             //mouse panning, moving
-            Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, UpDirection ) * this.Pivot.transform.right).normalized;
+            // Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, UpDirection ) * this.Pivot.transform.right).normalized;
 
 
 #warning TODO - this panning and stuff would be a separate controller, playercamera, which could be locked from the playing behaviour, e.g. preventing you from moving a path camera.
@@ -171,7 +168,7 @@ namespace CameraToolsKatnissified.Cameras
                 ManualOffset += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
             }*/
 
-            ManualOffset += UpDirection * CameraToolsManager.SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
+            //ManualOffset += UpDirection * CameraToolsManager.SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
 
             // autoFov
             /*if( Target != null && cameraBeh.UseAutoZoom )

@@ -90,11 +90,6 @@ namespace CameraToolsKatnissified
         Transform _originalCameraParent;
         float _originalCameraNearClip;
 
-        //public float ManualFov { get; set; } = 60;
-        //public float CurrentFov { get; set; } = 60;
-
-        //public float ZoomFactor { get; set; } = 1;
-
         bool _hasDied = false;
         float _diedTime = 0;
 
@@ -278,14 +273,20 @@ namespace CameraToolsKatnissified
         /// </summary>
         private void StartPlaying()
         {
-            Debug.Log( "[CameraToolsKatnissified] Starting playing." );
+            Debug.Log( $"[CameraToolsKatnissified] Starting playing. IsPlayingCT = {IsPlayingCT}" );
 
             if( IsPlayingCT )
             {
                 return;
             }
 
+            if( FlightGlobals.ActiveVessel != null )
+            {
+                ActiveVessel = FlightGlobals.ActiveVessel;
+            }
+
             StopEditingPath();
+
             SaveOriginalCamera();
 
             IsPlayingCT = true;
@@ -293,15 +294,10 @@ namespace CameraToolsKatnissified
 
             _hasDied = false;
 
-            if( FlightGlobals.ActiveVessel != null )
-            {
-                ActiveVessel = FlightGlobals.ActiveVessel;
-            }
-
-            ResetPivots();
-
             FlightCamera.SetTargetNone();
             FlightCamera.DeactivateUpdate();
+
+            ResetPivots();
 
             foreach( var beh in _behaviours )
             {
@@ -311,7 +307,7 @@ namespace CameraToolsKatnissified
 
         public void StartEditingPath()
         {
-            Debug.Log( "[CameraToolsKatnissified] Starting editing path." );
+            Debug.Log( $"[CameraToolsKatnissified] Starting editing path. IsEditingPathCT = {IsEditingPathCT}" );
 
             if( IsEditingPathCT )
             {
@@ -339,7 +335,7 @@ namespace CameraToolsKatnissified
         /// </summary>
         public void StopPlaying()
         {
-            Debug.Log( "[CameraToolsKatnissified] Stopping playing." );
+            Debug.Log( $"[CameraToolsKatnissified] Stopping playing. IsPlayingCT = {IsPlayingCT}" );
 
             if( !IsPlayingCT )
             {
@@ -360,7 +356,12 @@ namespace CameraToolsKatnissified
 
         public void StopEditingPath()
         {
-            Debug.Log( "[CameraToolsKatnissified] Stopping editing path." );
+            Debug.Log( $"[CameraToolsKatnissified] Stopping editing path. IsEditingPathCT = {IsEditingPathCT}" );
+
+            if( !IsEditingPathCT )
+            {
+                return;
+            }
 
             Destroy( _pathSetup ); // kill component.
             LoadLastKnownCameraState();

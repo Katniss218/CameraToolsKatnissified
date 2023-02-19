@@ -111,8 +111,8 @@ namespace CameraToolsKatnissified
 
             float time = CurrentPath.keyframeCount > 0 ? CurrentPath.GetKeyframe( CurrentPath.keyframeCount - 1 ).Time + 1 : 0;
 
-            Vector3 localPosition = _pathSpaceW2L.MultiplyPoint( this.Pivot.transform.localPosition );
-            Quaternion localRotation = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.transform.localRotation;
+            Vector3 localPosition = _pathSpaceW2L.MultiplyPoint( this.Pivot.localPosition );
+            Quaternion localRotation = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.localRotation;
             CurrentPath.AddTransform( localPosition, localRotation, _cameraBeh.Zoom, time );
 
             SelectKeyframe( CurrentPath.GetKeyframe( CurrentPath.keyframeCount - 1 ) );
@@ -150,15 +150,15 @@ namespace CameraToolsKatnissified
 
             InitializePivot();
 
-            this.Pivot.transform.localPosition = _pathSpaceL2W.MultiplyPoint( keyframe.Position );
-            this.Pivot.transform.localRotation = _pathRootRotation * keyframe.Rotation;
+            this.Pivot.localPosition = _pathSpaceL2W.MultiplyPoint( keyframe.Position );
+            this.Pivot.localRotation = _pathRootRotation * keyframe.Rotation;
             _cameraBeh.Zoom = keyframe.Zoom;
         }
 
         void SaveKeyframe( CameraKeyframe keyframe )
         {
-            Vector3 localPosition = _pathSpaceW2L.MultiplyPoint( this.Pivot.transform.localPosition );
-            Quaternion localRotation = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.transform.localRotation;
+            Vector3 localPosition = _pathSpaceW2L.MultiplyPoint( this.Pivot.localPosition );
+            Quaternion localRotation = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.localRotation;
 
             CurrentPath.SetTransform( keyframe, localPosition, localRotation, _cameraBeh.Zoom, CurrentKeyframe.Time );
         }
@@ -193,23 +193,30 @@ namespace CameraToolsKatnissified
 
             if( Input.GetKey( KeyCode.Mouse1 ) && Input.GetKey( KeyCode.Mouse2 ) )
             {
-                this.Pivot.transform.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, this.Pivot.transform.forward ) * this.Pivot.transform.rotation;
+                this.Pivot.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, this.Pivot.forward ) * this.Pivot.rotation;
             }
             else
             {
                 if( Input.GetKey( KeyCode.Mouse1 ) )
                 {
-                    this.Pivot.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (_cameraBeh.Zoom * _cameraBeh.Zoom), Vector3.up );
-                    this.Pivot.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (_cameraBeh.Zoom * _cameraBeh.Zoom), Vector3.right );
-                    this.Pivot.transform.rotation = Quaternion.LookRotation( this.Pivot.transform.forward, this.Pivot.transform.up );
+                    this.Pivot.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (_cameraBeh.Zoom * _cameraBeh.Zoom), Vector3.up );
+                    this.Pivot.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (_cameraBeh.Zoom * _cameraBeh.Zoom), Vector3.right );
+                    this.Pivot.rotation = Quaternion.LookRotation( this.Pivot.forward, this.Pivot.transform.up );
                 }
                 if( Input.GetKey( KeyCode.Mouse2 ) )
                 {
-                    this.Pivot.transform.position += this.Pivot.transform.right * Input.GetAxis( "Mouse X" ) * 2;
-                    this.Pivot.transform.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
+                    this.Pivot.position += this.Pivot.right * Input.GetAxis( "Mouse X" ) * 2;
+                    this.Pivot.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
                 }
             }
-            this.Pivot.transform.position += this.Pivot.transform.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
+            this.Pivot.position += this.Pivot.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
+
+#warning TODO - move duplicated code.
+            float fov = 60 / (Mathf.Exp( _cameraBeh.Zoom ) / Mathf.Exp( 1 ));
+            if( _cameraBeh.FlightCamera.FieldOfView != fov )
+            {
+                _cameraBeh.FlightCamera.SetFoV( fov );
+            }
         }
 
         public void DrawGuiWindow( int windowId )
@@ -387,7 +394,7 @@ namespace CameraToolsKatnissified
         public void DrawKeyframeEditorWindow()
         {
             float width = 300;
-            float height = 130;
+            float height = 250;
 
             Rect kWindowRect = new Rect( _windowRect.x - width, _windowRect.y + 365, width, height );
             GUI.Box( kWindowRect, string.Empty );
@@ -424,9 +431,9 @@ namespace CameraToolsKatnissified
             }
 
             GUI.Label( new Rect( 100, 135, 195, 20 ), "Zoom" );
-            CurrentKeyframe.Zoom = GUI.HorizontalSlider( new Rect( 100, 165, 195, 20 ), CurrentKeyframe.Zoom, 1.0f, 8.0f );
-            GUI.Label( new Rect( 100, 195, 195, 20 ), (Mathf.Exp( CurrentKeyframe.Zoom ) / Mathf.Exp( 1 )).ToString( "0.0" ) + "x" );
 
+            _cameraBeh.Zoom = GUI.HorizontalSlider( new Rect( 100, 165, 195, 20 ), _cameraBeh.Zoom, 1.0f, 8.0f );
+            GUI.Label( new Rect( 100, 195, 195, 20 ), (Mathf.Exp( _cameraBeh.Zoom ) / Mathf.Exp( 1 )).ToString( "0.0" ) + "x" );
 
             GUI.EndGroup();
 

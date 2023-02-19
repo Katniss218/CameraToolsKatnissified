@@ -134,14 +134,14 @@ namespace CameraToolsKatnissified.Cameras
                 // the camera is then fixed to a rubberband that is connected to the trolley on the other end (rotations work the same way).
                 CameraTransformation camTransformPath = CurrentPath.Evaulate( cameraBeh.TimeSinceStart );
 
-                Vector3 pivotPositionPathSpace = _pathSpaceW2L.MultiplyPoint( this.Pivot.transform.localPosition );
-                Quaternion pivotRotationPathSpace = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.transform.localRotation;
+                Vector3 pivotPositionPathSpace = _pathSpaceW2L.MultiplyPoint( this.Pivot.localPosition );
+                Quaternion pivotRotationPathSpace = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.localRotation;
 
                 // Pivot "follows" the spline. the lower the constant, the more smooth it feels.
                 // It is a lot like a B-spline in that it's completely inside the spline and doesn't pass through any of the conrol points (except the start and end).
                 // whenever the frame switches to vessel-centric, it fucks itself and goes to space.
-                this.Pivot.transform.localPosition = _pathSpaceL2W.MultiplyPoint( Vector3.Lerp( pivotPositionPathSpace, camTransformPath.position, CurrentPath.LerpRate * Time.fixedDeltaTime ) ); // time deltatime because we're moving the position over time.
-                this.Pivot.transform.localRotation = _pathRootRotation * Quaternion.Slerp( pivotRotationPathSpace, camTransformPath.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
+                this.Pivot.localPosition = _pathSpaceL2W.MultiplyPoint( Vector3.Lerp( pivotPositionPathSpace, camTransformPath.position, CurrentPath.LerpRate * Time.fixedDeltaTime ) ); // time deltatime because we're moving the position over time.
+                this.Pivot.localRotation = _pathRootRotation * Quaternion.Slerp( pivotRotationPathSpace, camTransformPath.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
                 cameraBeh.Zoom = Mathf.Lerp( cameraBeh.Zoom, camTransformPath.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
 
                 //zoom
