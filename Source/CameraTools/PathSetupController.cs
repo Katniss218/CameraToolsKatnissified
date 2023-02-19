@@ -103,6 +103,7 @@ namespace CameraToolsKatnissified
         {
             CurrentKeyframe = null;
             _pathKeyframeWindowVisible = false;
+#warning TODO - revert to what was viewed before the keyframe?
         }
 
         public void CreateNewKeyframe()
