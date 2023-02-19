@@ -19,6 +19,19 @@ namespace CameraToolsKatnissified
 
         public const string DIRECTORY_NAME = "CameraToolsKatnissified";
 
+        static CameraToolsManager _instance;
+        public static CameraToolsManager Instance
+        {
+            get
+            {
+                if( _instance == null )
+                {
+                    _instance = FindObjectOfType<CameraToolsManager>();
+                }
+                return _instance;
+            }
+        }
+
         /// <summary>
         /// True if the CameraTools window should be displayed.
         /// </summary>
@@ -32,10 +45,17 @@ namespace CameraToolsKatnissified
 
         List<CameraController> _behaviours = new List<CameraController>();
 
+        PathSetupController _pathSetup;
+
         /// <summary>
-        /// True if the CameraTools camera is active.
+        /// True if CameraTools is editing a path.
         /// </summary>
-        public bool CameraToolsActive { get; set; }
+        public bool IsEditingPathCT { get => _pathSetup != null; }
+
+        /// <summary>
+        /// True if the CameraTools is active and playing.
+        /// </summary>
+        public bool IsPlayingCT { get; set; }
 
         /// <summary>
         /// Uses auto-zoom with stationary camera.
@@ -127,6 +147,7 @@ namespace CameraToolsKatnissified
             GameEvents.onShowUI.Add( GameUIEnable );
             GameEvents.OnVesselRecoveryRequested.Add( PostDeathRevert );
             GameEvents.onGameSceneLoadRequested.Add( PostDeathRevert );
+            GameEvents.onVesselChange.Add( SwitchToVessel );
             //GameEvents.onFloatingOriginShift.Add( OnFloatingOriginShift );
 
             if( FlightGlobals.ActiveVessel != null )
@@ -134,11 +155,14 @@ namespace CameraToolsKatnissified
                 ActiveVessel = FlightGlobals.ActiveVessel;
             }
 
-            GameEvents.onVesselChange.Add( SwitchToVessel );
         }
 
         void OnDestroy()
         {
+            GameEvents.onHideUI.Remove( GameUIDisable );
+            GameEvents.onShowUI.Remove( GameUIEnable );
+            GameEvents.OnVesselRecoveryRequested.Remove( PostDeathRevert );
+            GameEvents.onGameSceneLoadRequested.Remove( PostDeathRevert );
             GameEvents.onVesselChange.Remove( SwitchToVessel );
         }
 
@@ -156,21 +180,17 @@ namespace CameraToolsKatnissified
 
             if( Input.GetKeyDown( KeyCode.Home ) )
             {
-                StartCamera();
-                if( _behaviours[0] is PathCameraController p )
-                {
-                    p.StartPlayingPath();
-                }
+                StartPlaying();
+            }
+
+            if( Input.GetKeyDown( KeyCode.End ) )
+            {
+                StopPlaying();
             }
 
             foreach( var beh in _behaviours )
             {
                 beh.Update();
-            }
-
-            if( Input.GetKeyDown( KeyCode.End ) )
-            {
-                EndCamera();
             }
 
             //vessel camera shake
@@ -194,8 +214,10 @@ namespace CameraToolsKatnissified
         {
             // Retain pos and rot after vessel destruction
             // This will fuck the camera is called when CT is not supposed to be active.
-            if( CameraToolsActive && FlightCamera.transform.parent != _behaviours[_behaviours.Count - 1].Pivot )
+            if( (IsPlayingCT || IsEditingPathCT) && FlightCamera.transform.parent != _behaviours[_behaviours.Count - 1].Pivot )
             {
+                Debug.LogWarning( $"[CameraToolsKatnissified] Reverting camera to last known state." );
+
                 FlightCamera.SetTargetNone();
                 FlightCamera.transform.parent = null;
                 FlightCamera.transform.position = LastCameraPosition;
@@ -218,7 +240,7 @@ namespace CameraToolsKatnissified
             }
 
             //if( !CameraToolsActive && !UseAutoZoom )
-           // {
+            // {
             //    ZoomFactor = Mathf.Exp( Zoom ) / Mathf.Exp( 1 );
             //}
 
@@ -232,7 +254,7 @@ namespace CameraToolsKatnissified
 
             if( _hasDied && Time.time - _diedTime > 2 )
             {
-                EndCamera();
+                StopPlaying();
             }
         }
 
@@ -263,15 +285,20 @@ namespace CameraToolsKatnissified
         /// <summary>
         /// Starts the CameraTools camera with the current settings.
         /// </summary>
-        private void StartCamera()
+        private void StartPlaying()
         {
-            CameraToolsActive = true;
-            _startCameraTimestamp = Time.time;
+            Debug.Log( "[CameraToolsKatnissified] Starting playing." );
 
-            if( !CameraToolsActive )
+            if( IsPlayingCT )
             {
-                SaveOriginalCamera();
+                return;
             }
+
+            StopEditingPath();
+            SaveOriginalCamera();
+
+            IsPlayingCT = true;
+            _startCameraTimestamp = Time.time;
 
             _hasDied = false;
 
@@ -291,11 +318,32 @@ namespace CameraToolsKatnissified
             }
         }
 
+        public void StartEditingPath()
+        {
+            Debug.Log( "[CameraToolsKatnissified] Starting editing path." );
+
+            if( IsEditingPathCT )
+            {
+                return;
+            }
+
+            StopPlaying();
+
+            _pathSetup = this.gameObject.AddComponent<PathSetupController>();
+        }
+
         /// <summary>
         /// Reverts the KSP camera to the state before the CameraTools took over the control.
         /// </summary>
-        public void EndCamera()
+        public void StopPlaying()
         {
+            Debug.Log( "[CameraToolsKatnissified] Stopping playing." );
+
+            if( !IsPlayingCT )
+            {
+                return;
+            }
+
             _hasDied = false;
 
             foreach( var beh in _behaviours )
@@ -316,7 +364,14 @@ namespace CameraToolsKatnissified
             FlightCamera.ActivateUpdate();
             //CurrentFov = 60;
 
-            CameraToolsActive = false;
+            IsPlayingCT = false;
+        }
+
+        public void StopEditingPath()
+        {
+            Debug.Log( "[CameraToolsKatnissified] Stopping editing path." );
+
+            Destroy( _pathSetup ); // kill component.
         }
 
         void SaveOriginalCamera()
@@ -388,17 +443,17 @@ namespace CameraToolsKatnissified
 
         void PostDeathRevert( GameScenes f )
         {
-            if( CameraToolsActive )
+            if( IsPlayingCT )
             {
-                EndCamera();
+                StopPlaying();
             }
         }
 
         void PostDeathRevert( Vessel v )
         {
-            if( CameraToolsActive )
+            if( IsPlayingCT )
             {
-                EndCamera();
+                StopPlaying();
             }
         }
 
@@ -475,9 +530,9 @@ namespace CameraToolsKatnissified
             {
                 throw new ArgumentOutOfRangeException( "Behaviour Index must be within the behaviours array", nameof( behaviourIndex ) );
             }
-            if( CameraToolsActive )
+            if( IsPlayingCT )
             {
-                EndCamera();
+                StopPlaying();
             }
 
             Type[] types = CameraController.GetBehaviourTypesWithCache();

@@ -215,7 +215,7 @@ namespace CameraToolsKatnissified.Cameras
 
         }
 
-        public override void DrawGui( float contentWidth, ref int line )
+        public override void DrawGui( UILayout UILayout, ref int line )
         {
             GUI.Label( UILayout.GetRectX( line, 1, 9 ), $"Frame of Reference: {CurrentReferenceMode}" );
             if( GUI.Button( UILayout.GetRect( 10, line ), "<" ) )

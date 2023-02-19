@@ -7,33 +7,33 @@ using UnityEngine;
 
 namespace CameraToolsKatnissified.UI
 {
-    public static class UILayout
+    public class UILayout
     {
-        public static float CellSize { get; set; } = 20.0f;
+        public float CellSize { get; set; } = 20.0f;
         /// <summary>
         /// The width of the grid in grid cells (excluding margins).
         /// </summary>
-        public static int Width { get; set; } = 5;
+        public int Width { get; set; } = 5;
         /// <summary>
         /// The height of the grid in grid cells (excluding margins).
         /// </summary>
-        public static int Height { get; set; } = 5;
-        public static float Margin { get; set; } = 12.0f;
+        public int Height { get; set; } = 5;
+        public float Margin { get; set; } = 12.0f;
 
-        private static int overwrittenHeight = 5;
+        private int overwrittenHeight = 5;
 
-        public static (int width, int height) GetOverwrittenDimensions()
+        public (int width, int height) GetOverwrittenDimensions()
         {
             return (Width, overwrittenHeight);
         }
 
-        public static (float width, float height) GetFullPixelSize()
+        public (float width, float height) GetFullPixelSize()
         {
 #warning TODO - seems to be 1 grid cell to narrow on the right?
             return ((Width * CellSize) + (2 * Margin), (overwrittenHeight * CellSize) + (2 * Margin)); // +CellSize is to include last cell.
         }
 
-        public static Rect SetWindow( int width, int height, float margins = 12.0f, float cellSize = 20.0f )
+        public Rect SetWindow( int width, int height, float margins = 12.0f, float cellSize = 20.0f )
         {
             Margin = margins;
             CellSize = cellSize;
@@ -46,7 +46,7 @@ namespace CameraToolsKatnissified.UI
         /// <summary>
         /// Rect arbitrary, takes up the specified grid cells.
         /// </summary>
-        public static Rect GetRect( int minX, int minY, int maxX, int maxY )
+        public Rect GetRect( int minX, int minY, int maxX, int maxY )
         {
             if( maxY > overwrittenHeight )
             {
@@ -59,7 +59,7 @@ namespace CameraToolsKatnissified.UI
         /// <summary>
         /// Single cell
         /// </summary>
-        public static Rect GetRect( int x, int y )
+        public Rect GetRect( int x, int y )
         {
             if( y > overwrittenHeight )
             {
@@ -71,7 +71,7 @@ namespace CameraToolsKatnissified.UI
         /// <summary>
         /// Rect horizontal, takes up the specified grid cells.
         /// </summary>
-        public static Rect GetRectX( int y, int minX, int maxX )
+        public Rect GetRectX( int y, int minX, int maxX )
         {
             if( y > overwrittenHeight )
             {
@@ -84,7 +84,7 @@ namespace CameraToolsKatnissified.UI
         /// <summary>
         /// Rect horizontal, takes up the entire grid width.
         /// </summary>
-        public static Rect GetRectX( int y )
+        public Rect GetRectX( int y )
         {
             if( y > overwrittenHeight )
             {
@@ -96,7 +96,7 @@ namespace CameraToolsKatnissified.UI
         /// <summary>
         /// Rect vertical, takes up the entire grid height.
         /// </summary>
-        public static Rect GetRectY( int x )
+        public Rect GetRectY( int x )
         {
             return new Rect( x * CellSize + Margin, Margin, CellSize, Width * CellSize );
         }

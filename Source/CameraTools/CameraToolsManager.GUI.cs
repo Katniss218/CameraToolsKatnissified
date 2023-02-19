@@ -40,9 +40,6 @@ namespace CameraToolsKatnissified
         public float _draggableHeight = 40;
 
 
-        // GUI - the location of the path scroll view.
-        public Vector2 _pathScrollPosition;
-        public Vector2 _pathSelectScrollPos;
 
         public Vector2 _behaviourScrollPos;
 
@@ -69,88 +66,105 @@ namespace CameraToolsKatnissified
         /// </summary>
         void DrawGuiWindow( int windowId )
         {
+            UILayout UILayout = new UILayout();
+
             GUI.DragWindow( UILayout.SetWindow( 12, 2, 12, 20 ) );
 
             GUI.Label( UILayout.GetRect( 0, 0, 11, 1 ), "Camera Tools", TitleStyle );
 
             int line = 3; // Used to calculate the position of the next line of the GUI.
 
-            /*if( UseAutoZoom )
+            if( IsEditingPathCT )
             {
-                GUI.Label( UILayout.GetRectX( line, 0, 2 ), "Autozoom" );
-                AutoZoomMargin = GUI.HorizontalSlider( UILayout.GetRectX( line, 3, 9 ), AutoZoomMargin, 1.0f, 75.0f );
-                GUI.Label( UILayout.GetRectX( line, 10, 11 ), AutoZoomMargin.ToString( "0.0" ) );
+                if( GUI.Button( UILayout.GetRectX( line ), "Exit Path Editor" ) )
+                {
+                    StopEditingPath();
+                }
             }
             else
-            {*/
+            {
+                /*if( UseAutoZoom )
+                {
+                    GUI.Label( UILayout.GetRectX( line, 0, 2 ), "Autozoom" );
+                    AutoZoomMargin = GUI.HorizontalSlider( UILayout.GetRectX( line, 3, 9 ), AutoZoomMargin, 1.0f, 75.0f );
+                    GUI.Label( UILayout.GetRectX( line, 10, 11 ), AutoZoomMargin.ToString( "0.0" ) );
+                }
+                else
+                {*/
+                if( GUI.Button( UILayout.GetRectX( line ), "Path Editor" ) )
+                {
+                    StartEditingPath();
+                }
+                line++;
                 GUI.Label( UILayout.GetRectX( line, 0, 1 ), "Zoom" );
                 Zoom = GUI.HorizontalSlider( UILayout.GetRectX( line, 2, 9 ), Zoom, 1.0f, 8.0f );
                 GUI.Label( UILayout.GetRectX( line, 10, 11 ), (Mathf.Exp( Zoom ) / Mathf.Exp( 1 )).ToString( "0.0" ) + "x" );
-            //}
-            line++;
-
-            //UseAutoZoom = GUI.Toggle( UILayout.GetRectX( line ), UseAutoZoom, "Auto Zoom" );
-            //line++;
-            line++;
-
-            GUI.Label( UILayout.GetRectX( line ), "Camera Shake:" );
-            line++;
-
-            ShakeMultiplier = GUI.HorizontalSlider( UILayout.GetRectX( line, 0, 9 ), ShakeMultiplier, 0.0f, 1.0f );
-            GUI.Label( UILayout.GetRectX( line, 10, 11 ), ShakeMultiplier.ToString( "0.00" ) + "x" );
-
-            //Rect scrollRect = new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, 6 * ENTRY_HEIGHT );
-            //GUI.Box( scrollRect, string.Empty );
-
-            // float viewcontentWidth = CONTENT_WIDTH - (2 * GUI_MARGIN);
-            //float viewHeight = Mathf.Max( 6 * ENTRY_HEIGHT, 10 * _behaviours.Count * ENTRY_HEIGHT ); // needs a method in the behaviours that returns the GUI height for each behaviour.
-            //_pathScrollPosition = GUI.BeginScrollView( scrollRect, _behaviourScrollPos, new Rect( 0, 0, viewcontentWidth, viewHeight ) );
-
-            for( int i = 0; i < _behaviours.Count; i++ )
-            {
+                //}
                 line++;
-                //tool mode switcher
-                GUI.Label( UILayout.GetRectX( line, 0, 9 ), $"Tool: {_behaviours[i].GetType().Name}", HeaderStyle );
-                if( !CameraToolsActive )
+
+                //UseAutoZoom = GUI.Toggle( UILayout.GetRectX( line ), UseAutoZoom, "Auto Zoom" );
+                //line++;
+                line++;
+
+                GUI.Label( UILayout.GetRectX( line ), "Camera Shake:" );
+                line++;
+
+                ShakeMultiplier = GUI.HorizontalSlider( UILayout.GetRectX( line, 0, 9 ), ShakeMultiplier, 0.0f, 1.0f );
+                GUI.Label( UILayout.GetRectX( line, 10, 11 ), ShakeMultiplier.ToString( "0.00" ) + "x" );
+
+                //Rect scrollRect = new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, 6 * ENTRY_HEIGHT );
+                //GUI.Box( scrollRect, string.Empty );
+
+                // float viewcontentWidth = CONTENT_WIDTH - (2 * GUI_MARGIN);
+                //float viewHeight = Mathf.Max( 6 * ENTRY_HEIGHT, 10 * _behaviours.Count * ENTRY_HEIGHT ); // needs a method in the behaviours that returns the GUI height for each behaviour.
+                //_pathScrollPosition = GUI.BeginScrollView( scrollRect, _behaviourScrollPos, new Rect( 0, 0, viewcontentWidth, viewHeight ) );
+
+                for( int i = 0; i < _behaviours.Count; i++ )
                 {
-                    if( GUI.Button( UILayout.GetRect( 10, line ), "<" ) )
+                    line++;
+                    //tool mode switcher
+                    GUI.Label( UILayout.GetRectX( line, 0, 9 ), $"Tool: {_behaviours[i].GetType().Name}", HeaderStyle );
+                    if( !IsPlayingCT )
                     {
-                        CycleToolMode( i, -1 );
+                        if( GUI.Button( UILayout.GetRect( 10, line ), "<" ) )
+                        {
+                            CycleToolMode( i, -1 );
+                        }
+                        if( GUI.Button( UILayout.GetRect( 11, line ), ">" ) )
+                        {
+                            CycleToolMode( i, 1 );
+                        }
                     }
-                    if( GUI.Button( UILayout.GetRect( 11, line ), ">" ) )
-                    {
-                        CycleToolMode( i, 1 );
-                    }
+
+                    line++;
+                    // Draw Camera GUI
+                    _behaviours[i].DrawGui( UILayout, ref line );
+                    line++;
                 }
 
+                //GUI.EndScrollView();
+
                 line++;
-                // Draw Camera GUI
-                _behaviours[i].DrawGui( 12 * 20, ref line );
+                if( GUI.Button( UILayout.GetRect( 0, line ), "+" ) )
+                {
+                    _behaviours.Add( new PathCameraController( this ) );
+                }
+                if( GUI.Button( UILayout.GetRect( 1, line ), "-" ) )
+                {
+                    _behaviours.RemoveAt( _behaviours.Count - 1 );
+                }
                 line++;
-            }
+                line++;
 
-            //GUI.EndScrollView();
+                if( GUI.Button( UILayout.GetRectX( line, 0, 5 ), "Save" ) )
+                {
+                    SaveAndSerialize();
+                }
 
-            line++;
-            if( GUI.Button( UILayout.GetRect( 0, line ), "+" ) )
-            {
-                _behaviours.Add( new PathCameraController( this ) );
-            }
-            if( GUI.Button( UILayout.GetRect( 1, line ), "-" ) )
-            {
-                _behaviours.RemoveAt( _behaviours.Count - 1 );
-            }
-            line++;
-            line++;
-
-            if( GUI.Button( UILayout.GetRectX( line, 0, 5 ), "Save" ) )
-            {
-                SaveAndSerialize();
-            }
-
-            if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Reload" ) )
-            {
-                LoadAndDeserialize();
+                if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Reload" ) )
+                {
+                    LoadAndDeserialize();
+                }
             }
 
             // fix length

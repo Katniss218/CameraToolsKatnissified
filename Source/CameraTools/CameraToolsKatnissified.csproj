@@ -41,6 +41,7 @@
     <Compile Include="Cameras\PointAtTargetController.cs" />
     <Compile Include="CameraToolsManager.cs" />
     <Compile Include="Cameras\PathCameraController.cs" />
+    <Compile Include="PathSetupController.cs" />
     <Compile Include="PersistentField.cs" />
     <Compile Include="Animation\CameraTransformation.cs" />
     <Compile Include="Animation\CameraPath.cs" />

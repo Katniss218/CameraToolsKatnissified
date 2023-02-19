@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CameraToolsKatnissified.UI;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -42,7 +43,7 @@ namespace CameraToolsKatnissified.Cameras
 
         public virtual void OnGUI() { }
 
-        public abstract void DrawGui( float viewcontentWidth, ref int line );
+        public abstract void DrawGui( UILayout UILayout, ref int line );
 
         public virtual void OnLoad( ConfigNode node )
         {
@@ -79,7 +80,7 @@ namespace CameraToolsKatnissified.Cameras
 
         public virtual void FixedUpdate()
         {
-            if( cameraBeh.CameraToolsActive )
+            if( cameraBeh.IsPlayingCT )
             {
                 OnPlayingFixedUpdate();
             }

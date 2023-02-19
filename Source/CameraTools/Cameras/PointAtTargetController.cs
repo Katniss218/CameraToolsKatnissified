@@ -82,7 +82,7 @@ namespace CameraToolsKatnissified.Cameras
 
         }
 
-        public override void DrawGui( float contentWidth, ref int line )
+        public override void DrawGui( UILayout UILayout, ref int line )
         {
             GUI.Label( UILayout.GetRectX( line, 1, 7 ), $"Target: {(Target == null ? "None" : Target.gameObject.name)}" );
             if( GUI.Button( UILayout.GetRectX( line, 8, 9 ), _settingTargetEnabled ? "..." : "S" ) )
