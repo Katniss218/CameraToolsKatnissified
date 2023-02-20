@@ -9,7 +9,7 @@ using UnityEngine;
 namespace CameraToolsKatnissified.Cameras
 {
     [DisallowMultipleComponent]
-    public sealed class PointAtTargetController : CameraController
+    public sealed class PointAtTargetBehaviour : CameraBehaviour
     {
         public Part Target { get; private set; } = null;
 
@@ -17,15 +17,41 @@ namespace CameraToolsKatnissified.Cameras
 
         bool _settingTargetEnabled;
 
-        public PointAtTargetController( CameraToolsManager ctm ) : base( ctm )
+        public PointAtTargetBehaviour() : base()
         {
 
         }
 
-        public override void Update()
+        protected override void OnStartPlaying()
+        {
+            Debug.Log( $"Started playing {nameof( PointAtTargetBehaviour )}" );
+
+            if( FlightGlobals.ActiveVessel != null )
+            {
+                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( Ctm.ActiveVessel ) == FlightCamera.Modes.ORBITAL) )
+                {
+                    UpDirection = Vector3.up;
+                }
+                else
+                {
+                    UpDirection = -FlightGlobals.getGeeForceAtPosition( Ctm.ActiveVessel.GetWorldPos3D() ).normalized;
+                }
+            }
+            else
+            {
+                Debug.Log( "CameraTools: Stationary Camera failed. Active Vessel is null." );
+            }
+        }
+
+        protected override void OnStopPlaying()
+        {
+
+        }
+
+        public override void Update( bool isPlaying )
         {
             // Set target from a mouse raycast.
-            if( _settingTargetEnabled && cameraBeh._wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
+            if( _settingTargetEnabled && Ctm._wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
             {
                 _settingTargetEnabled = false;
 
@@ -37,31 +63,17 @@ namespace CameraToolsKatnissified.Cameras
             }
         }
 
-        protected override void OnStartPlaying()
+        public override void FixedUpdate( bool isPlaying )
         {
-            if( FlightGlobals.ActiveVessel != null )
+            if( !isPlaying )
             {
-                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( cameraBeh.ActiveVessel ) == FlightCamera.Modes.ORBITAL) )
-                {
-                    UpDirection = Vector3.up;
-                }
-                else
-                {
-                    UpDirection = -FlightGlobals.getGeeForceAtPosition( cameraBeh.ActiveVessel.GetWorldPos3D() ).normalized;
-                }
+                return;
             }
-            else
-            {
-                Debug.Log( "CameraTools: Stationary Camera failed. Active Vessel is null." );
-            }
-        }
 
-        protected override void OnPlayingFixedUpdate()
-        {
-            if( cameraBeh.FlightCamera.Target != null )
-            {
-                cameraBeh.FlightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
-            }
+           // if( Ctm.FlightCamera.Target != null )
+           // {
+           //     Ctm.FlightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
+           // }
 
             if( Target != null )
             {
@@ -70,16 +82,11 @@ namespace CameraToolsKatnissified.Cameras
                 this.Pivot.transform.rotation = Quaternion.LookRotation( toTargetDirection, UpDirection );
             }
 
-            float fov = 60 / (Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 ));
-            if( cameraBeh.FlightCamera.FieldOfView != fov )
+            float fov = 60 / (Mathf.Exp( Ctm.Zoom ) / Mathf.Exp( 1 ));
+            if( Ctm.FlightCamera.FieldOfView != fov )
             {
-                cameraBeh.FlightCamera.SetFoV( fov );
+                Ctm.FlightCamera.SetFoV( fov );
             }
-        }
-
-        protected override void OnStopPlaying()
-        {
-
         }
 
         public override void DrawGui( UILayout UILayout, ref int line )
@@ -88,7 +95,7 @@ namespace CameraToolsKatnissified.Cameras
             if( GUI.Button( UILayout.GetRectX( line, 8, 9 ), _settingTargetEnabled ? "..." : "S" ) )
             {
                 _settingTargetEnabled = true;
-                cameraBeh._wasMouseUp = false;
+                Ctm._wasMouseUp = false;
             }
             if( GUI.Button( UILayout.GetRectX( line, 10, 11 ), "X" ) )
             {

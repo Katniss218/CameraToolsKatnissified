@@ -8,15 +8,15 @@ using UnityEngine;
 
 namespace CameraToolsKatnissified.Cameras
 {
-    public abstract class CameraController
+    public abstract class CameraBehaviour
     {
         // This class should be a base camera behaviour that you can derive from to make new camera modes.
 
-        protected CameraToolsManager cameraBeh;
+        protected CameraToolsManager Ctm { get; private set; }
 
-        public CameraController( CameraToolsManager ctm )
+        public CameraBehaviour()
         {
-            cameraBeh = ctm;
+            Ctm = CameraToolsManager.Instance;
         }
 
         public Transform Pivot { get; private set; }
@@ -30,11 +30,6 @@ namespace CameraToolsKatnissified.Cameras
         /// Called when the camera behaviour starts playing. Use this to set the initial state.
         /// </summary>
         protected abstract void OnStartPlaying();
-
-        /// <summary>
-        /// Called every frame while the camera behaviour is playing.
-        /// </summary>
-        protected abstract void OnPlayingFixedUpdate();
 
         /// <summary>
         /// Called when the camera behaviour stops playing.
@@ -60,8 +55,7 @@ namespace CameraToolsKatnissified.Cameras
         /// </summary>
         public void StartPlaying()
         {
-            //this.enabled = true;
-            Debug.Log( "[CTK] StartPlaying was called." );
+            Debug.Log( "[CameraToolsKatnissified] StartPlaying was called." );
             OnStartPlaying();
         }
 
@@ -70,20 +64,18 @@ namespace CameraToolsKatnissified.Cameras
         /// </summary>
         public void StopPlaying()
         {
+            Debug.Log( "[CameraToolsKatnissified] StopPlaying was called." );
             OnStopPlaying();
         }
 
-        public virtual void Update()
+        public virtual void Update( bool isPlaying )
         {
 
         }
 
-        public virtual void FixedUpdate()
+        public virtual void FixedUpdate( bool isPlaying )
         {
-            if( cameraBeh.IsPlayingCT )
-            {
-                OnPlayingFixedUpdate();
-            }
+
         }
 
         // -------
@@ -92,7 +84,7 @@ namespace CameraToolsKatnissified.Cameras
 
         private static void CacheBehaviours()
         {
-            Type cameraBehaviourType = typeof( CameraController );
+            Type cameraBehaviourType = typeof( CameraBehaviour );
             cachedCameraTypes = AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany( a => a.GetTypes() )
                 .Where( t => t != cameraBehaviourType && cameraBehaviourType.IsAssignableFrom( t ) ).ToArray();

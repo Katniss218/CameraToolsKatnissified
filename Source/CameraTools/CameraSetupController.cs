@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace CameraToolsKatnissified
 {
-    class PathSetupController : MonoBehaviour
+    class CameraSetupController : CameraController
     {
         public List<CameraPath> AvailablePaths { get; private set; }
         public CameraPath CurrentPath { get; private set; }
@@ -34,21 +34,13 @@ namespace CameraToolsKatnissified
         public float _windowHeight = 400;
         public float _draggableHeight = 40;
 
-        public Transform Pivot { get; set; }
-
-        void Awake()
-        {
-            _cameraBeh = CameraToolsManager.Instance;
-            LoadPaths();
-        }
-
-        void LoadPaths()
+        public void Load()
         {
             DeselectKeyframe();
             CurrentPath = null;
             AvailablePaths = new List<CameraPath>();
 
-            ConfigNode pathFileNode = ConfigNode.Load( PathCameraController.PATHS_FILE );
+            ConfigNode pathFileNode = ConfigNode.Load( PathBehaviour.PATHS_FILE );
 
             foreach( var n in pathFileNode.GetNode( "CAMERAPATHS" ).GetNodes( "CAMERAPATH" ) )
             {
@@ -56,9 +48,9 @@ namespace CameraToolsKatnissified
             }
         }
 
-        void SavePaths()
+        public void Save()
         {
-            ConfigNode pathFileNode = ConfigNode.Load( PathCameraController.PATHS_FILE );
+            ConfigNode pathFileNode = ConfigNode.Load( PathBehaviour.PATHS_FILE );
 
             ConfigNode pathsNode = pathFileNode.GetNode( "CAMERAPATHS" );
             pathsNode.RemoveNodes( "CAMERAPATH" );
@@ -68,7 +60,16 @@ namespace CameraToolsKatnissified
                 path.Save( pathsNode );
             }
 
-            pathFileNode.Save( PathCameraController.PATHS_FILE );
+            pathFileNode.Save( PathBehaviour.PATHS_FILE );
+        }
+
+
+        protected override void OnStartPlaying()
+        {
+        }
+
+        protected override void OnEndPlaying()
+        {
         }
 
         public void CreateNewPath()
@@ -187,36 +188,45 @@ namespace CameraToolsKatnissified
             }
         }
 
+        void Awake()
+        {
+            _cameraBeh = CameraToolsManager.Instance;
+            Load();
+        }
+
         void FixedUpdate()
         {
-            //mouse panning, moving
-            Vector3 forwardLevelAxis = this.Pivot.transform.forward;
+            if( IsPlaying )
+            {
+                //mouse panning, moving
+                Vector3 forwardLevelAxis = this.Pivot.transform.forward;
 
-            if( Input.GetKey( KeyCode.Mouse1 ) && Input.GetKey( KeyCode.Mouse2 ) )
-            {
-                this.Pivot.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, this.Pivot.forward ) * this.Pivot.rotation;
-            }
-            else
-            {
-                if( Input.GetKey( KeyCode.Mouse1 ) )
+                if( Input.GetKey( KeyCode.Mouse1 ) && Input.GetKey( KeyCode.Mouse2 ) )
                 {
-                    this.Pivot.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (_cameraBeh.Zoom * _cameraBeh.Zoom), Vector3.up );
-                    this.Pivot.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (_cameraBeh.Zoom * _cameraBeh.Zoom), Vector3.right );
-                    this.Pivot.rotation = Quaternion.LookRotation( this.Pivot.forward, this.Pivot.transform.up );
+                    this.Pivot.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, this.Pivot.forward ) * this.Pivot.rotation;
                 }
-                if( Input.GetKey( KeyCode.Mouse2 ) )
+                else
                 {
-                    this.Pivot.position += this.Pivot.right * Input.GetAxis( "Mouse X" ) * 2;
-                    this.Pivot.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
+                    if( Input.GetKey( KeyCode.Mouse1 ) )
+                    {
+                        this.Pivot.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (_cameraBeh.Zoom * _cameraBeh.Zoom), Vector3.up );
+                        this.Pivot.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (_cameraBeh.Zoom * _cameraBeh.Zoom), Vector3.right );
+                        this.Pivot.rotation = Quaternion.LookRotation( this.Pivot.forward, this.Pivot.transform.up );
+                    }
+                    if( Input.GetKey( KeyCode.Mouse2 ) )
+                    {
+                        this.Pivot.position += this.Pivot.right * Input.GetAxis( "Mouse X" ) * 2;
+                        this.Pivot.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
+                    }
                 }
-            }
-            this.Pivot.position += this.Pivot.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
+                this.Pivot.position += this.Pivot.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
 
 #warning TODO - move duplicated code.
-            float fov = 60 / (Mathf.Exp( _cameraBeh.Zoom ) / Mathf.Exp( 1 ));
-            if( _cameraBeh.FlightCamera.FieldOfView != fov )
-            {
-                _cameraBeh.FlightCamera.SetFoV( fov );
+                float fov = 60 / (Mathf.Exp( _cameraBeh.Zoom ) / Mathf.Exp( 1 ));
+                if( _cameraBeh.FlightCamera.FieldOfView != fov )
+                {
+                    _cameraBeh.FlightCamera.SetFoV( fov );
+                }
             }
         }
 
@@ -241,7 +251,7 @@ namespace CameraToolsKatnissified
 
             if( GUI.Button( UILayout.GetRectX( line ), "Open Path" ) )
             {
-                LoadPaths();
+                Load();
                 TogglePathList();
             }
             line++;
@@ -333,12 +343,12 @@ namespace CameraToolsKatnissified
 
                 if( GUI.Button( UILayout.GetRectX( line, 0, 5 ), "Save All Paths" ) )
                 {
-                    SavePaths();
+                    Save();
                 }
 
                 if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Reload All Paths" ) )
                 {
-                    LoadPaths();
+                    Load();
                 }
             }
 

@@ -52,10 +52,6 @@ namespace CameraToolsKatnissified
             {
                 _windowRect = GUI.Window( 320, _windowRect, DrawGuiWindow, "" );
             }
-            foreach( var beh in _behaviours )
-            {
-                beh.OnGUI();
-            }
         }
 
         // public const float CONTENT_WIDTH = WINDOW_WIDTH - (2 * GUI_MARGIN);
@@ -74,15 +70,16 @@ namespace CameraToolsKatnissified
 
             int line = 3; // Used to calculate the position of the next line of the GUI.
 
-            if( IsEditingPathCT )
+            if( CurrentController is CameraSetupController )
             {
                 if( GUI.Button( UILayout.GetRectX( line ), "Exit Path Editor" ) )
                 {
-                    StopEditingPath();
+                    SetController<CameraPlayerController>();
                 }
             }
-            else
+            else if( CurrentController is CameraPlayerController cpc )
             {
+#warning TODO - move this to the behaviour gui?.
                 /*if( UseAutoZoom )
                 {
                     GUI.Label( UILayout.GetRectX( line, 0, 2 ), "Autozoom" );
@@ -93,7 +90,9 @@ namespace CameraToolsKatnissified
                 {*/
                 if( GUI.Button( UILayout.GetRectX( line ), "Path Editor" ) )
                 {
-                    StartEditingPath();
+                    //StartEditingPath();
+                    SetController<CameraSetupController>();
+                    CurrentController.StartPlaying();
                 }
                 line++;
                 GUI.Label( UILayout.GetRectX( line, 0, 1 ), "Zoom" );
@@ -119,26 +118,26 @@ namespace CameraToolsKatnissified
                 //float viewHeight = Mathf.Max( 6 * ENTRY_HEIGHT, 10 * _behaviours.Count * ENTRY_HEIGHT ); // needs a method in the behaviours that returns the GUI height for each behaviour.
                 //_pathScrollPosition = GUI.BeginScrollView( scrollRect, _behaviourScrollPos, new Rect( 0, 0, viewcontentWidth, viewHeight ) );
 
-                for( int i = 0; i < _behaviours.Count; i++ )
+                for( int i = 0; i < cpc.Behaviours.Count; i++ )
                 {
                     line++;
                     //tool mode switcher
-                    GUI.Label( UILayout.GetRectX( line, 0, 9 ), $"Tool: {_behaviours[i].GetType().Name}", HeaderStyle );
-                    if( !IsPlayingCT )
+                    GUI.Label( UILayout.GetRectX( line, 0, 9 ), $"Tool: {cpc.Behaviours[i].GetType().Name}", HeaderStyle );
+                    if( !IsActive )
                     {
                         if( GUI.Button( UILayout.GetRect( 10, line ), "<" ) )
                         {
-                            CycleToolMode( i, -1 );
+                            cpc.CycleToolMode( i, -1 );
                         }
                         if( GUI.Button( UILayout.GetRect( 11, line ), ">" ) )
                         {
-                            CycleToolMode( i, 1 );
+                            cpc.CycleToolMode( i, 1 );
                         }
                     }
 
                     line++;
                     // Draw Camera GUI
-                    _behaviours[i].DrawGui( UILayout, ref line );
+                    cpc.Behaviours[i].DrawGui( UILayout, ref line );
                     line++;
                 }
 
@@ -147,23 +146,23 @@ namespace CameraToolsKatnissified
                 line++;
                 if( GUI.Button( UILayout.GetRect( 0, line ), "+" ) )
                 {
-                    _behaviours.Add( new PathCameraController( this ) );
+                    cpc.Behaviours.Add( new PathBehaviour() );
                 }
                 if( GUI.Button( UILayout.GetRect( 1, line ), "-" ) )
                 {
-                    _behaviours.RemoveAt( _behaviours.Count - 1 );
+                    cpc.Behaviours.RemoveAt( cpc.Behaviours.Count - 1 );
                 }
                 line++;
                 line++;
 
                 if( GUI.Button( UILayout.GetRectX( line, 0, 5 ), "Save" ) )
                 {
-                    SaveAndSerialize();
+                    cpc.Save();
                 }
 
                 if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Reload" ) )
                 {
-                    LoadAndDeserialize();
+                    cpc.Load();
                 }
             }
 

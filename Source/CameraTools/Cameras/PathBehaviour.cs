@@ -5,8 +5,7 @@ using UnityEngine;
 
 namespace CameraToolsKatnissified.Cameras
 {
-    [DisallowMultipleComponent]
-    public sealed class PathCameraController : CameraController
+    public sealed class PathBehaviour : CameraBehaviour
     {
         public static string PATHS_FILE = $"GameData/{CameraToolsManager.DIRECTORY_NAME}/paths.cfg";
 
@@ -24,7 +23,16 @@ namespace CameraToolsKatnissified.Cameras
 
         Vector3 _accumulatedOffset;
 
-        public PathCameraController( CameraToolsManager ctm ) : base( ctm )
+        float _startCameraTimestamp;
+        float TimeSinceStart
+        {
+            get
+            {
+                return Time.time - _startCameraTimestamp;
+            }
+        }
+
+        public PathBehaviour() : base()
         {
             OnLoad( null );
         }
@@ -56,7 +64,9 @@ namespace CameraToolsKatnissified.Cameras
 
         protected override void OnStartPlaying()
         {
-            Debug.Log( "[CTK] Path Camera Active" );
+            Debug.Log( $"Started playing {nameof( PathBehaviour )}" );
+
+            _startCameraTimestamp = Time.time;
             if( FlightGlobals.ActiveVessel != null )
             {
                 if( CurrentPath == null || CurrentPath.keyframeCount <= 0 )
@@ -71,7 +81,7 @@ namespace CameraToolsKatnissified.Cameras
                 CameraTransformation firstFrame = CurrentPath.Evaulate( 0 );
                 this.Pivot.transform.position = _pathSpaceL2W.MultiplyPoint( firstFrame.position );
                 this.Pivot.transform.rotation = _pathRootRotation * firstFrame.rotation;
-                cameraBeh.Zoom = firstFrame.zoom;
+                Ctm.Zoom = firstFrame.zoom;
             }
             else
             {
@@ -79,10 +89,14 @@ namespace CameraToolsKatnissified.Cameras
             }
         }
 
+        protected override void OnStopPlaying()
+        {
+        }
+
         private void InitializePivot()
         {
-            _pathRootPosition = cameraBeh.ActiveVessel.transform.position;
-            _pathRootRotation = cameraBeh.ActiveVessel.transform.rotation;
+            _pathRootPosition = Ctm.ActiveVessel.transform.position;
+            _pathRootRotation = Ctm.ActiveVessel.transform.rotation;
             _pathSpaceL2W = Matrix4x4.TRS( _pathRootPosition, _pathRootRotation, new Vector3( 1, 1, 1 ) );
             _pathSpaceW2L = _pathSpaceL2W.inverse;
         }
@@ -92,24 +106,29 @@ namespace CameraToolsKatnissified.Cameras
 
             if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixPosition )
             {
-                _pathRootPosition = cameraBeh.ActiveVessel.transform.position;
+                _pathRootPosition = Ctm.ActiveVessel.transform.position;
             }
             if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixRotation )
             {
-                _pathRootRotation = cameraBeh.ActiveVessel.transform.rotation;
+                _pathRootRotation = Ctm.ActiveVessel.transform.rotation;
             }
             if( CurrentPath.Frame == CameraPath.ReferenceFrame.FixPositionAndRotation )
             {
-                _pathRootPosition = cameraBeh.ActiveVessel.transform.position;
-                _pathRootRotation = cameraBeh.ActiveVessel.transform.rotation;
+                _pathRootPosition = Ctm.ActiveVessel.transform.position;
+                _pathRootRotation = Ctm.ActiveVessel.transform.rotation;
             }
             _pathSpaceL2W = Matrix4x4.TRS( _pathRootPosition, _pathRootRotation, new Vector3( 1, 1, 1 ) );
             _pathSpaceW2L = _pathSpaceL2W.inverse;
         }
 
-        protected override void OnPlayingFixedUpdate()
+        public override void FixedUpdate( bool isPlaying )
         {
-            if( cameraBeh.ActiveVessel != null )
+            if( !isPlaying )
+            {
+                return;
+            }
+
+            if( Ctm.ActiveVessel != null )
             {
                 UpdateRecalculatePivot();
 
@@ -120,10 +139,10 @@ namespace CameraToolsKatnissified.Cameras
 
                 if( CurrentPath.Frame == CameraPath.ReferenceFrame.Free || CurrentPath.Frame == CameraPath.ReferenceFrame.FixRotation )
                 {
-                    _accumulatedOffset -= cameraBeh.ActiveVessel.srf_velocity * Time.fixedDeltaTime; // vessel.rb_velocity is 0 after switching to vessel-centric
+                    _accumulatedOffset -= Ctm.ActiveVessel.srf_velocity * Time.fixedDeltaTime; // vessel.rb_velocity is 0 after switching to vessel-centric
 
                     // After flying high enough (~2500m), the space switches to be vessel-centric. we need to catch that. The rotation doesn't change I think.
-                    _pathRootPosition = cameraBeh.ActiveVessel.transform.position;
+                    _pathRootPosition = Ctm.ActiveVessel.transform.position;
                     _pathRootPosition += _accumulatedOffset;
 
                     _pathSpaceL2W = Matrix4x4.TRS( _pathRootPosition, _pathRootRotation, new Vector3( 1, 1, 1 ) );
@@ -132,7 +151,7 @@ namespace CameraToolsKatnissified.Cameras
 
                 // camTransformPath is like the trolley mounted to the camerapath.
                 // the camera is then fixed to a rubberband that is connected to the trolley on the other end (rotations work the same way).
-                CameraTransformation camTransformPath = CurrentPath.Evaulate( cameraBeh.TimeSinceStart );
+                CameraTransformation camTransformPath = CurrentPath.Evaulate( TimeSinceStart );
 
                 Vector3 pivotPositionPathSpace = _pathSpaceW2L.MultiplyPoint( this.Pivot.localPosition );
                 Quaternion pivotRotationPathSpace = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.localRotation;
@@ -142,7 +161,7 @@ namespace CameraToolsKatnissified.Cameras
                 // whenever the frame switches to vessel-centric, it fucks itself and goes to space.
                 this.Pivot.localPosition = _pathSpaceL2W.MultiplyPoint( Vector3.Lerp( pivotPositionPathSpace, camTransformPath.position, CurrentPath.LerpRate * Time.fixedDeltaTime ) ); // time deltatime because we're moving the position over time.
                 this.Pivot.localRotation = _pathRootRotation * Quaternion.Slerp( pivotRotationPathSpace, camTransformPath.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
-                cameraBeh.Zoom = Mathf.Lerp( cameraBeh.Zoom, camTransformPath.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
+                Ctm.Zoom = Mathf.Lerp( Ctm.Zoom, camTransformPath.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
 
                 //zoom
                 //cameraBeh.ZoomFactor = Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 );
@@ -151,17 +170,13 @@ namespace CameraToolsKatnissified.Cameras
                 //if( cameraBeh.CurrentFov != cameraBeh.ManualFov )
                 //{
                 //   cameraBeh.CurrentFov = Mathf.Lerp( cameraBeh.CurrentFov, cameraBeh.ManualFov, 0.1f );
-                float fov = 60 / (Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 ));
-                if( cameraBeh.FlightCamera.FieldOfView != fov )
+                float fov = 60 / (Mathf.Exp( Ctm.Zoom ) / Mathf.Exp( 1 ));
+                if( Ctm.FlightCamera.FieldOfView != fov )
                 {
-                    cameraBeh.FlightCamera.SetFoV( fov );
+                    Ctm.FlightCamera.SetFoV( fov );
                 }
                 //}
             }
-        }
-
-        protected override void OnStopPlaying()
-        {
         }
 
         void TogglePathList()
@@ -207,7 +222,7 @@ namespace CameraToolsKatnissified.Cameras
             float indent = 5;
             float scrollRectSize = width - indent - indent;
 
-            Rect pSelectRect = new Rect( cameraBeh._windowRect.x - width, cameraBeh._windowRect.y + 290, width, height );
+            Rect pSelectRect = new Rect( Ctm._windowRect.x - width, Ctm._windowRect.y + 290, width, height );
             GUI.Box( pSelectRect, string.Empty );
 
             GUI.BeginGroup( pSelectRect );

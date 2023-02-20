@@ -1,5 +1,6 @@
 using CameraToolsKatnissified.Animation;
 using CameraToolsKatnissified.Cameras;
+using KSP.UI;
 using KSP.UI.Screens;
 using System;
 using System.Collections.Generic;
@@ -43,39 +44,18 @@ namespace CameraToolsKatnissified
         /// </summary>
         public static bool _uiVisible = true;
 
-        List<CameraController> _behaviours = new List<CameraController>();
-
-        PathSetupController _pathSetup;
+        public CameraController CurrentController { get; private set; }
 
         /// <summary>
         /// True if CameraTools is editing a path.
         /// </summary>
-        public bool IsEditingPathCT { get => _pathSetup != null; }
-
-        /// <summary>
-        /// True if the CameraTools is active and playing.
-        /// </summary>
-        public bool IsPlayingCT { get; set; }
-
-        /// <summary>
-        /// Uses auto-zoom with stationary camera.
-        /// </summary>
-        [field: PersistentField]
-        public bool UseAutoZoom { get; set; } = false;
+        public bool IsActive { get => CurrentController != null && CurrentController.IsPlaying; }
 
         /// <summary>
         /// Zoom level when using manual zoom.
         /// </summary>
-        [field: PersistentField]
         public float Zoom { get; set; } = 1.0f;
 
-        /// <summary>
-        /// Zoom level when using auto zoom.
-        /// </summary>
-        [field: PersistentField]
-        public float AutoZoomMargin { get; set; } = 20.0f;
-
-        [field: PersistentField]
         public float ShakeMultiplier { get; set; } = 0.0f;
 
         /// <summary>
@@ -90,14 +70,10 @@ namespace CameraToolsKatnissified
         Transform _originalCameraParent;
         float _originalCameraNearClip;
 
-        bool _hasDied = false;
+        bool _hasDied { get; set; } = false;
         float _diedTime = 0;
 
         public const float SCROLL_MULTIPLIER = 10.0f;
-
-        // retaining position and rotation after vessel destruction
-        Vector3 LastCameraPosition { get; set; }
-        Quaternion LastCameraRotation { get; set; }
 
         /// <summary>
         /// This is set to false to prevent the selector triggering immediately after the gui button is pressed.
@@ -106,17 +82,6 @@ namespace CameraToolsKatnissified
 
         float _cameraShakeMagnitude = 0.0f;
 
-        float _startCameraTimestamp;
-        public float TimeSinceStart
-        {
-            get
-            {
-                return Time.time - _startCameraTimestamp;
-            }
-        }
-
-        List<GameObject> pivots = new List<GameObject>();
-
         //      new
         // Vessel - stationary follow, path, drone all move and rotate this obj
         // - VesselOffset - stationary follow offset velocity moves this
@@ -124,9 +89,63 @@ namespace CameraToolsKatnissified
         // - - - Shake - shake shakes this
         // - - - - Camera
 
+
+
+        public void SetController<T>() where T : CameraController
+        {
+            if( CurrentController != null ) // Should only be null on first load.
+            {
+                if( CurrentController.IsPlaying )
+                {
+                    CurrentController.EndPlaying();
+                }
+                CameraController.Detach( CurrentController );
+            }
+
+            CurrentController = CameraController.Attach<T>( FlightCamera );
+        }
+
+        public void SaveAndDisableCamera()
+        {
+            Debug.Log( $"[CameraToolsKatnissified] '{nameof( SaveAndDisableCamera )}'" );
+            _hasDied = false;
+            _originalCameraPosition = FlightCamera.transform.position;
+            _originalCameraRotation = FlightCamera.transform.rotation;
+            _originalCameraParent = FlightCamera.transform.parent;
+            _originalCameraNearClip = Camera.main.nearClipPlane;
+
+            FlightCamera.SetTargetNone();
+            FlightCamera.DeactivateUpdate();
+            //FlightCamera.enabled = false;
+        }
+
+        public void LoadSavedAndEnableCamera()
+        {
+            Debug.Log( $"[CameraToolsKatnissified] '{nameof( LoadSavedAndEnableCamera )}'" );
+            if( FlightGlobals.ActiveVessel != null && HighLogic.LoadedScene == GameScenes.FLIGHT )
+            {
+                FlightCamera.SetTarget( FlightGlobals.ActiveVessel.transform, FlightCamera.TargetMode.Vessel );
+            }
+            FlightCamera.transform.SetParent( _originalCameraParent );
+            FlightCamera.transform.position = _originalCameraPosition;
+            FlightCamera.transform.rotation = _originalCameraRotation;
+            Camera.main.nearClipPlane = _originalCameraNearClip;
+            FlightCamera.SetFoV( 60 );
+            FlightCamera.ActivateUpdate();
+
+#warning TODO - sound breaks after reverting.
+            if( !FlightCamera.enabled )
+            {
+                FlightCamera.enabled = true;
+            }
+            FlightCamera.EnableCamera();
+        }
+
+
         void Awake()
         {
-            LoadAndDeserialize();
+            _instance = this;
+            //LoadAndDeserialize();
         }
 
         void Start()
@@ -134,7 +153,7 @@ namespace CameraToolsKatnissified
             _windowRect = new Rect( Screen.width - (12 * 20) - 40, 0, (12 * 20), _windowHeight );
             FlightCamera = FlightCamera.fetch;
 
-            SaveOriginalCamera();
+            SetController<CameraPlayerController>();
 
             AddToolbarButton();
 
@@ -149,7 +168,6 @@ namespace CameraToolsKatnissified
             {
                 ActiveVessel = FlightGlobals.ActiveVessel;
             }
-
         }
 
         void OnDestroy()
@@ -175,17 +193,36 @@ namespace CameraToolsKatnissified
 
             if( Input.GetKeyDown( KeyCode.Home ) )
             {
-                StartPlaying();
+                if( CurrentController.IsPlaying )
+                {
+                    CurrentController.EndPlaying();
+                }
+                CurrentController.StartPlaying();
+            }
+
+            if( Input.GetKeyDown( KeyCode.PageUp ) )
+            {
+                if( CurrentController.IsPlaying )
+                {
+                    CurrentController.EndPlaying();
+                }
+                if( !(CurrentController is CameraPlayerController) )
+                {
+                    SetController<CameraPlayerController>();
+                }
+                CurrentController.StartPlaying();
             }
 
             if( Input.GetKeyDown( KeyCode.End ) )
             {
-                StopPlaying();
-            }
-
-            foreach( var beh in _behaviours )
-            {
-                beh.Update();
+                if( CurrentController.IsPlaying )
+                {
+                    CurrentController.EndPlaying();
+                }
+                if( !(CurrentController is CameraPlayerController) )
+                {
+                    SetController<CameraPlayerController>();
+                }
             }
 
             //vessel camera shake
@@ -207,10 +244,10 @@ namespace CameraToolsKatnissified
 
         void LateUpdate()
         {
-            if( IsPlayingCT && FlightCamera.transform.parent != _behaviours[_behaviours.Count - 1].Pivot )
-            {
-                OnKilled();
-            }
+            //if( IsPlayingCT && FlightCamera.transform.parent != _behaviours[_behaviours.Count - 1].Pivot )
+            //{
+            //    OnKilled();
+            //}
         }
 
         void FixedUpdate()
@@ -230,178 +267,17 @@ namespace CameraToolsKatnissified
             //    ZoomFactor = Mathf.Exp( Zoom ) / Mathf.Exp( 1 );
             //}
 
-            foreach( var beh in _behaviours )
+            // LastCameraPosition = FlightCamera.transform.position; // was in stationary camera only.
+            // LastCameraRotation = FlightCamera.transform.rotation;
+
+            /*if( _hasDied && Time.time - _diedTime > 2 )
             {
-                beh.FixedUpdate();
-            }
-
-            LastCameraPosition = FlightCamera.transform.position; // was in stationary camera only.
-            LastCameraRotation = FlightCamera.transform.rotation;
-
-            if( _hasDied && Time.time - _diedTime > 2 )
-            {
-                StopPlaying();
-            }
-        }
-
-        void ResetPivots()
-        {
-            foreach( var pivot in pivots )
-            {
-                Destroy( pivot );
-            }
-
-            Transform parent = null;
-
-            foreach( var beh in _behaviours )
-            {
-                GameObject go = new GameObject( $"Camera Pivot - {beh.GetType().FullName}" );
-                go.transform.SetParent( parent );
-                go.transform.position = FlightCamera.transform.position;
-                go.transform.rotation = FlightCamera.transform.rotation;
-
-                beh.SetTransform( go.transform );
-
-                parent = go.transform;
-            }
-
-            FlightCamera.transform.SetParent( parent );
-        }
-
-        /// <summary>
-        /// Starts the CameraTools camera with the current settings.
-        /// </summary>
-        private void StartPlaying()
-        {
-            Debug.Log( $"[CameraToolsKatnissified] Starting playing. IsPlayingCT = {IsPlayingCT}" );
-
-            if( IsPlayingCT )
-            {
-                return;
-            }
-
-            if( FlightGlobals.ActiveVessel != null )
-            {
-                ActiveVessel = FlightGlobals.ActiveVessel;
-            }
-
-            StopEditingPath();
-
-            SaveOriginalCamera();
-
-            IsPlayingCT = true;
-            _startCameraTimestamp = Time.time;
-
-            _hasDied = false;
-
-            FlightCamera.SetTargetNone();
-            FlightCamera.DeactivateUpdate();
-
-            ResetPivots();
-
-            foreach( var beh in _behaviours )
-            {
-                beh.StartPlaying();
-            }
-        }
-
-        public void StartEditingPath()
-        {
-            Debug.Log( $"[CameraToolsKatnissified] Starting editing path. IsEditingPathCT = {IsEditingPathCT}" );
-
-            if( IsEditingPathCT )
-            {
-                return;
-            }
-
-            StopPlaying();
-
-            FlightCamera.SetTargetNone();
-            FlightCamera.DeactivateUpdate();
-
-            GameObject go = new GameObject( $"Camera Pivot - patheditor" );
-            go.transform.SetParent( null );
-            go.transform.position = FlightCamera.transform.position;
-            go.transform.rotation = FlightCamera.transform.rotation;
-
-            FlightCamera.transform.SetParent( go.transform );
-
-            _pathSetup = this.gameObject.AddComponent<PathSetupController>();
-            _pathSetup.Pivot = go.transform;
-        }
-
-        /// <summary>
-        /// Reverts the KSP camera to the state before the CameraTools took over the control.
-        /// </summary>
-        public void StopPlaying()
-        {
-            Debug.Log( $"[CameraToolsKatnissified] Stopping playing. IsPlayingCT = {IsPlayingCT}" );
-
-            if( !IsPlayingCT )
-            {
-                return;
-            }
-
-            _hasDied = false;
-
-            foreach( var beh in _behaviours )
-            {
-                beh.StopPlaying();
-            }
-
-            LoadLastKnownCameraState();
-
-            IsPlayingCT = false;
-        }
-
-        public void StopEditingPath()
-        {
-            Debug.Log( $"[CameraToolsKatnissified] Stopping editing path. IsEditingPathCT = {IsEditingPathCT}" );
-
-            if( !IsEditingPathCT )
-            {
-                return;
-            }
-
-            Destroy( _pathSetup ); // kill component.
-            LoadLastKnownCameraState();
-        }
-
-        void SaveOriginalCamera()
-        {
-            _originalCameraPosition = FlightCamera.transform.position;
-            _originalCameraRotation = FlightCamera.transform.localRotation;
-            _originalCameraParent = FlightCamera.transform.parent;
-            _originalCameraNearClip = Camera.main.nearClipPlane;
-        }
-
-        void LoadLastKnownCameraState()
-        {
-            if( FlightGlobals.ActiveVessel != null && HighLogic.LoadedScene == GameScenes.FLIGHT )
-            {
-                FlightCamera.SetTarget( FlightGlobals.ActiveVessel.transform, FlightCamera.TargetMode.Vessel );
-            }
-            FlightCamera.transform.parent = _originalCameraParent;
-            FlightCamera.transform.position = _originalCameraPosition;
-            FlightCamera.transform.rotation = _originalCameraRotation;
-            Camera.main.nearClipPlane = _originalCameraNearClip;
-
-            FlightCamera.SetFoV( 60 );
-            FlightCamera.ActivateUpdate();
-        }
-
-        void OnKilled()
-        {
-            // Retain pos and rot after vessel destruction
-            // This will fuck the camera if called when CT is not supposed to be active.
-            Debug.LogWarning( $"[CameraToolsKatnissified] Reverting camera to last known state." );
-
-            FlightCamera.SetTargetNone();
-            FlightCamera.transform.parent = null;
-            FlightCamera.transform.position = LastCameraPosition;
-            FlightCamera.transform.rotation = LastCameraRotation;
-            _hasDied = true;
-            _diedTime = Time.time;
+                if( CurrentController.IsPlaying )
+                {
+                    CurrentController.EndPlaying();
+                }
+                SetController<CameraPlayerController>();
+            }*/
         }
 
         public void ShakeCamera( float magnitude )
@@ -465,40 +341,19 @@ namespace CameraToolsKatnissified
 
         void PostDeathRevert( GameScenes f )
         {
-            if( IsPlayingCT )
+            if( IsActive )
             {
-                StopPlaying();
+                CurrentController.EndPlaying();
+                SetController<CameraPlayerController>();
             }
         }
 
         void PostDeathRevert( Vessel v )
         {
-            if( IsPlayingCT )
+            if( IsActive )
             {
-                StopPlaying();
-            }
-        }
-
-        void SaveAndSerialize()
-        {
-            Serializer.SaveFields();
-
-            foreach( var beh in _behaviours )
-            {
-                beh.OnSave( null );
-            }
-        }
-
-        void LoadAndDeserialize()
-        {
-            Serializer.LoadFields();
-
-            _behaviours = new List<CameraController>();
-            _behaviours.Add( new StationaryCameraController( this ) );
-
-            foreach( var beh in _behaviours )
-            {
-                beh.OnLoad( null );
+                CurrentController.EndPlaying();
+                SetController<CameraPlayerController>();
             }
         }
 
@@ -544,27 +399,6 @@ namespace CameraToolsKatnissified
         void GameUIDisable()
         {
             _uiVisible = false;
-        }
-
-        void CycleToolMode( int behaviourIndex, int step )
-        {
-            if( behaviourIndex < 0 || behaviourIndex >= _behaviours.Count )
-            {
-                throw new ArgumentOutOfRangeException( "Behaviour Index must be within the behaviours array", nameof( behaviourIndex ) );
-            }
-            if( IsPlayingCT )
-            {
-                StopPlaying();
-            }
-
-            Type[] types = CameraController.GetBehaviourTypesWithCache();
-            Type thisType = _behaviours[behaviourIndex].GetType();
-            int typeIndex = types.IndexOf( thisType );
-
-            int newTypeIndex = (typeIndex + step + types.Length) % types.Length; // adding length unfucks negative modulo
-
-            _behaviours[behaviourIndex] = (CameraController)Activator.CreateInstance( types[newTypeIndex], new object[] { this } );
-            _behaviours[behaviourIndex].OnLoad( null ); // loads the path list.
         }
 
         /*OnFloatingOriginShift( Vector3d offset, Vector3d data1 )

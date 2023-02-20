@@ -9,7 +9,7 @@ using UnityEngine;
 namespace CameraToolsKatnissified.Cameras
 {
     [DisallowMultipleComponent]
-    public sealed class StationaryCameraController : CameraController
+    public sealed class StationaryBehaviour : CameraBehaviour
     {
         public Vector3? CameraPosition { get; private set; } = null;
 
@@ -36,15 +36,54 @@ namespace CameraToolsKatnissified.Cameras
         Vector3 _initialOffset = Vector3.zero;
         Vector3 _accumulatedOffset = Vector3.zero;
 
-        public StationaryCameraController( CameraToolsManager ctm ) : base( ctm )
+        public StationaryBehaviour() : base()
         {
 
         }
 
-        public override void Update()
+        protected override void OnStartPlaying()
+        {
+            Debug.Log( $"Started playing {nameof( StationaryBehaviour )}" );
+
+            if( FlightGlobals.ActiveVessel != null )
+            {
+                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( Ctm.ActiveVessel ) == FlightCamera.Modes.ORBITAL) )
+                {
+                    UpDirection = Vector3.up;
+                }
+                else
+                {
+                    UpDirection = -FlightGlobals.getGeeForceAtPosition( Ctm.ActiveVessel.GetWorldPos3D() ).normalized;
+                }
+
+                _initialOffset = this.Pivot.position - Ctm.ActiveVessel.transform.position;
+
+                if( CameraPosition != null )
+                {
+                    this.Pivot.position = CameraPosition.Value;
+                }
+
+                _accumulatedOffset = Vector3.zero;
+                _initialVelocity = Ctm.ActiveVessel.srf_velocity;
+                _initialOrbit = new Orbit();
+                _initialOrbit.UpdateFromStateVectors( Ctm.ActiveVessel.orbit.pos, Ctm.ActiveVessel.orbit.vel, FlightGlobals.currentMainBody, Planetarium.GetUniversalTime() );
+                //_initialUT = Planetarium.GetUniversalTime();
+            }
+            else
+            {
+                Debug.Log( "CameraTools: Stationary Camera failed. Active Vessel is null." );
+            }
+        }
+
+        protected override void OnStopPlaying()
+        {
+
+        }
+
+        public override void Update( bool isPlaying )
         {
             // Set position from a mouse raycast
-            if( _settingPositionEnabled && cameraBeh._wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
+            if( _settingPositionEnabled && Ctm._wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
             {
                 _settingPositionEnabled = false;
 
@@ -56,73 +95,46 @@ namespace CameraToolsKatnissified.Cameras
             }
         }
 
-        protected override void OnStartPlaying()
+        public override void FixedUpdate( bool isPlaying )
         {
-            if( FlightGlobals.ActiveVessel != null )
+            if( !isPlaying )
             {
-                if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( cameraBeh.ActiveVessel ) == FlightCamera.Modes.ORBITAL) )
-                {
-                    UpDirection = Vector3.up;
-                }
-                else
-                {
-                    UpDirection = -FlightGlobals.getGeeForceAtPosition( cameraBeh.ActiveVessel.GetWorldPos3D() ).normalized;
-                }
-
-                Debug.Log( this.Pivot.position );
-                _initialOffset = this.Pivot.position - cameraBeh.ActiveVessel.transform.position;
-
-                if( CameraPosition != null )
-                {
-                    this.Pivot.position = CameraPosition.Value;
-                }
-
-                _accumulatedOffset = Vector3.zero;
-                _initialVelocity = cameraBeh.ActiveVessel.srf_velocity;
-                _initialOrbit = new Orbit();
-                _initialOrbit.UpdateFromStateVectors( cameraBeh.ActiveVessel.orbit.pos, cameraBeh.ActiveVessel.orbit.vel, FlightGlobals.currentMainBody, Planetarium.GetUniversalTime() );
-                //_initialUT = Planetarium.GetUniversalTime();
-            }
-            else
-            {
-                Debug.Log( "CameraTools: Stationary Camera failed. Active Vessel is null." );
-            }
-        }
-
-        protected override void OnPlayingFixedUpdate()
-        {
-            if( cameraBeh.FlightCamera.Target != null )
-            {
-                cameraBeh.FlightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
+                return;
             }
 
-            if( cameraBeh.ActiveVessel != null )
+            Debug.Log( "STATIONARY" );
+
+           // if( Ctm.FlightCamera.Target != null )
+           // {
+           //     Ctm.FlightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
+           // }
+
+            if( Ctm.ActiveVessel != null )
             {
                 // Parent follows the vessel.
-                this.Pivot.localPosition = cameraBeh.ActiveVessel.transform.position + _initialOffset;
+                this.Pivot.localPosition = Ctm.ActiveVessel.transform.position + _initialOffset;
 
-                Debug.Log( this.Pivot.position );
                 // Camera itself accumulates the inverse of the vessel movement.
                 if( CurrentReferenceMode == CameraReference.Surface )
                 {
-                    float magnitude = Mathf.Clamp( (float)cameraBeh.ActiveVessel.srf_velocity.magnitude, 0, MaxRelativeVelocity );
-                    _accumulatedOffset -= (magnitude * cameraBeh.ActiveVessel.srf_velocity.normalized) * Time.fixedDeltaTime;
+                    float magnitude = Mathf.Clamp( (float)Ctm.ActiveVessel.srf_velocity.magnitude, 0, MaxRelativeVelocity );
+                    _accumulatedOffset -= (magnitude * Ctm.ActiveVessel.srf_velocity.normalized) * Time.fixedDeltaTime;
                 }
                 else if( CurrentReferenceMode == CameraReference.Orbit )
                 {
-                    float magnitude = Mathf.Clamp( (float)cameraBeh.ActiveVessel.obt_velocity.magnitude, 0, MaxRelativeVelocity );
-                    _accumulatedOffset -= (magnitude * cameraBeh.ActiveVessel.obt_velocity.normalized) * Time.fixedDeltaTime;
+                    float magnitude = Mathf.Clamp( (float)Ctm.ActiveVessel.obt_velocity.magnitude, 0, MaxRelativeVelocity );
+                    _accumulatedOffset -= (magnitude * Ctm.ActiveVessel.obt_velocity.normalized) * Time.fixedDeltaTime;
                 }
                 else if( CurrentReferenceMode == CameraReference.InitialVelocity )
                 {
                     Vector3 cameraVelocity;
                     if( UseOrbitalInitialVelocity && _initialOrbit != null )
                     {
-                        cameraVelocity = _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - cameraBeh.ActiveVessel.GetObtVelocity();
+                        cameraVelocity = _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - Ctm.ActiveVessel.GetObtVelocity();
                     }
                     else
                     {
-                        cameraVelocity = _initialVelocity - cameraBeh.ActiveVessel.srf_velocity;
+                        cameraVelocity = _initialVelocity - Ctm.ActiveVessel.srf_velocity;
                     }
 
                     _accumulatedOffset += cameraVelocity * Time.fixedDeltaTime;
@@ -200,16 +212,11 @@ namespace CameraToolsKatnissified.Cameras
                 cameraBeh.FlightCamera.SetFoV( cameraBeh.CurrentFov );
                 cameraBeh.ZoomFactor = 60 / cameraBeh.CurrentFov;
             }*/
-            float fov = 60 / (Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 ));
-            if( cameraBeh.FlightCamera.FieldOfView != fov )
+            float fov = 60 / (Mathf.Exp( Ctm.Zoom ) / Mathf.Exp( 1 ));
+            if( Ctm.FlightCamera.FieldOfView != fov )
             {
-                cameraBeh.FlightCamera.SetFoV( fov );
+                Ctm.FlightCamera.SetFoV( fov );
             }
-        }
-
-        protected override void OnStopPlaying()
-        {
-
         }
 
         public override void DrawGui( UILayout UILayout, ref int line )
@@ -248,7 +255,7 @@ namespace CameraToolsKatnissified.Cameras
             if( GUI.Button( UILayout.GetRectX( line, 1, 5 ), positionText ) )
             {
                 _settingPositionEnabled = true;
-                cameraBeh._wasMouseUp = false;
+                Ctm._wasMouseUp = false;
             }
             if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Clear Position" ) )
             {
