@@ -27,7 +27,6 @@ namespace CameraToolsKatnissified
         }
         public FlightCamera Camera { get; set; }
 
-        GameObject _camRoot;
 
         /// <summary>
         /// Starts "playing".
@@ -41,12 +40,13 @@ namespace CameraToolsKatnissified
 
             CameraToolsManager.Instance.SaveAndDisableCamera();
 
-            _camRoot = new GameObject( "Camera Root" );
-            _camRoot.transform.position = Camera.transform.position;
-            _camRoot.transform.rotation = Camera.transform.rotation;
-            Camera.transform.SetParent( _camRoot.transform );
+            GameObject camRoot;
+            camRoot = new GameObject( "Camera Root" );
+            camRoot.transform.position = Camera.transform.position;
+            camRoot.transform.rotation = Camera.transform.rotation;
+            Camera.transform.SetParent( camRoot.transform );
 
-            this.Pivot = _camRoot.transform;
+            this.Pivot = camRoot.transform;
 
             IsPlaying = true;
 
@@ -67,13 +67,11 @@ namespace CameraToolsKatnissified
 
             OnEndPlaying();
 
+            CameraToolsManager.Instance.LoadSavedAndEnableCamera();
+            // Apparently order at which this happens matters.
             Destroy( this.Pivot.gameObject );
 
             IsPlaying = false;
-
-            CameraToolsManager.Instance.LoadSavedAndEnableCamera();
-
-            Destroy( _camRoot );
         }
 
         protected abstract void OnEndPlaying();

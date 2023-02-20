@@ -133,12 +133,12 @@ namespace CameraToolsKatnissified
             FlightCamera.SetFoV( 60 );
             FlightCamera.ActivateUpdate();
 
-#warning TODO - sound breaks after reverting.
+#warning TODO - possibly not needed.
             if( !FlightCamera.enabled )
             {
-                FlightCamera.enabled = true;
+                FlightCamera.enabled = true; // sometimes is set to false, god knows why.
             }
-            FlightCamera.EnableCamera();
+            //FlightCamera.EnableCamera(); // this fixes broken sound.
         }
 
 
