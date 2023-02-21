@@ -6,10 +6,10 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace CameraToolsKatnissified.Cameras
+namespace CameraToolsKatnissified.CameraControllers.Behaviours
 {
     [DisallowMultipleComponent]
-    public sealed class PointAtTargetBehaviour : CameraBehaviour
+    public sealed class LookAtBehaviour : CameraBehaviour
     {
         public Part Target { get; private set; } = null;
 
@@ -17,14 +17,14 @@ namespace CameraToolsKatnissified.Cameras
 
         bool _settingTargetEnabled;
 
-        public PointAtTargetBehaviour() : base()
+        public LookAtBehaviour() : base()
         {
 
         }
 
         protected override void OnStartPlaying()
         {
-            Debug.Log( $"Started playing {nameof( PointAtTargetBehaviour )}" );
+            Debug.Log( $"Started playing {nameof( LookAtBehaviour )}" );
 
             if( FlightGlobals.ActiveVessel != null )
             {
@@ -55,7 +55,7 @@ namespace CameraToolsKatnissified.Cameras
             {
                 _settingTargetEnabled = false;
 
-                Part newTarget = Utils.GetPartFromMouse();
+                Part newTarget = Utils.Misc.GetPartFromMouse();
                 if( newTarget != null )
                 {
                     Target = newTarget;

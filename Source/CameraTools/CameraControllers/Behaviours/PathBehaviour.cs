@@ -3,12 +3,10 @@ using CameraToolsKatnissified.UI;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace CameraToolsKatnissified.Cameras
+namespace CameraToolsKatnissified.CameraControllers.Behaviours
 {
     public sealed class PathBehaviour : CameraBehaviour
     {
-        public static string PATHS_FILE = $"GameData/{CameraToolsManager.DIRECTORY_NAME}/paths.cfg";
-
         public List<CameraPath> AvailablePaths { get; private set; }
         public CameraPath CurrentPath { get; private set; }
 
@@ -43,7 +41,7 @@ namespace CameraToolsKatnissified.Cameras
             CurrentPath = null;
             AvailablePaths = new List<CameraPath>();
 
-            ConfigNode pathFileNode = ConfigNode.Load( PATHS_FILE );
+            ConfigNode pathFileNode = ConfigNode.Load( CameraToolsManager.PATHS_FILE );
 
             foreach( var n in pathFileNode.GetNode( "CAMERAPATHS" ).GetNodes( "CAMERAPATH" ) )
             {

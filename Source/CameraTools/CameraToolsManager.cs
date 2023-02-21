@@ -1,5 +1,5 @@
 using CameraToolsKatnissified.Animation;
-using CameraToolsKatnissified.Cameras;
+using CameraToolsKatnissified.CameraControllers;
 using KSP.UI;
 using KSP.UI.Screens;
 using System;
@@ -19,6 +19,8 @@ namespace CameraToolsKatnissified
         // Also should manage the camera itself.
 
         public const string DIRECTORY_NAME = "CameraToolsKatnissified";
+
+        public const string PATHS_FILE = "GameData/" + DIRECTORY_NAME + "/paths.cfg";
 
         static CameraToolsManager _instance;
         public static CameraToolsManager Instance

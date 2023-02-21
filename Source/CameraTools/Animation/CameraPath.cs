@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CameraToolsKatnissified.Utils;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -48,10 +49,10 @@ namespace CameraToolsKatnissified.Animation
             newPath.PathName = node.GetValue( "pathName" );
 
             // decompose keyframes for backwards compatibility.
-            var points = Utils.ParseVectorList( node.GetValue( "points" ) );
-            var rotations = Utils.ParseQuaternionList( node.GetValue( "rotations" ) );
-            var zooms = Utils.ParseFloatList( node.GetValue( "zooms" ) );
-            var times = Utils.ParseFloatList( node.GetValue( "times" ) );
+            var points = Misc.ParseVectorList( node.GetValue( "points" ) );
+            var rotations = Misc.ParseQuaternionList( node.GetValue( "rotations" ) );
+            var zooms = Misc.ParseFloatList( node.GetValue( "zooms" ) );
+            var times = Misc.ParseFloatList( node.GetValue( "times" ) );
 
             for( int i = 0; i < points.Count; i++ )
             {
@@ -93,10 +94,10 @@ namespace CameraToolsKatnissified.Animation
                 times.Add( kf.Time );
             }
 
-            pathNode.AddValue( "points", Utils.WriteVectorList( points ) );
-            pathNode.AddValue( "rotations", Utils.WriteQuaternionList( rotations ) );
-            pathNode.AddValue( "zooms", Utils.WriteFloatList( zooms ) );
-            pathNode.AddValue( "times", Utils.WriteFloatList( times ) );
+            pathNode.AddValue( "points", Misc.WriteVectorList( points ) );
+            pathNode.AddValue( "rotations", Misc.WriteQuaternionList( rotations ) );
+            pathNode.AddValue( "zooms", Misc.WriteFloatList( zooms ) );
+            pathNode.AddValue( "times", Misc.WriteFloatList( times ) );
 
             pathNode.AddValue( "lerpRate", this.LerpRate );
             pathNode.AddValue( "timeScale", this.TimeScale );

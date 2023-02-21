@@ -37,13 +37,13 @@
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="CameraController.cs" />
-    <Compile Include="CameraPlayerController.cs" />
-    <Compile Include="Cameras\CameraBehaviour.cs" />
-    <Compile Include="CameraReference.cs" />
-    <Compile Include="Cameras\PointAtTargetBehaviour.cs" />
+    <Compile Include="CameraControllers\Behaviours\ConstantMovementBehaviour.cs" />
+    <Compile Include="CameraControllers\CameraPlayerController.cs" />
+    <Compile Include="CameraControllers\CameraBehaviour.cs" />
+    <Compile Include="CameraControllers\Behaviours\LookAtBehaviour.cs" />
     <Compile Include="CameraToolsManager.cs" />
-    <Compile Include="Cameras\PathBehaviour.cs" />
-    <Compile Include="CameraSetupController.cs" />
+    <Compile Include="CameraControllers\Behaviours\PathBehaviour.cs" />
+    <Compile Include="CameraControllers\CameraSetupController.cs" />
     <Compile Include="PersistentField.cs" />
     <Compile Include="Animation\CameraTransformation.cs" />
     <Compile Include="Animation\CameraPath.cs" />
@@ -51,9 +51,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Animation\Curve.cs" />
     <Compile Include="Serializer.cs" />
-    <Compile Include="Cameras\StationaryBehaviour.cs" />
+    <Compile Include="CameraControllers\Behaviours\FollowVesselBehaviour.cs" />
     <Compile Include="UI\UILayout.cs" />
-    <Compile Include="Utils.cs" />
+    <Compile Include="Utils\Misc.cs" />
+    <Compile Include="Utils\OrbitEx.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />

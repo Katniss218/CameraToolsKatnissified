@@ -5,10 +5,26 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace CameraToolsKatnissified
+namespace CameraToolsKatnissified.Utils
 {
-    public static class Utils
+    public static class Misc
     {
+        public static List<ModuleEngines> GetAllEngines( this Vessel vessel )
+        {
+            List<ModuleEngines> engines = new List<ModuleEngines>();
+
+            foreach( var part in vessel.Parts )
+            {
+                foreach( var module in part.Modules )
+                {
+                    if( module is ModuleEngines engine )
+                    {
+                        engines.Add( engine );
+                    }
+                }
+            }
+            return engines;
+        }
 
         public static T CycleEnum<T>( T value, int step )
         {

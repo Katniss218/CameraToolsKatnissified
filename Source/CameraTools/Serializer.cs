@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CameraToolsKatnissified.Utils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -31,7 +32,7 @@ namespace CameraToolsKatnissified
                     continue;
                 }
 
-                settings.SetValue( field.Name, Utils.ValueToString( field.GetValue( ctb ) ), true );
+                settings.SetValue( field.Name, Misc.ValueToString( field.GetValue( ctb ) ), true );
             }
 
             fileNode.Save( SETTINGS_PATH );
@@ -57,7 +58,7 @@ namespace CameraToolsKatnissified
 
                 if( settings.HasValue( field.Name ) )
                 {
-                    object parsedValue = Utils.StringToValue( field.FieldType, settings.GetValue( field.Name ) );
+                    object parsedValue = Misc.StringToValue( field.FieldType, settings.GetValue( field.Name ) );
 
                     field.SetValue( ctb, parsedValue );
                 }

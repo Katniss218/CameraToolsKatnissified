@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace CameraToolsKatnissified.Cameras
+namespace CameraToolsKatnissified.CameraControllers
 {
     public abstract class CameraBehaviour
     {
@@ -108,6 +108,26 @@ namespace CameraToolsKatnissified.Cameras
             }
 
             return cachedCameraTypes.ToArray(); // copy.
+        }
+
+        public static Type GetDefaultType()
+        {
+            if( cachedCameraTypes == null )
+            {
+                CacheBehaviours();
+            }
+
+            return cachedCameraTypes[0];
+        }
+
+        public static CameraBehaviour GetBehaviour( Type type )
+        {
+            if( !typeof( CameraBehaviour ).IsAssignableFrom( type ) )
+            {
+                throw new ArgumentException( $"The type must defive from '{typeof( CameraBehaviour ).FullName}'." );
+            }
+
+            return (CameraBehaviour)Activator.CreateInstance( type, new object[] { } );
         }
     }
 }

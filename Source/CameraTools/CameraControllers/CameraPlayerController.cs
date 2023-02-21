@@ -1,12 +1,11 @@
-﻿using CameraToolsKatnissified.Cameras;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace CameraToolsKatnissified
+namespace CameraToolsKatnissified.CameraControllers
 {
     public sealed class CameraPlayerController : CameraController
     {
@@ -54,7 +53,7 @@ namespace CameraToolsKatnissified
         void Awake()
         {
             Behaviours = new List<CameraBehaviour>();
-            Behaviours.Add( new StationaryBehaviour() );
+            Behaviours.Add( CameraBehaviour.GetBehaviour( CameraBehaviour.GetDefaultType() ) );
 
             Load();
         }

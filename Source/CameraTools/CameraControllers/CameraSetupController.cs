@@ -1,14 +1,14 @@
 ﻿using CameraToolsKatnissified.Animation;
-using CameraToolsKatnissified.Cameras;
 using CameraToolsKatnissified.UI;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace CameraToolsKatnissified
+namespace CameraToolsKatnissified.CameraControllers
 {
     class CameraSetupController : CameraController
     {
@@ -17,7 +17,7 @@ namespace CameraToolsKatnissified
 
         public CameraKeyframe CurrentKeyframe { get; private set; }
 
-        CameraToolsManager _cameraBeh;
+        CameraToolsManager _ctm;
         bool _pathKeyframeWindowVisible = false;
         bool _pathWindowVisible = false;
 
@@ -34,13 +34,15 @@ namespace CameraToolsKatnissified
         public float _windowHeight = 400;
         public float _draggableHeight = 40;
 
+        Vector3 _upDir = Vector3.up;
+
         public void Load()
         {
             DeselectKeyframe();
             CurrentPath = null;
             AvailablePaths = new List<CameraPath>();
 
-            ConfigNode pathFileNode = ConfigNode.Load( PathBehaviour.PATHS_FILE );
+            ConfigNode pathFileNode = ConfigNode.Load( CameraToolsManager.PATHS_FILE );
 
             foreach( var n in pathFileNode.GetNode( "CAMERAPATHS" ).GetNodes( "CAMERAPATH" ) )
             {
@@ -50,7 +52,7 @@ namespace CameraToolsKatnissified
 
         public void Save()
         {
-            ConfigNode pathFileNode = ConfigNode.Load( PathBehaviour.PATHS_FILE );
+            ConfigNode pathFileNode = ConfigNode.Load( CameraToolsManager.PATHS_FILE );
 
             ConfigNode pathsNode = pathFileNode.GetNode( "CAMERAPATHS" );
             pathsNode.RemoveNodes( "CAMERAPATH" );
@@ -60,7 +62,7 @@ namespace CameraToolsKatnissified
                 path.Save( pathsNode );
             }
 
-            pathFileNode.Save( PathBehaviour.PATHS_FILE );
+            pathFileNode.Save( CameraToolsManager.PATHS_FILE );
         }
 
 
@@ -113,9 +115,11 @@ namespace CameraToolsKatnissified
 
             float time = CurrentPath.keyframeCount > 0 ? CurrentPath.GetKeyframe( CurrentPath.keyframeCount - 1 ).Time + 1 : 0;
 
+            InitializePivot();
+
             Vector3 localPosition = _pathSpaceW2L.MultiplyPoint( this.Pivot.localPosition );
             Quaternion localRotation = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.localRotation;
-            CurrentPath.AddTransform( localPosition, localRotation, _cameraBeh.Zoom, time );
+            CurrentPath.AddTransform( localPosition, localRotation, _ctm.Zoom, time );
 
             SelectKeyframe( CurrentPath.GetKeyframe( CurrentPath.keyframeCount - 1 ) );
 
@@ -137,10 +141,19 @@ namespace CameraToolsKatnissified
 
         private void InitializePivot()
         {
-            _pathRootPosition = _cameraBeh.ActiveVessel.transform.position;
-            _pathRootRotation = _cameraBeh.ActiveVessel.transform.rotation;
+            _pathRootPosition = _ctm.ActiveVessel.transform.position;
+            _pathRootRotation = _ctm.ActiveVessel.transform.rotation;
             _pathSpaceL2W = Matrix4x4.TRS( _pathRootPosition, _pathRootRotation, new Vector3( 1, 1, 1 ) );
             _pathSpaceW2L = _pathSpaceL2W.inverse;
+
+            if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( _ctm.ActiveVessel ) == FlightCamera.Modes.ORBITAL) )
+            {
+                _upDir = Vector3.up;
+            }
+            else
+            {
+                _upDir = -FlightGlobals.getGeeForceAtPosition( _ctm.ActiveVessel.GetWorldPos3D() ).normalized;
+            }
         }
 
         /// <summary>
@@ -154,7 +167,7 @@ namespace CameraToolsKatnissified
 
             this.Pivot.localPosition = _pathSpaceL2W.MultiplyPoint( keyframe.Position );
             this.Pivot.localRotation = _pathRootRotation * keyframe.Rotation;
-            _cameraBeh.Zoom = keyframe.Zoom;
+            _ctm.Zoom = keyframe.Zoom;
         }
 
         void SaveKeyframe( CameraKeyframe keyframe )
@@ -162,7 +175,7 @@ namespace CameraToolsKatnissified
             Vector3 localPosition = _pathSpaceW2L.MultiplyPoint( this.Pivot.localPosition );
             Quaternion localRotation = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.localRotation;
 
-            CurrentPath.SetTransform( keyframe, localPosition, localRotation, _cameraBeh.Zoom, CurrentKeyframe.Time );
+            CurrentPath.SetTransform( keyframe, localPosition, localRotation, _ctm.Zoom, CurrentKeyframe.Time );
         }
 
         void TogglePathList()
@@ -190,7 +203,7 @@ namespace CameraToolsKatnissified
 
         void Awake()
         {
-            _cameraBeh = CameraToolsManager.Instance;
+            _ctm = CameraToolsManager.Instance;
             Load();
         }
 
@@ -201,31 +214,39 @@ namespace CameraToolsKatnissified
                 //mouse panning, moving
                 Vector3 forwardLevelAxis = this.Pivot.transform.forward;
 
-                if( Input.GetKey( KeyCode.Mouse1 ) && Input.GetKey( KeyCode.Mouse2 ) )
+                // left and right - tilt around forward.
+                if( Input.GetKey( KeyCode.Mouse0 ) && Input.GetKey( KeyCode.Mouse2 ) )
                 {
                     this.Pivot.rotation = Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * -1.7f, this.Pivot.forward ) * this.Pivot.rotation;
                 }
                 else
                 {
-                    if( Input.GetKey( KeyCode.Mouse1 ) )
+                    if( Input.GetKey( KeyCode.Mouse0 ) ) // left - constrained, always horizontal
                     {
-                        this.Pivot.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (_cameraBeh.Zoom * _cameraBeh.Zoom), Vector3.up );
-                        this.Pivot.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (_cameraBeh.Zoom * _cameraBeh.Zoom), Vector3.right );
-                        this.Pivot.rotation = Quaternion.LookRotation( this.Pivot.forward, this.Pivot.transform.up );
+                        this.Pivot.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up );
+                        this.Pivot.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
+                        this.Pivot.transform.rotation = Quaternion.LookRotation( this.Pivot.forward, _upDir );
                     }
-                    if( Input.GetKey( KeyCode.Mouse2 ) )
+                    else if( Input.GetKey( KeyCode.Mouse1 ) ) // middle - free
+                    {
+                        this.Pivot.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (_ctm.Zoom * _ctm.Zoom), Vector3.up );
+                        this.Pivot.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (_ctm.Zoom * _ctm.Zoom), Vector3.right );
+                        this.Pivot.rotation = Quaternion.LookRotation( this.Pivot.forward, this.Pivot.up );
+                    }
+                    else if( Input.GetKey( KeyCode.Mouse2 ) ) // right - translation
                     {
                         this.Pivot.position += this.Pivot.right * Input.GetAxis( "Mouse X" ) * 2;
                         this.Pivot.position += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
                     }
                 }
+                // scroll - move up and down.
                 this.Pivot.position += this.Pivot.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
 
 #warning TODO - move duplicated code.
-                float fov = 60 / (Mathf.Exp( _cameraBeh.Zoom ) / Mathf.Exp( 1 ));
-                if( _cameraBeh.FlightCamera.FieldOfView != fov )
+                float fov = 60 / (Mathf.Exp( _ctm.Zoom ) / Mathf.Exp( 1 ));
+                if( _ctm.FlightCamera.FieldOfView != fov )
                 {
-                    _cameraBeh.FlightCamera.SetFoV( fov );
+                    _ctm.FlightCamera.SetFoV( fov );
                 }
             }
         }
@@ -284,11 +305,11 @@ namespace CameraToolsKatnissified
                 line++;
                 if( GUI.Button( UILayout.GetRect( 1, line ), "<" ) )
                 {
-                    CurrentPath.Frame = Utils.CycleEnum( CurrentPath.Frame, -1 );
+                    CurrentPath.Frame = Utils.Misc.CycleEnum( CurrentPath.Frame, -1 );
                 }
                 if( GUI.Button( UILayout.GetRect( 2, line ), ">" ) )
                 {
-                    CurrentPath.Frame = Utils.CycleEnum( CurrentPath.Frame, 1 );
+                    CurrentPath.Frame = Utils.Misc.CycleEnum( CurrentPath.Frame, 1 );
                 }
                 line++;
 
@@ -422,7 +443,7 @@ namespace CameraToolsKatnissified
             GUI.Label( new Rect( 5, 35, 80, 25 ), "Time: " );
             string s = GUI.TextField( new Rect( 100, 35, 195, 25 ), CurrentKeyframe.Time.ToString(), 16 );
 
-            if( float.TryParse( s, out float parsed ) )
+            if( float.TryParse( s, NumberStyles.Any, CultureInfo.InvariantCulture, out float parsed ) )
             {
                 CurrentKeyframe.Time = parsed;
             }
@@ -433,6 +454,7 @@ namespace CameraToolsKatnissified
             {
                 Debug.Log( $"[CameraToolsKatnissified] Applying keyframe at time: {CurrentKeyframe.Time}" );
                 SaveKeyframe( CurrentKeyframe );
+                Save();
                 isApplied = true;
             }
 
@@ -443,8 +465,8 @@ namespace CameraToolsKatnissified
 
             GUI.Label( new Rect( 100, 135, 195, 20 ), "Zoom" );
 
-            _cameraBeh.Zoom = GUI.HorizontalSlider( new Rect( 100, 165, 195, 20 ), _cameraBeh.Zoom, 1.0f, 8.0f );
-            GUI.Label( new Rect( 100, 195, 195, 20 ), (Mathf.Exp( _cameraBeh.Zoom ) / Mathf.Exp( 1 )).ToString( "0.0" ) + "x" );
+            _ctm.Zoom = GUI.HorizontalSlider( new Rect( 100, 165, 195, 20 ), _ctm.Zoom, 1.0f, 8.0f );
+            GUI.Label( new Rect( 100, 195, 195, 20 ), (Mathf.Exp( _ctm.Zoom ) / Mathf.Exp( 1 )).ToString( "0.0" ) + "x" );
 
             GUI.EndGroup();
 

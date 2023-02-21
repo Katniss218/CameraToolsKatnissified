@@ -1,4 +1,4 @@
-﻿using CameraToolsKatnissified.Cameras;
+﻿using CameraToolsKatnissified.CameraControllers;
 using CameraToolsKatnissified.UI;
 using System;
 using System.Collections.Generic;
@@ -146,7 +146,7 @@ namespace CameraToolsKatnissified
                 line++;
                 if( GUI.Button( UILayout.GetRect( 0, line ), "+" ) )
                 {
-                    cpc.Behaviours.Add( new PathBehaviour() );
+                    cpc.Behaviours.Add( CameraBehaviour.GetBehaviour( CameraBehaviour.GetDefaultType() ) );
                 }
                 if( GUI.Button( UILayout.GetRect( 1, line ), "-" ) )
                 {
