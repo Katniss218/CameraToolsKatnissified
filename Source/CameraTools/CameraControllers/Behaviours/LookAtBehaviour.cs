@@ -1,4 +1,5 @@
 ﻿using CameraToolsKatnissified.UI;
+using CameraToolsKatnissified.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,7 +29,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         public bool UseZoom { get; set; }
 
         /// How big the object should appear.
-        public float ZoomAngularSize { get; set; }
+        public float ZoomAngularSize { get; set; } = 5.0f;
 
         /// If 1, the angular size will be constant, if 0, the zoom will not change with distance. Values in-between use lerp?
         public float ZoomDistanceFactor { get; set; }
@@ -75,7 +76,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             {
                 _settingTargetEnabled = false;
 
-                Part newTarget = Utils.Misc.GetPartFromMouse();
+                Part newTarget = Misc.GetPartFromMouse();
                 if( newTarget != null )
                 {
                     Target = newTarget.transform;
@@ -100,17 +101,35 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 Vector3 toTargetDirection = (Target.position - this.Pivot.position).normalized;
 
                 this.Pivot.rotation = Quaternion.LookRotation( toTargetDirection, _upDir );
+                this.Controller.CameraTargetWorldSpace = Target.position;
+
+                if( UseZoom )
+                {
+                    const float NORMAL_ZOOM = 1.0f;
+
+                    float cameraDistance = Vector3.Distance( Target.position, this.Pivot.position );
+
+                    float targetFoV = GetFovToFixSize( cameraDistance, (ZoomAngularSize / 10000.0f) );
+
+                    float zoom = Mathf.Log( 60 / targetFoV ) + 1;
+
+                    float zoom2 = Mathf.Lerp( NORMAL_ZOOM, zoom, ZoomDistanceFactor ); // depending on the zoomDistanceFactor, blend a different amount of the normal FoV, and the autozoom.
+
+                    Controller.Zoom = zoom2;
+                }
             }
+        }
 
-            if( UseZoom )
-            {
-                float cameraDistance = Vector3.Distance( Target.transform.position, this.Pivot.transform.position );
+        /// <summary>
+        /// Returns the FoV needed to make an object appear a constant angular size.
+        /// </summary>
+        /// <param name="fixedSize">Controls the size of the object.</param>
+        public static float GetFovToFixSize( float distance, float fixedSize )
+        {
+            const float SCALE = 1.0f;
+            float fov = SCALE / (distance * fixedSize);
 
-                float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + ZoomAngularSize, 1, 150 );
-
-                Controller.Zoom = Mathf.Log( 60 / targetFoV ) + 1;
-                //float fov = 60 / (Mathf.Exp( Zoom ) / Mathf.Exp( 1 ));
-            }
+            return fov;
         }
 
         public override void DrawGui( UILayout UILayout, ref int line )
@@ -125,6 +144,31 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             {
                 Target = null;
             }
+            line++;
+
+            GUI.Label( UILayout.GetRectX( line, 1, 9 ), $"Up: {Up}" );
+            if( GUI.Button( UILayout.GetRect( 10, line ), "<" ) )
+            {
+                Up = Misc.CycleEnum( Up, -1 );
+            }
+            if( GUI.Button( UILayout.GetRect( 11, line ), ">" ) )
+            {
+                Up = Misc.CycleEnum( Up, 1 );
+            }
+            line++;
+
+            UseZoom = GUI.Toggle( UILayout.GetRectX( line ), UseZoom, "Use Auto-Zoom" );
+            line++;
+
+            GUI.Label( UILayout.GetRectX( line, 1, 5 ), "Zoom Angular Size:" );
+            ZoomAngularSize = float.Parse( GUI.TextField( UILayout.GetRectX( line, 6, 11 ), ZoomAngularSize.ToString() ) );
+            if( ZoomAngularSize < 1 )
+            {
+                ZoomAngularSize = 1;
+            }
+            line++;
+            GUI.Label( UILayout.GetRectX( line, 1, 5 ), "Zoom Dist. Factor:" );
+            ZoomDistanceFactor = GUI.HorizontalSlider( UILayout.GetRectX( line, 6, 11 ), ZoomDistanceFactor, 0, 1 );
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace CameraToolsKatnissified.CameraControllers.Behaviours
 {
@@ -22,7 +23,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
 
         /// The preferred distance from target.
-        public float Distance { get; set; }
+        public float Distance { get; set; } = 100.0f;
         /// The minimum distance from target, which will never be exceeded. Can be null.
         public float? MinDistance { get; set; }
         /// Maximum distance from target, which will never be exceeded. Can be null.
@@ -43,6 +44,22 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
         protected override void OnStopPlaying()
         {
+        }
+
+        public override void FixedUpdate( bool isPlaying )
+        {
+            if( this.Controller.CameraTargetWorldSpace == null )
+            {
+                return;
+            }
+            if( _Mode == Mode.Fixed )
+            {
+                Vector3 dir = this.Controller.CameraTargetWorldSpace.Value - this.Pivot.position;
+            }
+            else if( _Mode == Mode.Ease )
+            {
+
+            }
         }
 
         public override void DrawGui( UILayout UILayout, ref int line )

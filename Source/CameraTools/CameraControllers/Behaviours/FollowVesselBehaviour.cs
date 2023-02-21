@@ -127,32 +127,12 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
         }
 
-        /*public override void Update( bool isPlaying )
-        {
-            // Set position from a mouse raycast
-            if( _settingPositionEnabled && Ctm._wasMouseUp && Input.GetKeyDown( KeyCode.Mouse0 ) )
-            {
-                _settingPositionEnabled = false;
-
-                Vector3? newPosition = Utils.GetPosFromMouse();
-                if( newPosition != null )
-                {
-                    CameraPosition = newPosition;
-                }
-            }
-        }*/
-
         public override void FixedUpdate( bool isPlaying )
         {
             if( !isPlaying )
             {
                 return;
             }
-
-            // if( Ctm.FlightCamera.Target != null )
-            // {
-            //     Ctm.FlightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
-            // }
 
             if( Ctm.ActiveVessel != null )
             {
@@ -164,16 +144,10 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 // Camera itself accumulates the inverse of the vessel movement.
                 if( ReferenceFrame == FrameOfReference.Surface )
                 {
-                    //float magnitude = Mathf.Clamp( (float)Ctm.ActiveVessel.srf_velocity.magnitude, 0, MaxRelativeVelocity );
-
-                    //cameraVelocity -= ((float)Ctm.ActiveVessel.srf_velocity.magnitude * Ctm.ActiveVessel.srf_velocity.normalized);
                     cameraVelocity -= Ctm.ActiveVessel.srf_velocity;
                 }
                 else if( ReferenceFrame == FrameOfReference.Orbit )
                 {
-                    // float magnitude = Mathf.Clamp( (float)Ctm.ActiveVessel.obt_velocity.magnitude, 0, MaxRelativeVelocity );
-
-                    //cameraVelocity -= ((float)Ctm.ActiveVessel.obt_velocity.magnitude * Ctm.ActiveVessel.obt_velocity.normalized);
                     cameraVelocity -= Ctm.ActiveVessel.obt_velocity;
                 }
 
@@ -369,7 +343,6 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             {
                 ReferenceFrame = Misc.CycleEnum( ReferenceFrame, 1 );
             }
-
             line++;
 
             GUI.Label( UILayout.GetRectX( line, 1, 9 ), $"Constraint: {Constraint}" );
@@ -381,16 +354,19 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             {
                 Constraint = Misc.CycleEnum( Constraint, 1 );
             }
-
             line++;
 
             GUI.Label( UILayout.GetRectX( line, 1, 4 ), "Max Rel. V:" );
             MaxRelativeVelocity = float.Parse( GUI.TextField( UILayout.GetRectX( line, 5, 11 ), MaxRelativeVelocity.ToString() ) );
+            if( MaxRelativeVelocity < 0 )
+            {
+                MaxRelativeVelocity = 0;
+            }
 
             line++;
-            ReverseDirection = GUI.Toggle( UILayout.GetRectX( line ), ReverseDirection, "ReverseDirection" );
+            ReverseDirection = GUI.Toggle( UILayout.GetRectX( line ), ReverseDirection, "Reverse Direction" );
             line++;
-            UseInitialVelocity = GUI.Toggle( UILayout.GetRectX( line ), UseInitialVelocity, "UseInitialVelocity" );
+            UseInitialVelocity = GUI.Toggle( UILayout.GetRectX( line ), UseInitialVelocity, "Use Init. Velocity" );
 
             // Draw position buttons.
             /*
