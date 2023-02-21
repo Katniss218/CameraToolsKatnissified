@@ -111,7 +111,6 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 Controller.Zoom = Mathf.Log( 60 / targetFoV ) + 1;
                 //float fov = 60 / (Mathf.Exp( Zoom ) / Mathf.Exp( 1 ));
             }
-
         }
 
         public override void DrawGui( UILayout UILayout, ref int line )

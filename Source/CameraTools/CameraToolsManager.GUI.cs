@@ -76,6 +76,7 @@ namespace CameraToolsKatnissified
                 {
                     SetController<CameraPlayerController>();
                 }
+                line++;
             }
             else if( CurrentController is CameraPlayerController cpc )
             {
@@ -95,6 +96,7 @@ namespace CameraToolsKatnissified
                     CurrentController.StartPlaying();
                 }
                 line++;
+                line++;
                 GUI.Label( UILayout.GetRectX( line, 0, 1 ), "Zoom" );
                 cpc.Zoom = GUI.HorizontalSlider( UILayout.GetRectX( line, 2, 9 ), cpc.Zoom, 1.0f, 8.0f );
                 GUI.Label( UILayout.GetRectX( line, 10, 11 ), (Mathf.Exp( cpc.Zoom ) / Mathf.Exp( 1 )).ToString( "0.0" ) + "x" );
@@ -105,11 +107,10 @@ namespace CameraToolsKatnissified
                 //line++;
                 line++;
 
-                GUI.Label( UILayout.GetRectX( line ), "Camera Shake:" );
-                line++;
-
-                cpc.ShakeMultiplier = GUI.HorizontalSlider( UILayout.GetRectX( line, 0, 9 ), cpc.ShakeMultiplier, 0.0f, 1.0f );
+                GUI.Label( UILayout.GetRectX( line, 0, 1 ), "Shake" );
+                cpc.ShakeMultiplier = GUI.HorizontalSlider( UILayout.GetRectX( line, 2, 9 ), cpc.ShakeMultiplier, 0.0f, 1.0f );
                 GUI.Label( UILayout.GetRectX( line, 10, 11 ), cpc.ShakeMultiplier.ToString( "0.00" ) + "x" );
+                line++;
 
                 //Rect scrollRect = new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, 6 * ENTRY_HEIGHT );
                 //GUI.Box( scrollRect, string.Empty );

@@ -181,12 +181,12 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 {
                     if( ReferenceFrame == FrameOfReference.Surface )
                     {
-                        cameraVelocity += (_initialSurfaceVelocity) * Time.fixedDeltaTime;
+                        cameraVelocity += _initialSurfaceVelocity;
                     }
                     else if( ReferenceFrame == FrameOfReference.Orbit )
                     {
                         // this will desync if followed long enough.
-                        cameraVelocity += (_initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - Ctm.ActiveVessel.GetObtVelocity()) * Time.fixedDeltaTime;
+                        cameraVelocity += _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - Ctm.ActiveVessel.GetObtVelocity();
                     }
                 }
 
@@ -196,15 +196,36 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
                     if( Constraint == ConstraintMode.Prograde )
                     {
-                        constraintVector = Ctm.ActiveVessel.orbit.Prograde( Planetarium.GetUniversalTime() );
+                        if( ReferenceFrame == FrameOfReference.Surface )
+                        {
+                            constraintVector = Ctm.ActiveVessel.srf_velocity; // Surface prograde
+                        }
+                        else if( ReferenceFrame == FrameOfReference.Orbit )
+                        {
+                            constraintVector = Ctm.ActiveVessel.orbit.Prograde( Planetarium.GetUniversalTime() );
+                        }
                     }
                     if( Constraint == ConstraintMode.Normal )
                     {
-                        constraintVector = Ctm.ActiveVessel.orbit.Normal( Planetarium.GetUniversalTime() );
+                        if( ReferenceFrame == FrameOfReference.Surface )
+                        {
+                            constraintVector = Ctm.ActiveVessel.mainBody.RotationAxis; // surface Normal
+                        }
+                        else if( ReferenceFrame == FrameOfReference.Orbit )
+                        {
+                            constraintVector = Ctm.ActiveVessel.orbit.Normal( Planetarium.GetUniversalTime() );
+                        }
                     }
                     if( Constraint == ConstraintMode.Radial )
                     {
-                        constraintVector = Ctm.ActiveVessel.orbit.Radial( Planetarium.GetUniversalTime() );
+                        if( ReferenceFrame == FrameOfReference.Surface )
+                        {
+                            constraintVector = Ctm.ActiveVessel.upAxis; // surface radialIn
+                        }
+                        else if( ReferenceFrame == FrameOfReference.Orbit )
+                        {
+                            constraintVector = Ctm.ActiveVessel.orbit.Radial( Planetarium.GetUniversalTime() );
+                        }
                     }
                     /*if( Constraint == ConstraintMode.ThrustVector ) removed because too laggy.
                     {

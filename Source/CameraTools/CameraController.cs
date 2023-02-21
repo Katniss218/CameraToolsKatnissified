@@ -9,7 +9,7 @@ namespace CameraToolsKatnissified
 {
     public abstract class CameraController : MonoBehaviour
     {
-        public float Zoom { get; set; }
+        public float Zoom { get; set; } = 1.0f;
 
         public FlightCamera Camera { get; set; }
 
