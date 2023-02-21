@@ -18,6 +18,7 @@ namespace CameraToolsKatnissified.CameraControllers
         public CameraKeyframe CurrentKeyframe { get; private set; }
 
         CameraToolsManager _ctm;
+
         bool _pathKeyframeWindowVisible = false;
         bool _pathWindowVisible = false;
 
@@ -119,7 +120,7 @@ namespace CameraToolsKatnissified.CameraControllers
 
             Vector3 localPosition = _pathSpaceW2L.MultiplyPoint( this.Pivot.localPosition );
             Quaternion localRotation = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.localRotation;
-            CurrentPath.AddTransform( localPosition, localRotation, _ctm.Zoom, time );
+            CurrentPath.AddTransform( localPosition, localRotation, Zoom, time );
 
             SelectKeyframe( CurrentPath.GetKeyframe( CurrentPath.keyframeCount - 1 ) );
 
@@ -167,7 +168,7 @@ namespace CameraToolsKatnissified.CameraControllers
 
             this.Pivot.localPosition = _pathSpaceL2W.MultiplyPoint( keyframe.Position );
             this.Pivot.localRotation = _pathRootRotation * keyframe.Rotation;
-            _ctm.Zoom = keyframe.Zoom;
+            Zoom = keyframe.Zoom;
         }
 
         void SaveKeyframe( CameraKeyframe keyframe )
@@ -175,7 +176,7 @@ namespace CameraToolsKatnissified.CameraControllers
             Vector3 localPosition = _pathSpaceW2L.MultiplyPoint( this.Pivot.localPosition );
             Quaternion localRotation = Quaternion.Inverse( _pathRootRotation ) * this.Pivot.localRotation;
 
-            CurrentPath.SetTransform( keyframe, localPosition, localRotation, _ctm.Zoom, CurrentKeyframe.Time );
+            CurrentPath.SetTransform( keyframe, localPosition, localRotation, Zoom, CurrentKeyframe.Time );
         }
 
         void TogglePathList()
@@ -207,6 +208,18 @@ namespace CameraToolsKatnissified.CameraControllers
             Load();
         }
 
+        void Update()
+        {
+            if( IsPlaying )
+            {
+                float fov = 60 / (Mathf.Exp( Zoom ) / Mathf.Exp( 1 ));
+                if( Camera.FieldOfView != fov )
+                {
+                    Camera.SetFoV( fov );
+                }
+            }
+        }
+
         void FixedUpdate()
         {
             if( IsPlaying )
@@ -229,8 +242,8 @@ namespace CameraToolsKatnissified.CameraControllers
                     }
                     else if( Input.GetKey( KeyCode.Mouse1 ) ) // middle - free
                     {
-                        this.Pivot.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (_ctm.Zoom * _ctm.Zoom), Vector3.up );
-                        this.Pivot.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (_ctm.Zoom * _ctm.Zoom), Vector3.right );
+                        this.Pivot.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f / (Zoom * Zoom), Vector3.up );
+                        this.Pivot.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f / (Zoom * Zoom), Vector3.right );
                         this.Pivot.rotation = Quaternion.LookRotation( this.Pivot.forward, this.Pivot.up );
                     }
                     else if( Input.GetKey( KeyCode.Mouse2 ) ) // right - translation
@@ -243,7 +256,7 @@ namespace CameraToolsKatnissified.CameraControllers
                 this.Pivot.position += this.Pivot.up * 10 * Input.GetAxis( "Mouse ScrollWheel" );
 
 #warning TODO - move duplicated code.
-                float fov = 60 / (Mathf.Exp( _ctm.Zoom ) / Mathf.Exp( 1 ));
+                float fov = 60 / (Mathf.Exp( Zoom ) / Mathf.Exp( 1 ));
                 if( _ctm.FlightCamera.FieldOfView != fov )
                 {
                     _ctm.FlightCamera.SetFoV( fov );
@@ -465,8 +478,8 @@ namespace CameraToolsKatnissified.CameraControllers
 
             GUI.Label( new Rect( 100, 135, 195, 20 ), "Zoom" );
 
-            _ctm.Zoom = GUI.HorizontalSlider( new Rect( 100, 165, 195, 20 ), _ctm.Zoom, 1.0f, 8.0f );
-            GUI.Label( new Rect( 100, 195, 195, 20 ), (Mathf.Exp( _ctm.Zoom ) / Mathf.Exp( 1 )).ToString( "0.0" ) + "x" );
+            Zoom = GUI.HorizontalSlider( new Rect( 100, 165, 195, 20 ), Zoom, 1.0f, 8.0f );
+            GUI.Label( new Rect( 100, 195, 195, 20 ), (Mathf.Exp( Zoom ) / Mathf.Exp( 1 )).ToString( "0.0" ) + "x" );
 
             GUI.EndGroup();
 

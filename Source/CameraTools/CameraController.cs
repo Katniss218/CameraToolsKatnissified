@@ -9,6 +9,10 @@ namespace CameraToolsKatnissified
 {
     public abstract class CameraController : MonoBehaviour
     {
+        public float Zoom { get; set; }
+
+        public FlightCamera Camera { get; set; }
+
         public bool IsPlaying { get; private set; }
 
         private Transform _pivot;
@@ -25,7 +29,6 @@ namespace CameraToolsKatnissified
                 _pivot = value;
             }
         }
-        public FlightCamera Camera { get; set; }
 
 
         /// <summary>
@@ -75,6 +78,7 @@ namespace CameraToolsKatnissified
         }
 
         protected abstract void OnEndPlaying();
+
 
         public static CameraController Attach<T>( FlightCamera camera ) where T : CameraController
         {

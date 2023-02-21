@@ -20,9 +20,9 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             Orbit
         }
 
-
         public enum ConstraintMode
         {
+            None,
             /// Move accumulatedOffset along the prograde-retrograde axis only.
             Prograde,
             /// Move accumulatedOffset along the normal-antinormal axis only.
@@ -60,7 +60,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         /// The maximum velocity relative to the vessel that the acumulatedoffset can have.
         /// After all the constraints have been applied.
         /// Cannot take negative numbers.
-        public float MaxRelativeVelocity { get; set; }
+        public float MaxRelativeVelocity { get; set; } = 250;
 
 
 
@@ -85,7 +85,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         Vector3 _initialOffset = Vector3.zero; // The offset between the vessel and the camera on initialization. Alternative for initial position.
         Vector3 _accumulatedOffset = Vector3.zero;
 
-        public FollowVesselBehaviour() : base()
+        public FollowVesselBehaviour( CameraPlayerController controller ) : base( controller )
         {
 
         }
@@ -149,8 +149,6 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 return;
             }
 
-            Debug.Log( "STATIONARY" );
-
             // if( Ctm.FlightCamera.Target != null )
             // {
             //     Ctm.FlightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
@@ -162,18 +160,6 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 this.Pivot.position = Ctm.ActiveVessel.transform.position + _initialOffset;
 
                 Vector3 cameraVelocity = Vector3.zero;
-
-                if( UseInitialVelocity )
-                {
-                    if( ReferenceFrame == FrameOfReference.Surface )
-                    {
-                        cameraVelocity = _initialSurfaceVelocity - Ctm.ActiveVessel.srf_velocity;
-                    }
-                    else if( ReferenceFrame == FrameOfReference.Orbit )
-                    {
-                        cameraVelocity = _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - Ctm.ActiveVessel.GetObtVelocity();
-                    }
-                }
 
                 // Camera itself accumulates the inverse of the vessel movement.
                 if( ReferenceFrame == FrameOfReference.Surface )
@@ -191,70 +177,78 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                     cameraVelocity -= Ctm.ActiveVessel.obt_velocity;
                 }
 
-                Vector3 constraintVector = Vector3.zero;
-
-                if( Constraint == ConstraintMode.Prograde )
+                if( UseInitialVelocity )
                 {
-                    constraintVector = Ctm.ActiveVessel.orbit.Prograde( Planetarium.GetUniversalTime() );
-                }
-                if( Constraint == ConstraintMode.Normal )
-                {
-                    constraintVector = Ctm.ActiveVessel.orbit.Normal( Planetarium.GetUniversalTime() );
-                }
-                if( Constraint == ConstraintMode.Radial )
-                {
-                    constraintVector = Ctm.ActiveVessel.orbit.Radial( Planetarium.GetUniversalTime() );
-                }
-                /*if( Constraint == ConstraintMode.ThrustVector ) removed because too laggy.
-                {
-                    Vector3 vectorWorldSpace = Vector3.zero;
-                    var engines = Ctm.ActiveVessel.GetAllEngines();
-                    foreach( var engine in engines )
+                    if( ReferenceFrame == FrameOfReference.Surface )
                     {
-                        for( int i = 0; i < engine.thrustTransforms.Count; i++ )
+                        cameraVelocity += (_initialSurfaceVelocity) * Time.fixedDeltaTime;
+                    }
+                    else if( ReferenceFrame == FrameOfReference.Orbit )
+                    {
+                        // this will desync if followed long enough.
+                        cameraVelocity += (_initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - Ctm.ActiveVessel.GetObtVelocity()) * Time.fixedDeltaTime;
+                    }
+                }
+
+                if( Constraint != ConstraintMode.None )
+                {
+                    Vector3 constraintVector = Vector3.zero;
+
+                    if( Constraint == ConstraintMode.Prograde )
+                    {
+                        constraintVector = Ctm.ActiveVessel.orbit.Prograde( Planetarium.GetUniversalTime() );
+                    }
+                    if( Constraint == ConstraintMode.Normal )
+                    {
+                        constraintVector = Ctm.ActiveVessel.orbit.Normal( Planetarium.GetUniversalTime() );
+                    }
+                    if( Constraint == ConstraintMode.Radial )
+                    {
+                        constraintVector = Ctm.ActiveVessel.orbit.Radial( Planetarium.GetUniversalTime() );
+                    }
+                    /*if( Constraint == ConstraintMode.ThrustVector ) removed because too laggy.
+                    {
+                        Vector3 vectorWorldSpace = Vector3.zero;
+                        var engines = Ctm.ActiveVessel.GetAllEngines();
+                        foreach( var engine in engines )
                         {
-                            vectorWorldSpace += engine.thrustTransforms[i].forward * engine.thrustTransformMultipliers[i];
+                            for( int i = 0; i < engine.thrustTransforms.Count; i++ )
+                            {
+                                vectorWorldSpace += engine.thrustTransforms[i].forward * engine.thrustTransformMultipliers[i];
+                            }
                         }
-                    }
-                    if( vectorWorldSpace != Vector3.zero )
+                        if( vectorWorldSpace != Vector3.zero )
+                        {
+                            vectorWorldSpace.Normalize();
+                        }
+                        constraintVector = vectorWorldSpace;
+                    }*/
+                    if( Constraint == ConstraintMode.GravityVector )
                     {
-                        vectorWorldSpace.Normalize();
+                        constraintVector = FlightGlobals.getGeeForceAtPosition( Ctm.ActiveVessel.GetWorldPos3D() ).normalized;
                     }
-                    constraintVector = vectorWorldSpace;
-                }*/
-                if( Constraint == ConstraintMode.GravityVector )
-                {
-                    constraintVector = FlightGlobals.getGeeForceAtPosition( Ctm.ActiveVessel.GetWorldPos3D() ).normalized;
-                }
-                if( Constraint == ConstraintMode.VesselForward )
-                {
-                    constraintVector = Ctm.ActiveVessel.transform.forward;
-                }
-                if( Constraint == ConstraintMode.VesselRight )
-                {
-                    constraintVector = Ctm.ActiveVessel.transform.right;
-                }
-                if( Constraint == ConstraintMode.VesselUp )
-                {
-                    constraintVector = Ctm.ActiveVessel.transform.up;
+                    if( Constraint == ConstraintMode.VesselForward )
+                    {
+                        constraintVector = Ctm.ActiveVessel.transform.forward;
+                    }
+                    if( Constraint == ConstraintMode.VesselRight )
+                    {
+                        constraintVector = Ctm.ActiveVessel.transform.right;
+                    }
+                    if( Constraint == ConstraintMode.VesselUp )
+                    {
+                        constraintVector = Ctm.ActiveVessel.transform.up;
+                    }
+
+                    if( constraintVector != Vector3.zero ) // keep the component pointing along the constraint vector.
+                    {
+                        cameraVelocity = Vector3.Project( cameraVelocity, constraintVector.normalized );
+                    }
                 }
 
-                float scale = 1;
-                if( constraintVector == Vector3.zero )
+                if( cameraVelocity.magnitude > MaxRelativeVelocity )
                 {
-                    scale = 1;
-                }
-                else
-                {
-                    scale = Mathf.Abs( Vector3.Dot( constraintVector, cameraVelocity ) );
-                }
-
-                cameraVelocity *= scale; // constrain.
-
-                float speed = cameraVelocity.magnitude;
-                if( speed > MaxRelativeVelocity )
-                {
-                    cameraVelocity = cameraVelocity * (MaxRelativeVelocity / speed); // clamp to maximum of MaxRelativeVelocity.
+                    cameraVelocity = cameraVelocity.normalized * MaxRelativeVelocity;
                 }
 
                 if( ReverseDirection )
@@ -266,7 +260,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                     _accumulatedOffset += cameraVelocity * Time.fixedDeltaTime;
                 }
 
-                this.Pivot.localPosition += _accumulatedOffset;
+                this.Pivot.position += _accumulatedOffset;
             }
             //mouse panning, moving
             // Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, UpDirection ) * this.Pivot.transform.right).normalized;
@@ -339,12 +333,9 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 cameraBeh.FlightCamera.SetFoV( cameraBeh.CurrentFov );
                 cameraBeh.ZoomFactor = 60 / cameraBeh.CurrentFov;
             }*/
-            float fov = 60 / (Mathf.Exp( Ctm.Zoom ) / Mathf.Exp( 1 ));
-            if( Ctm.FlightCamera.FieldOfView != fov )
-            {
-                Ctm.FlightCamera.SetFoV( fov );
-            }
+            
         }
+
 
         public override void DrawGui( UILayout UILayout, ref int line )
         {

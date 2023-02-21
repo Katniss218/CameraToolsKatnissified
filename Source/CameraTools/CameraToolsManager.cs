@@ -56,9 +56,8 @@ namespace CameraToolsKatnissified
         /// <summary>
         /// Zoom level when using manual zoom.
         /// </summary>
-        public float Zoom { get; set; } = 1.0f;
+       // public float Zoom { get; set; } = 1.0f;
 
-        public float ShakeMultiplier { get; set; } = 0.0f;
 
         /// <summary>
         /// The main camera.
@@ -81,8 +80,6 @@ namespace CameraToolsKatnissified
         /// This is set to false to prevent the selector triggering immediately after the gui button is pressed.
         /// </summary>
         public bool _wasMouseUp { get; set; } = false;
-
-        float _cameraShakeMagnitude = 0.0f;
 
         //      new
         // Vessel - stationary follow, path, drone all move and rotate this obj
@@ -226,22 +223,6 @@ namespace CameraToolsKatnissified
                     SetController<CameraPlayerController>();
                 }
             }
-
-            //vessel camera shake
-            if( ShakeMultiplier > 0 )
-            {
-                foreach( var vessel in FlightGlobals.Vessels )
-                {
-                    if( !vessel || !vessel.loaded || vessel.packed )
-                    {
-                        continue;
-                    }
-
-                    DoCameraShake( vessel );
-                }
-
-                UpdateCameraShakeMagnitude();
-            }
         }
 
         void LateUpdate()
@@ -280,65 +261,6 @@ namespace CameraToolsKatnissified
                 }
                 SetController<CameraPlayerController>();
             }*/
-        }
-
-        public void ShakeCamera( float magnitude )
-        {
-            _cameraShakeMagnitude = Mathf.Max( _cameraShakeMagnitude, magnitude );
-        }
-
-        public void UpdateCameraShakeMagnitude()
-        {
-            if( ShakeMultiplier > 0 )
-            {
-                FlightCamera.transform.rotation = Quaternion.AngleAxis( (ShakeMultiplier / 2) * _cameraShakeMagnitude / 50f, Vector3.ProjectOnPlane( UnityEngine.Random.onUnitSphere, FlightCamera.transform.forward ) ) * FlightCamera.transform.rotation;
-            }
-
-            _cameraShakeMagnitude = Mathf.Lerp( _cameraShakeMagnitude, 0, 5 * Time.fixedDeltaTime );
-        }
-
-        public void DoCameraShake( Vessel vessel )
-        {
-            //shake
-            float camDistance = Vector3.Distance( FlightCamera.transform.position, vessel.CoM );
-
-            float distanceFactor = 50f / camDistance;
-
-            float angleToCam = Vector3.Angle( vessel.srf_velocity, FlightCamera.fetch.mainCamera.transform.position - vessel.transform.position );
-            angleToCam = Mathf.Clamp( angleToCam, 1, 180 );
-
-            float srfSpeed = (float)vessel.srfSpeed;
-
-            float lagAudioFactor = (75000 / (Vector3.Distance( vessel.transform.position, FlightCamera.fetch.mainCamera.transform.position ) * srfSpeed * angleToCam / 90));
-            lagAudioFactor = Mathf.Clamp( lagAudioFactor * lagAudioFactor * lagAudioFactor, 0, 4 );
-            lagAudioFactor += srfSpeed / 230;
-
-            float waveFrontFactor = ((3.67f * angleToCam) / srfSpeed);
-            waveFrontFactor = Mathf.Clamp( waveFrontFactor * waveFrontFactor * waveFrontFactor, 0, 2 );
-            if( vessel.srfSpeed > 330 )
-            {
-                waveFrontFactor = ((srfSpeed / angleToCam) < 3.67f) ? (srfSpeed / 15.0f) : 0.0f;
-            }
-
-            lagAudioFactor *= waveFrontFactor;
-
-            lagAudioFactor = Mathf.Clamp01( lagAudioFactor ) * distanceFactor;
-
-            float shakeAtmPressureMultiplier = (float)vessel.dynamicPressurekPa / 2f * lagAudioFactor;
-
-            float shakeThrustFactor = GetTotalThrust() / 1000f * distanceFactor * lagAudioFactor;
-
-            ShakeCamera( shakeAtmPressureMultiplier + shakeThrustFactor );
-        }
-
-        float GetTotalThrust()
-        {
-            float total = 0;
-            foreach( var engine in ActiveVessel.FindPartModulesImplementing<ModuleEngines>() )
-            {
-                total += engine.finalThrust;
-            }
-            return total;
         }
 
         void PostDeathRevert( GameScenes f )

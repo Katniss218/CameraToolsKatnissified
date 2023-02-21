@@ -96,8 +96,8 @@ namespace CameraToolsKatnissified
                 }
                 line++;
                 GUI.Label( UILayout.GetRectX( line, 0, 1 ), "Zoom" );
-                Zoom = GUI.HorizontalSlider( UILayout.GetRectX( line, 2, 9 ), Zoom, 1.0f, 8.0f );
-                GUI.Label( UILayout.GetRectX( line, 10, 11 ), (Mathf.Exp( Zoom ) / Mathf.Exp( 1 )).ToString( "0.0" ) + "x" );
+                cpc.Zoom = GUI.HorizontalSlider( UILayout.GetRectX( line, 2, 9 ), cpc.Zoom, 1.0f, 8.0f );
+                GUI.Label( UILayout.GetRectX( line, 10, 11 ), (Mathf.Exp( cpc.Zoom ) / Mathf.Exp( 1 )).ToString( "0.0" ) + "x" );
                 //}
                 line++;
 
@@ -108,8 +108,8 @@ namespace CameraToolsKatnissified
                 GUI.Label( UILayout.GetRectX( line ), "Camera Shake:" );
                 line++;
 
-                ShakeMultiplier = GUI.HorizontalSlider( UILayout.GetRectX( line, 0, 9 ), ShakeMultiplier, 0.0f, 1.0f );
-                GUI.Label( UILayout.GetRectX( line, 10, 11 ), ShakeMultiplier.ToString( "0.00" ) + "x" );
+                cpc.ShakeMultiplier = GUI.HorizontalSlider( UILayout.GetRectX( line, 0, 9 ), cpc.ShakeMultiplier, 0.0f, 1.0f );
+                GUI.Label( UILayout.GetRectX( line, 10, 11 ), cpc.ShakeMultiplier.ToString( "0.00" ) + "x" );
 
                 //Rect scrollRect = new Rect( GUI_MARGIN, CONTENT_TOP + (line * ENTRY_HEIGHT), CONTENT_WIDTH, 6 * ENTRY_HEIGHT );
                 //GUI.Box( scrollRect, string.Empty );
@@ -146,7 +146,7 @@ namespace CameraToolsKatnissified
                 line++;
                 if( GUI.Button( UILayout.GetRect( 0, line ), "+" ) )
                 {
-                    cpc.Behaviours.Add( CameraBehaviour.GetBehaviour( CameraBehaviour.GetDefaultType() ) );
+                    cpc.Behaviours.Add( CameraBehaviour.GetBehaviour( CameraBehaviour.GetDefaultType(), cpc ) );
                 }
                 if( GUI.Button( UILayout.GetRect( 1, line ), "-" ) )
                 {

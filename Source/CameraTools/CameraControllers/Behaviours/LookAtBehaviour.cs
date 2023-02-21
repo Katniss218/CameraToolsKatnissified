@@ -11,13 +11,33 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
     [DisallowMultipleComponent]
     public sealed class LookAtBehaviour : CameraBehaviour
     {
-        public Part Target { get; private set; } = null;
+        public enum UpDirection
+        {
+            /// Use the inverse of the gravity vector for the up direction.
+            Gravity,
+            /// Use the parent object's up direction for the up direction.
+            /// World's up if parent is null.
+            Parent
+        }
 
-        public Vector3 UpDirection { get; set; } = Vector3.up;
+        public Transform Target { get; private set; }
+
+        public UpDirection Up { get; set; }
+
+        /// If true, it will auto-zoom to the target.
+        public bool UseZoom { get; set; }
+
+        /// How big the object should appear.
+        public float ZoomAngularSize { get; set; }
+
+        /// If 1, the angular size will be constant, if 0, the zoom will not change with distance. Values in-between use lerp?
+        public float ZoomDistanceFactor { get; set; }
+
+        Vector3 _upDir = Vector3.up;
 
         bool _settingTargetEnabled;
 
-        public LookAtBehaviour() : base()
+        public LookAtBehaviour( CameraPlayerController controller ) : base( controller )
         {
 
         }
@@ -30,11 +50,11 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             {
                 if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( Ctm.ActiveVessel ) == FlightCamera.Modes.ORBITAL) )
                 {
-                    UpDirection = Vector3.up;
+                    _upDir = Vector3.up;
                 }
                 else
                 {
-                    UpDirection = -FlightGlobals.getGeeForceAtPosition( Ctm.ActiveVessel.GetWorldPos3D() ).normalized;
+                    _upDir = -FlightGlobals.getGeeForceAtPosition( Ctm.ActiveVessel.GetWorldPos3D() ).normalized;
                 }
             }
             else
@@ -58,7 +78,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 Part newTarget = Utils.Misc.GetPartFromMouse();
                 if( newTarget != null )
                 {
-                    Target = newTarget;
+                    Target = newTarget.transform;
                 }
             }
         }
@@ -70,23 +90,28 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 return;
             }
 
-           // if( Ctm.FlightCamera.Target != null )
-           // {
-           //     Ctm.FlightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
-           // }
+            // if( Ctm.FlightCamera.Target != null )
+            // {
+            //     Ctm.FlightCamera.SetTargetNone(); //dont go to next vessel if vessel is destroyed
+            // }
 
             if( Target != null )
             {
-                Vector3 toTargetDirection = (Target.transform.position - this.Pivot.transform.position).normalized;
+                Vector3 toTargetDirection = (Target.position - this.Pivot.position).normalized;
 
-                this.Pivot.transform.rotation = Quaternion.LookRotation( toTargetDirection, UpDirection );
+                this.Pivot.rotation = Quaternion.LookRotation( toTargetDirection, _upDir );
             }
 
-            float fov = 60 / (Mathf.Exp( Ctm.Zoom ) / Mathf.Exp( 1 ));
-            if( Ctm.FlightCamera.FieldOfView != fov )
+            if( UseZoom )
             {
-                Ctm.FlightCamera.SetFoV( fov );
+                float cameraDistance = Vector3.Distance( Target.transform.position, this.Pivot.transform.position );
+
+                float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + ZoomAngularSize, 1, 150 );
+
+                Controller.Zoom = Mathf.Log( 60 / targetFoV ) + 1;
+                //float fov = 60 / (Mathf.Exp( Zoom ) / Mathf.Exp( 1 ));
             }
+
         }
 
         public override void DrawGui( UILayout UILayout, ref int line )

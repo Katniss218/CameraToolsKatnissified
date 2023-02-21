@@ -1,5 +1,6 @@
 ﻿using CameraToolsKatnissified.Animation;
 using CameraToolsKatnissified.UI;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,8 +8,32 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 {
     public sealed class PathBehaviour : CameraBehaviour
     {
-        public List<CameraPath> AvailablePaths { get; private set; }
+        [Flags]
+        public enum FrameOfReferenceFrameUpdateMode
+        {
+            /// Doesn't update the reference frame.
+            None = 0,
+            /// Updates position every frame.
+            Position = 1,
+            /// Updates rotation every frame.
+            Rotation = 2,
+            /// Updates position and rotation every frame.
+            PositionAndRotation = 3
+        }
+
+        public FrameOfReferenceFrameUpdateMode ReferenceFrameUpdateMode { get; set; }
+
         public CameraPath CurrentPath { get; private set; }
+
+        /// If true, applies position using path.
+        public bool UsePosition { get; set; }
+        /// If true, applies rotation using path.
+        public bool UseRotation { get; set; }
+        /// If true, applies zoom using path.
+        public bool UseZoom { get; set; }
+
+
+        List<CameraPath> _availablePaths;
 
         // GUI - the location of the path scroll view.
         public Vector2 _pathSelectScrollPos;
@@ -30,7 +55,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             }
         }
 
-        public PathBehaviour() : base()
+        public PathBehaviour( CameraPlayerController controller ) : base( controller )
         {
             OnLoad( null );
         }
@@ -39,13 +64,13 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         {
             // DeselectKeyframe();
             CurrentPath = null;
-            AvailablePaths = new List<CameraPath>();
+            _availablePaths = new List<CameraPath>();
 
             ConfigNode pathFileNode = ConfigNode.Load( CameraToolsManager.PATHS_FILE );
 
             foreach( var n in pathFileNode.GetNode( "CAMERAPATHS" ).GetNodes( "CAMERAPATH" ) )
             {
-                AvailablePaths.Add( CameraPath.LoadOld( n ) );
+                _availablePaths.Add( CameraPath.LoadOld( n ) );
             }
         }
 
@@ -79,7 +104,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 CameraTransformation firstFrame = CurrentPath.Evaulate( 0 );
                 this.Pivot.transform.position = _pathSpaceL2W.MultiplyPoint( firstFrame.position );
                 this.Pivot.transform.rotation = _pathRootRotation * firstFrame.rotation;
-                Ctm.Zoom = firstFrame.zoom;
+                Controller.Zoom = firstFrame.zoom;
             }
             else
             {
@@ -159,7 +184,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 // whenever the frame switches to vessel-centric, it fucks itself and goes to space.
                 this.Pivot.localPosition = _pathSpaceL2W.MultiplyPoint( Vector3.Lerp( pivotPositionPathSpace, camTransformPath.position, CurrentPath.LerpRate * Time.fixedDeltaTime ) ); // time deltatime because we're moving the position over time.
                 this.Pivot.localRotation = _pathRootRotation * Quaternion.Slerp( pivotRotationPathSpace, camTransformPath.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
-                Ctm.Zoom = Mathf.Lerp( Ctm.Zoom, camTransformPath.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
+                Controller.Zoom = Mathf.Lerp( Controller.Zoom, camTransformPath.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
 
                 //zoom
                 //cameraBeh.ZoomFactor = Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 );
@@ -168,11 +193,11 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 //if( cameraBeh.CurrentFov != cameraBeh.ManualFov )
                 //{
                 //   cameraBeh.CurrentFov = Mathf.Lerp( cameraBeh.CurrentFov, cameraBeh.ManualFov, 0.1f );
-                float fov = 60 / (Mathf.Exp( Ctm.Zoom ) / Mathf.Exp( 1 ));
-                if( Ctm.FlightCamera.FieldOfView != fov )
-                {
-                    Ctm.FlightCamera.SetFoV( fov );
-                }
+                //float fov = 60 / (Mathf.Exp( Controller.Zoom ) / Mathf.Exp( 1 ));
+                //if( Ctm.FlightCamera.FieldOfView != fov )
+                //{
+                //    Ctm.FlightCamera.SetFoV( fov );
+                //}
                 //}
             }
         }
@@ -226,17 +251,17 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             GUI.BeginGroup( pSelectRect );
 
             Rect scrollRect = new Rect( indent, indent, scrollRectSize, scrollRectSize );
-            float scrollHeight = Mathf.Max( scrollRectSize, 20 * AvailablePaths.Count );
+            float scrollHeight = Mathf.Max( scrollRectSize, 20 * _availablePaths.Count );
             Rect scrollViewRect = new Rect( 0, 0, scrollRectSize - 20, scrollHeight );
             _pathSelectScrollPos = GUI.BeginScrollView( scrollRect, _pathSelectScrollPos, scrollViewRect );
 
             bool isAnyPathSelected = false;
 
-            for( int i = 0; i < AvailablePaths.Count; i++ )
+            for( int i = 0; i < _availablePaths.Count; i++ )
             {
-                if( GUI.Button( new Rect( 0, i * 20, scrollRectSize - 30, 20 ), AvailablePaths[i].PathName ) )
+                if( GUI.Button( new Rect( 0, i * 20, scrollRectSize - 30, 20 ), _availablePaths[i].PathName ) )
                 {
-                    CurrentPath = AvailablePaths[i];
+                    CurrentPath = _availablePaths[i];
                     isAnyPathSelected = true;
                 }
             }

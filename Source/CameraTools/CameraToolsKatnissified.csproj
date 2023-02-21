@@ -38,6 +38,8 @@
   <ItemGroup>
     <Compile Include="CameraController.cs" />
     <Compile Include="CameraControllers\Behaviours\ConstantMovementBehaviour.cs" />
+    <Compile Include="CameraControllers\Behaviours\FixedDistanceBehaviour.cs" />
+    <Compile Include="CameraControllers\Behaviours\FreeBehaviour.cs" />
     <Compile Include="CameraControllers\CameraPlayerController.cs" />
     <Compile Include="CameraControllers\CameraBehaviour.cs" />
     <Compile Include="CameraControllers\Behaviours\LookAtBehaviour.cs" />

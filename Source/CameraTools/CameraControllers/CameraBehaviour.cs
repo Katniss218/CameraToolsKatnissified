@@ -12,10 +12,13 @@ namespace CameraToolsKatnissified.CameraControllers
     {
         // This class should be a base camera behaviour that you can derive from to make new camera modes.
 
+        public CameraPlayerController Controller { get; set; }
+
         protected CameraToolsManager Ctm { get; private set; }
 
-        public CameraBehaviour()
+        public CameraBehaviour( CameraPlayerController controller )
         {
+            this.Controller = controller;
             Ctm = CameraToolsManager.Instance;
         }
 
@@ -120,14 +123,14 @@ namespace CameraToolsKatnissified.CameraControllers
             return cachedCameraTypes[0];
         }
 
-        public static CameraBehaviour GetBehaviour( Type type )
+        public static CameraBehaviour GetBehaviour( Type type, CameraPlayerController cpc )
         {
             if( !typeof( CameraBehaviour ).IsAssignableFrom( type ) )
             {
                 throw new ArgumentException( $"The type must defive from '{typeof( CameraBehaviour ).FullName}'." );
             }
 
-            return (CameraBehaviour)Activator.CreateInstance( type, new object[] { } );
+            return (CameraBehaviour)Activator.CreateInstance( type, new object[] { cpc } );
         }
     }
 }

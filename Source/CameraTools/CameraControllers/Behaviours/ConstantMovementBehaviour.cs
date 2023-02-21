@@ -46,7 +46,10 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         // This behaviour applies a constant rotation to the pivot.
         // it doesn't follow anything
 
+        public ConstantMovementBehaviour( CameraPlayerController controller ) : base( controller )
+        {
 
+        }
 
 
         /// Calculate the transformation to apply in this frame in local space of this.Pivot.
@@ -62,12 +65,10 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
         protected override void OnStartPlaying()
         {
-            throw new NotImplementedException();
         }
 
         protected override void OnStopPlaying()
         {
-            throw new NotImplementedException();
         }
 
         public override void FixedUpdate( bool isPlaying )
@@ -84,7 +85,6 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
         public override void DrawGui( UILayout UILayout, ref int line )
         {
-            throw new NotImplementedException();
         }
     }
 }
