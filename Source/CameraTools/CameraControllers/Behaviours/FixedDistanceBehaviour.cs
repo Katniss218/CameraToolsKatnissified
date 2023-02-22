@@ -48,19 +48,52 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
         public override void FixedUpdate( bool isPlaying )
         {
-            if( this.Controller.CameraTargetWorldSpace == null )
+            if( isPlaying )
             {
-                return;
-            }
-            if( _Mode == Mode.Fixed )
-            {
-                Vector3 dir = this.Controller.CameraTargetWorldSpace.Value - this.Pivot.position;
-            }
-            else if( _Mode == Mode.Ease )
-            {
+                if( this.Pivot.parent == null )
+                {
+                    return;
+                }
 
+
+                // project position onto vector from parent to target. (immediately snaps the camera inline).
+
+
+                Vector3 dir;
+                float desiredDisplacementFromParent;
+                float currentDisplacementFromParent = this.Pivot.localPosition.magnitude;
+                if( this.Controller.CameraTargetWorldSpace == null )
+                {
+                    desiredDisplacementFromParent = -Distance; // negative moves back.
+                    dir = this.Pivot.forward;
+                }
+                else
+                {
+                    Vector3 targetPos = this.Controller.CameraTargetWorldSpace.Value;
+                    float targetDist = Vector3.Distance( targetPos, this.Pivot.parent.position );
+                    dir = targetPos - this.Pivot.parent.position;
+
+                    desiredDisplacementFromParent = targetDist - Distance; // negative moves back.
+                }
+                // remaining = full - current as percentage of what is desired.
+                //float remainingDisplacementPercentage = 1 - (currentDisplacementFromParent / desiredDisplacementFromParent);
+#warning TODO - the camera goes away to infinity slowly when the parent lies too close.
+
+                float remainingDisplacement = desiredDisplacementFromParent - currentDisplacementFromParent;
+                //
+
+                dir.Normalize();
+
+                Vector3 displaceWorld = dir * remainingDisplacement;
+
+                this.Pivot.position += displaceWorld;
+
+
+
+                // clamp in range of min to max distance.
             }
         }
+
 
         public override void DrawGui( UILayout UILayout, ref int line )
         {
