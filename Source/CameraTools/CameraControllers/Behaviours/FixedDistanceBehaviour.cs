@@ -82,11 +82,13 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 float remainingDisplacement = desiredDisplacementFromParent - currentDisplacementFromParent;
                 //
 
+                Debug.Log( $"desiredDisplacementFromParent {desiredDisplacementFromParent}\n currentDisplacementFromParent {currentDisplacementFromParent}\n remainingDisplacement {remainingDisplacement}" );
+
                 dir.Normalize();
 
-                Vector3 displaceWorld = dir * remainingDisplacement;
+                Vector3 displaceWorld = dir * desiredDisplacementFromParent;
 
-                this.Pivot.position += displaceWorld;
+                this.Pivot.position = this.Pivot.parent.position + displaceWorld;
 
 
 
