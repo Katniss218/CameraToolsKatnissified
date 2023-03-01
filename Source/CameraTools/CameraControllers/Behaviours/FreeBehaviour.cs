@@ -101,6 +101,8 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             ApplySmoothLength();
             _velocityWS = Vector3.zero;
             _angularVelocityWS = Quaternion.identity;
+            _scrollVelocity = 0.0f;
+            _isOrbiting = false;
         }
 
         void ApplySmoothLength()
@@ -133,7 +135,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             angularVelocity.ToAngleAxis( out float anglePerSec, out Vector3 axis );
             // dir
             // tangential velocity magnitude per unit time is radius * angular displacement per unit time
-            return Vector3.Cross( axis, where.normalized ) * where.magnitude * anglePerSec; // might need to be converted to radians.
+            return Vector3.Cross( axis, where.normalized ) * where.magnitude * (anglePerSec * Mathf.Deg2Rad); // might need to be converted to radians.
         }
 
         /// Returns the angular velocity for a circular orbit at a distance from the origin and its tangent velocity.
@@ -148,7 +150,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             // theta * r = v
             // theta = v / r
             float anglePerSec = velocity.magnitude / where.magnitude; // angle = velocity / radius
-            return Quaternion.AngleAxis( anglePerSec, axis ); // angle possibly might need to be converted to degrees.
+            return Quaternion.AngleAxis( (anglePerSec * Mathf.Rad2Deg), axis ); // angle possibly might need to be converted to degrees.
                                                               // vice versa on the other end.
         }
 
@@ -168,6 +170,16 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 {
                     if( Input.GetKey( KeyCode.Mouse0 ) ) // mouse2 - middle
                     {
+                        if( _isOrbiting )
+                        {
+                            Debug.Log( "stop orbit" );
+                            // convert orbital angular velocity to normal velocity.
+                            // rotational (angular) velocity remains so that it's not abruptly stopping.
+                            this._velocityWS = GetVelocity( this._angularVelocityWS, this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value );
+                            this._angularVelocityWS = Quaternion.identity;
+                            _isOrbiting = false;
+                        }
+
                         // x inputaxis, y inputaxis copy from other controller, but add to velocity instead.
                         // limit to max acceleration.
                         // how do we limit? degrees per second.
@@ -183,15 +195,12 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                     else
                     {
                         Debug.Log( "ORBIT" );
-                        if( !_isOrbiting )
+                        if( !_isOrbiting && this.Controller.CameraTargetWorldSpace != null ) // start orbiting
                         {
-                            Debug.Log( "ORBIT 2" );
+                            Debug.Log( "start orbit" );
                             // get angular velocity from velocity and distance.
                             this._angularVelocityWS = GetAngularVelocity( this._velocityWS, this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value );
                             this._velocityWS = Vector3.zero;
-                        }
-                        else
-                        {
                             _isOrbiting = true;
                         }
                         // orbit.
@@ -207,11 +216,11 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 {
                     if( _isOrbiting )
                     {
-                        Debug.Log( "o3" );
+                        Debug.Log( "stop orbit" );
                         // convert orbital angular velocity to normal velocity.
                         // rotational (angular) velocity remains so that it's not abruptly stopping.
                         this._velocityWS = GetVelocity( this._angularVelocityWS, this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value );
-
+                        this._angularVelocityWS = Quaternion.identity;
                         _isOrbiting = false;
                     }
                 }
@@ -240,7 +249,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 // Apply the accelerations based on avg inputs.
                 if( _isOrbiting )
                 {
-
+                    this.Pivot.RotateAround( this.Controller.CameraTargetWorldSpace.Value, axis, scaledAngle );
                 }
                 else
                 {
