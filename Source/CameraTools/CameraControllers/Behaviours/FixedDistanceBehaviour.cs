@@ -110,11 +110,13 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                     return;
                 }
 
-                Vector3 pivotPos = this.Pivot.position;
-                Vector3 targetPos = this.Controller.CameraTargetWorldSpace == null ? pivotPos : this.Controller.CameraTargetWorldSpace.Value;
-                Vector3 dir = this.Controller.CameraTargetWorldSpace == null ? this.Pivot.forward : (targetPos - pivotPos).normalized;
+                Vector3 pivotPos = this.Pivot.parent.position;
+                Vector3 dir = this.Controller.CameraTargetWorldSpace == null ? this.Pivot.forward : (this.Controller.CameraTargetWorldSpace.Value - pivotPos).normalized;
                 // project position onto vector from parent to target. (immediately snaps the camera inline).
 
+#warning TODO - dir value dances around. The this.pivot.position (self pivot) point changes rapidly (and overcorrects?)
+                Debug.Log( "dir: " + dir );
+                Debug.Log( "tgt: " + this.Controller.CameraTargetWorldSpace.Value + ", " + pivotPos );
                 float position = GetPosition1D( dir, pivotPos );
                 float desiredPosition = Distance;
 
@@ -123,7 +125,6 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 // Never be further/closer from target than min/max distance.
                 newPosition = Mathf.Clamp( newPosition, MinDistance == null ? float.MinValue : MinDistance.Value, MaxDistance == null ? float.MaxValue : MaxDistance.Value );
 
-#warning TODO - doesn't work.
                 Vector3 newWorldPos = GetPosition3D( dir, newPosition );
 
                 this.Pivot.position = newWorldPos;
