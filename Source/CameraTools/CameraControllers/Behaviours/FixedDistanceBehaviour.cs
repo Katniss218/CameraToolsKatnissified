@@ -66,30 +66,24 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 return desiredPosition;
             }
 
-            Debug.Log( $"desiredPosition: {desiredPosition}" );
             if( _Mode == Mode.Velocity )
             {
-                float DistanceRemaining = desiredPosition - position;
-                if( DistanceRemaining > 0 ) // current position too high.
+                if( position > desiredPosition )
                 {
-                    Debug.Log( $"remaining: {DistanceRemaining}" );
                     float newPos = position - (Speed * deltaTime);
                     if( newPos < desiredPosition ) // don't overshoot below the desired pos.
                     {
                         newPos = desiredPosition;
                     }
-                    Debug.Log( $"newPos: {newPos}" );
                     return newPos;
                 }
-                if( DistanceRemaining < 0 ) // current position too low.
+                if( position < desiredPosition )
                 {
-                    Debug.Log( $"remaining: {DistanceRemaining}" );
                     float newPos = position + (Speed * deltaTime);
                     if( newPos > desiredPosition ) // don't overshoot above the desired pos.
                     {
                         newPos = desiredPosition;
                     }
-                    Debug.Log( $"newPos: {newPos}" );
                     return newPos;
                 }
                 return desiredPosition; // Already at the target.
@@ -123,7 +117,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 //  - Negative - target behind camera.
 #warning TODO - distance seems to overshoot
 
-                Vector3 posRelativeToTarget = this.Pivot.parent.position - this.Controller.CameraTargetWorldSpace.Value;
+                Vector3 posRelativeToTarget = this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value;
 
                 float position = -GetPosition1D( directionToTarget, posRelativeToTarget ); // swap signs because we want distance to be positive behind the ray
                 float desiredPosition = Distance;
