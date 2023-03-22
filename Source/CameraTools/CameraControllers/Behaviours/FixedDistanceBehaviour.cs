@@ -38,9 +38,8 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
         private float GetPosition1D( Vector3 dir, Vector3 position )
         {
-            // returns position along the vector in one dimension.
-            // project the vector
-            // length = magnitude, sign = dot.
+            // Returns the distance along a ray of a position projected onto the ray.
+
             Vector3 newVector = Vector3.Project( position, dir );
             if( Vector3.Dot( dir, newVector.normalized ) < 0 )
             {
@@ -51,7 +50,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
         private Vector3 GetPosition3D( Vector3 dir, float position )
         {
-            // returns the position along the direction vector.
+            // Returns the position at a certain distance along a ray.
             return dir * position;
         }
 
@@ -67,25 +66,30 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 return desiredPosition;
             }
 
+            Debug.Log( $"desiredPosition: {desiredPosition}" );
             if( _Mode == Mode.Velocity )
             {
-                float relativePosition = desiredPosition - position;
-                if( relativePosition > 0 ) // current position too high.
+                float DistanceRemaining = desiredPosition - position;
+                if( DistanceRemaining > 0 ) // current position too high.
                 {
+                    Debug.Log( $"remaining: {DistanceRemaining}" );
                     float newPos = position - (Speed * deltaTime);
                     if( newPos < desiredPosition ) // don't overshoot below the desired pos.
                     {
                         newPos = desiredPosition;
                     }
+                    Debug.Log( $"newPos: {newPos}" );
                     return newPos;
                 }
-                if( relativePosition < 0 ) // current position too low.
+                if( DistanceRemaining < 0 ) // current position too low.
                 {
+                    Debug.Log( $"remaining: {DistanceRemaining}" );
                     float newPos = position + (Speed * deltaTime);
                     if( newPos > desiredPosition ) // don't overshoot above the desired pos.
                     {
                         newPos = desiredPosition;
                     }
+                    Debug.Log( $"newPos: {newPos}" );
                     return newPos;
                 }
                 return desiredPosition; // Already at the target.
@@ -110,14 +114,18 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                     return;
                 }
 
-                Vector3 pivotPos = this.Pivot.parent.position;
-                Vector3 dir = this.Controller.CameraTargetWorldSpace == null ? this.Pivot.forward : (this.Controller.CameraTargetWorldSpace.Value - pivotPos).normalized;
+                Vector3 directionToTarget = this.Controller.CameraTargetWorldSpace == null ? this.Pivot.forward : (this.Controller.CameraTargetWorldSpace.Value - this.Pivot.parent.position).normalized;
+                // origin at target, away from pivot.
                 // project position onto vector from parent to target. (immediately snaps the camera inline).
 
-#warning TODO - dir value dances around. The this.pivot.position (self pivot) point changes rapidly (and overcorrects?)
-                Debug.Log( "dir: " + dir );
-                Debug.Log( "tgt: " + this.Controller.CameraTargetWorldSpace.Value + ", " + pivotPos );
-                float position = GetPosition1D( dir, pivotPos );
+                // Position = distance along the axis from the target.
+                //  - Positive - target in front of camera.
+                //  - Negative - target behind camera.
+#warning TODO - distance seems to overshoot
+
+                Vector3 posRelativeToTarget = this.Pivot.parent.position - this.Controller.CameraTargetWorldSpace.Value;
+
+                float position = -GetPosition1D( directionToTarget, posRelativeToTarget ); // swap signs because we want distance to be positive behind the ray
                 float desiredPosition = Distance;
 
                 float newPosition = Step( position, desiredPosition, Time.fixedDeltaTime );
@@ -125,9 +133,9 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 // Never be further/closer from target than min/max distance.
                 newPosition = Mathf.Clamp( newPosition, MinDistance == null ? float.MinValue : MinDistance.Value, MaxDistance == null ? float.MaxValue : MaxDistance.Value );
 
-                Vector3 newWorldPos = GetPosition3D( dir, newPosition );
+                Vector3 newPosRelativeToTarget = GetPosition3D( directionToTarget, -newPosition ); // swap signs because the method wants the position to be negative behind the ray.
 
-                this.Pivot.position = newWorldPos;
+                this.Pivot.position = newPosRelativeToTarget + this.Controller.CameraTargetWorldSpace.Value;
             }
         }
 

@@ -185,8 +185,11 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                         // how do we limit? degrees per second.
 
                         Debug.Log( "PAN" );
-                        this._angularVelocityWS *= Quaternion.AngleAxis( mouseX * MaxAngularAcceleration * Time.fixedDeltaTime, Vector3.up );
-                        this._angularVelocityWS *= Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration * Time.fixedDeltaTime, Vector3.right );
+                        // pan around vertical.
+                        this._angularVelocityWS *= Quaternion.AngleAxis( mouseX * MaxAngularAcceleration * Time.fixedDeltaTime, this.Pivot.up );
+                        // and around horizontal.
+                        this._angularVelocityWS *= Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration * Time.fixedDeltaTime, this.Pivot.right );
+
                         //_angularVelocityWS.ToAngleAxis( out float a, out Vector3 ax );
                         //this._angularVelocityWS = Quaternion.LookRotation( ax, _upDir );
 
@@ -205,8 +208,8 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                         }
                         // orbit.
 
-                        this._angularVelocityWS *= Quaternion.AngleAxis( mouseX * MaxAngularAcceleration * Time.fixedDeltaTime, Vector3.up );
-                        this._angularVelocityWS *= Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration * Time.fixedDeltaTime, Vector3.right );
+                        this._angularVelocityWS *= Quaternion.AngleAxis( mouseX * MaxAngularAcceleration * Time.fixedDeltaTime, this.Pivot.up );
+                        this._angularVelocityWS *= Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration * Time.fixedDeltaTime, this.Pivot.right );
                         //_angularVelocityWS.ToAngleAxis( out float a, out Vector3 ax );
                         //this._angularVelocityWS = Quaternion.LookRotation( ax, _upDir );
 
