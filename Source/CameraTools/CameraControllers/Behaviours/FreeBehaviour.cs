@@ -208,7 +208,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                         }
                         // orbit.
 
-#warning TODO - alternatively, pitch and yaw is a possibility. Also, rigidbody is a possibility maybe too.
+#warning TODO - alternatively, pitch and yaw is a possibility. Also, rigidbody is a possibility maybe too. Or storing the angular velocity as axis and angular speed.
                         this._angularVelocityWS = Quaternion.AngleAxis( mouseX * MaxAngularAcceleration, this.Pivot.up ) * this._angularVelocityWS; // Non-commutative
                         this._angularVelocityWS = Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration, this.Pivot.right ) * this._angularVelocityWS; // Non-commutative
 
