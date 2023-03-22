@@ -40,7 +40,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
     {
         /// How many frames to smooth over. More = smoother input, but less responsive.
         /// >1 - smoothing, ==1 - no smoothing, <=0 - invalid.
-        public int SmoothLength { get; set; } = 10;
+        public int SmoothLength { get; set; } = 20;
 
         /// Multiplier for scroll wheel input.
         public float ScrollSensitivity { get; set; } = 1.0f;
@@ -50,11 +50,11 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         /// Multiplier for keyboard input.
         public float KeyboardSensitivity { get; set; } = 1.0f;
 
-        public float MaxAngularAcceleration { get; set; } = 1.0f;
-        public float MaxAcceleration { get; set; } = 1.0f;
+        public float MaxAngularAcceleration { get; set; } = 5.0f;
+        public float MaxAcceleration { get; set; } = 5.0f;
         /// Every frame, the _velocity and _angularVelocity are multiplied with this.
-        public float Drag { get; set; } = 0.9f;
-        public float AngularDrag { get; set; } = 0.9f;
+        public float Drag { get; set; } = 0.95f;
+        public float AngularDrag { get; set; } = 0.95f;
 
         bool _isOrbiting;
 
@@ -168,7 +168,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 // then the camera continues moving tangentially with the velocity it had before.
                 if( Input.GetKey( KeyCode.Mouse1 ) ) // mouse1 - right
                 {
-                    if( Input.GetKey( KeyCode.Mouse0 ) ) // mouse2 - middle
+                    if( Input.GetKey( KeyCode.Mouse0 ) ) // mouse0 - left
                     {
                         if( _isOrbiting )
                         {
@@ -185,10 +185,10 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                         // how do we limit? degrees per second.
 
                         Debug.Log( "PAN" );
-                        // pan around vertical.
-                        this._angularVelocityWS *= Quaternion.AngleAxis( mouseX * MaxAngularAcceleration * Time.fixedDeltaTime, this.Pivot.up );
-                        // and around horizontal.
-                        this._angularVelocityWS *= Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration * Time.fixedDeltaTime, this.Pivot.right );
+
+                        // this assumes angularvelocityWS is relative to the axis.
+                        this._angularVelocityWS = Quaternion.AngleAxis( mouseX * MaxAngularAcceleration, this.Pivot.up ) * this._angularVelocityWS; // Non-commutative
+                       // this._angularVelocityWS = Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration, this.Pivot.right ) * this._angularVelocityWS; // Non-commutative
 
                         //_angularVelocityWS.ToAngleAxis( out float a, out Vector3 ax );
                         //this._angularVelocityWS = Quaternion.LookRotation( ax, _upDir );
@@ -208,11 +208,12 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                         }
                         // orbit.
 
-                        this._angularVelocityWS *= Quaternion.AngleAxis( mouseX * MaxAngularAcceleration * Time.fixedDeltaTime, this.Pivot.up );
-                        this._angularVelocityWS *= Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration * Time.fixedDeltaTime, this.Pivot.right );
+#warning TODO - alternatively, pitch and yaw is a possibility.
+                        this._angularVelocityWS = Quaternion.AngleAxis( mouseX * MaxAngularAcceleration, this.Pivot.up ) * this._angularVelocityWS; // Non-commutative
+                        this._angularVelocityWS = Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration, this.Pivot.right ) * this._angularVelocityWS; // Non-commutative
+
                         //_angularVelocityWS.ToAngleAxis( out float a, out Vector3 ax );
                         //this._angularVelocityWS = Quaternion.LookRotation( ax, _upDir );
-
                     }
                 }
                 else
@@ -257,8 +258,13 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 else
                 {
                     this.Pivot.position += this._velocityWS * Time.fixedDeltaTime;
-                    this.Pivot.rotation *= scaledAngularVelocity;
+                    this.Pivot.rotation = scaledAngularVelocity * this.Pivot.rotation; // Non-commutative
                 }
+
+                _velocityWS *= Drag;
+
+                angle *= AngularDrag;
+                _angularVelocityWS = Quaternion.AngleAxis( angle, axis );
 
                 /*left + right
                 left + middle
@@ -274,10 +280,6 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 // scroll wheel zooms you in and out.
                 // - as a multiplier to the normal Zoom value.
 
-                _velocityWS *= Drag;
-
-                angle *= AngularDrag;
-                _angularVelocityWS = Quaternion.AngleAxis( angle, axis );
             }
         }
 
