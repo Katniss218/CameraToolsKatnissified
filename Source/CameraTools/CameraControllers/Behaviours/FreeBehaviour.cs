@@ -186,9 +186,9 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
                         Debug.Log( "PAN" );
 
-                        // this assumes angularvelocityWS is relative to the axis.
+                        // First add the rotation in world space, and then rotate that by the leftover rotation.
                         this._angularVelocityWS = Quaternion.AngleAxis( mouseX * MaxAngularAcceleration, this.Pivot.up ) * this._angularVelocityWS; // Non-commutative
-                       // this._angularVelocityWS = Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration, this.Pivot.right ) * this._angularVelocityWS; // Non-commutative
+                        this._angularVelocityWS = Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration, this.Pivot.right ) * this._angularVelocityWS; // Non-commutative
 
                         //_angularVelocityWS.ToAngleAxis( out float a, out Vector3 ax );
                         //this._angularVelocityWS = Quaternion.LookRotation( ax, _upDir );
@@ -208,7 +208,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                         }
                         // orbit.
 
-#warning TODO - alternatively, pitch and yaw is a possibility.
+#warning TODO - alternatively, pitch and yaw is a possibility. Also, rigidbody is a possibility maybe too.
                         this._angularVelocityWS = Quaternion.AngleAxis( mouseX * MaxAngularAcceleration, this.Pivot.up ) * this._angularVelocityWS; // Non-commutative
                         this._angularVelocityWS = Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration, this.Pivot.right ) * this._angularVelocityWS; // Non-commutative
 
@@ -243,22 +243,19 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
                     this._velocityWS += sum;
                 }
-#warning TODO - camera values spin out of control.
 
                 _angularVelocityWS.ToAngleAxis( out float angle, out Vector3 axis );
-
-                float scaledAngle = angle * Time.fixedDeltaTime;
-                Quaternion scaledAngularVelocity = Quaternion.AngleAxis( scaledAngle, axis );
 
                 // Apply the accelerations based on avg inputs.
                 if( _isOrbiting )
                 {
-                    this.Pivot.RotateAround( this.Controller.CameraTargetWorldSpace.Value, axis, scaledAngle );
+                    this.Pivot.RotateAround( this.Controller.CameraTargetWorldSpace.Value, axis, angle * Time.fixedDeltaTime );
                 }
                 else
                 {
+#warning TODO - this is very broken with fast rotations, because when the unmultiplied rotation over frame reaches 180 degrees, the angle and axis flips.
                     this.Pivot.position += this._velocityWS * Time.fixedDeltaTime;
-                    this.Pivot.rotation = scaledAngularVelocity * this.Pivot.rotation; // Non-commutative
+                    this.Pivot.rotation = Quaternion.AngleAxis( angle * Time.fixedDeltaTime, axis ) * this.Pivot.rotation; // Non-commutative
                 }
 
                 _velocityWS *= Drag;
