@@ -1,4 +1,5 @@
 ﻿using CameraToolsKatnissified.UI;
+using CameraToolsKatnissified.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -124,6 +125,28 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
         public override void DrawGui( UILayout UILayout, ref int line )
         {
+            GUI.Label( UILayout.GetRectX( line, 1, 9 ), $"Reference: {ReferenceFrame}" );
+            if( GUI.Button( UILayout.GetRect( 10, line ), "<" ) )
+            {
+                ReferenceFrame = Misc.CycleEnum( ReferenceFrame, -1 );
+            }
+            if( GUI.Button( UILayout.GetRect( 11, line ), ">" ) )
+            {
+                ReferenceFrame = Misc.CycleEnum( ReferenceFrame, 1 );
+            }
+            line++;
+
+
+            GUI.Label( UILayout.GetRectX( line, 1, 2 ), "T. rate:" );
+            TranslationRate = new Vector3( float.Parse( GUI.TextField( UILayout.GetRectX( line, 3, 5 ), TranslationRate.x.ToString() ) ), TranslationRate.y, TranslationRate.z );
+            TranslationRate = new Vector3( TranslationRate.x, float.Parse( GUI.TextField( UILayout.GetRectX( line, 6, 8 ), TranslationRate.y.ToString() ) ), TranslationRate.z );
+            TranslationRate = new Vector3( TranslationRate.x, TranslationRate.y, float.Parse( GUI.TextField( UILayout.GetRectX( line, 9, 11 ), TranslationRate.z.ToString() ) ) );
+            line++;
+
+            GUI.Label( UILayout.GetRectX( line, 1, 2 ), "R. rate:" );
+            RotationRate = Quaternion.Euler( float.Parse( GUI.TextField( UILayout.GetRectX( line, 3, 5 ), RotationRate.eulerAngles.x.ToString() ) ), RotationRate.eulerAngles.y, RotationRate.eulerAngles.z );
+            RotationRate = Quaternion.Euler( RotationRate.eulerAngles.x, float.Parse( GUI.TextField( UILayout.GetRectX( line, 6, 8 ), RotationRate.eulerAngles.y.ToString() ) ), RotationRate.eulerAngles.z );
+            RotationRate = Quaternion.Euler( RotationRate.eulerAngles.x, RotationRate.eulerAngles.y, float.Parse( GUI.TextField( UILayout.GetRectX( line, 9, 11 ), RotationRate.eulerAngles.z.ToString() ) ) );
         }
     }
 }

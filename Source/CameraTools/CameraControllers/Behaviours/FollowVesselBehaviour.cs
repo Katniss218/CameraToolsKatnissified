@@ -22,65 +22,62 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
         public enum ConstraintMode
         {
+            /// <summary>
+            /// Don't constraint the camera movement.
+            /// </summary>
             None,
+            /// <summary>
             /// Move accumulatedOffset along the prograde-retrograde axis only.
+            /// </summary>
             Prograde,
+            /// <summary>
             /// Move accumulatedOffset along the normal-antinormal axis only.
+            /// </summary>
             Normal,
+            /// <summary>
             /// Move accumulatedOffset along the radial-antiradial axis only.
+            /// </summary>
             Radial,
+            /// <summary>
             /// Move accumulatedOffset along the gravity vector axis only.
+            /// </summary>
             GravityVector,
-            /// Move accumulatedOffset along the vessel's forward-back axis only.
-            VesselForward,
+            /// <summary>
             /// Move accumulatedOffset along the vessel's left-right axis only.
-            VesselRight,
+            /// </summary>
+            VesselX,
+            /// <summary>
             /// Move accumulatedOffset along the vessel's up-down axis only.
-            VesselUp
+            /// </summary>
+            VesselY,
+            /// <summary>
+            /// Move accumulatedOffset along the vessel's forward-back axis only.
+            /// </summary>
+            VesselZ
         }
-
-        //public Vector3? CameraPosition { get; private set; } = null;
 
         /// Specifies what to add to the accumulatedOffset.
         public FrameOfReference ReferenceFrame { get; set; }
 
-
         /// Constraint removes the components of the accumulatedOffset that are not along a specified vector before applying.
         public ConstraintMode Constraint { get; set; }
-
 
         /// If True, it's gonna add the initial velocity (in a given frame of reference) to the accumulatedOffset on startup.
         public bool UseInitialVelocity { get; set; }
 
-
         /// If true, it'll make the accumulatedOffset apply in the opposite direction.
         public bool ReverseDirection { get; set; }
 
-
-        /// The maximum velocity relative to the vessel that the acumulatedoffset can have.
+        /// The maximum velocity relative to the vessel that the accumulatedoffset can have.
         /// After all the constraints have been applied.
         /// Cannot take negative numbers.
         public float MaxRelativeVelocity { get; set; } = 250;
 
-
-
         Vector3 _upDir = Vector3.up;
-
-        /// <summary>
-        /// Whether or not to use orbital velocity as reference. True - uses orbital velocity, False - uses surface velocity.
-        /// </summary>
-        //public bool UseOrbitalInitialVelocity { get; set; } = false;
-
-        /// <summary>
-        /// Maximum velocity of the target relative to the camera. Can be negative to reverse the camera direction.
-        /// </summary>
-        //public float MaxRelativeVelocity { get; set; } = 250.0f;
 
         // Used for the Initial Velocity camera mode.
         Vector3 _initialSurfaceVelocity;
         Orbit _initialOrbit;
-
-        // bool _settingPositionEnabled;
 
         Vector3 _initialOffset = Vector3.zero; // The offset between the vessel and the camera on initialization. Alternative for initial position.
         Vector3 _accumulatedOffset = Vector3.zero;
@@ -107,11 +104,6 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             {
                 _upDir = -FlightGlobals.getGeeForceAtPosition( Ctm.ActiveVessel.GetWorldPos3D() ).normalized;
             }
-
-            /* if( CameraPosition != null )
-             {
-                 this.Pivot.position = CameraPosition.Value;
-             }*/
 
             _initialOffset = this.Pivot.position - Ctm.ActiveVessel.transform.position;
             _accumulatedOffset = Vector3.zero;
@@ -160,45 +152,45 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                     else if( ReferenceFrame == FrameOfReference.Orbit )
                     {
                         // this will desync if followed long enough.
-                        cameraVelocity += _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy - Ctm.ActiveVessel.GetObtVelocity();
+                        cameraVelocity += _initialOrbit.getOrbitalVelocityAtUT( Planetarium.GetUniversalTime() ).xzy;
                     }
                 }
 
                 if( Constraint != ConstraintMode.None )
                 {
-                    Vector3 constraintVector = Vector3.zero;
+                    Vector3 constraintAxis = Vector3.zero;
 
                     if( Constraint == ConstraintMode.Prograde )
                     {
                         if( ReferenceFrame == FrameOfReference.Surface )
                         {
-                            constraintVector = Ctm.ActiveVessel.srf_velocity; // Surface prograde
+                            constraintAxis = Ctm.ActiveVessel.srf_velocity; // Surface prograde
                         }
                         else if( ReferenceFrame == FrameOfReference.Orbit )
                         {
-                            constraintVector = Ctm.ActiveVessel.orbit.Prograde( Planetarium.GetUniversalTime() );
+                            constraintAxis = Ctm.ActiveVessel.orbit.Prograde( Planetarium.GetUniversalTime() );
                         }
                     }
                     if( Constraint == ConstraintMode.Normal )
                     {
                         if( ReferenceFrame == FrameOfReference.Surface )
                         {
-                            constraintVector = Ctm.ActiveVessel.mainBody.RotationAxis; // surface Normal
+                            constraintAxis = Ctm.ActiveVessel.mainBody.RotationAxis; // surface Normal
                         }
                         else if( ReferenceFrame == FrameOfReference.Orbit )
                         {
-                            constraintVector = Ctm.ActiveVessel.orbit.Normal( Planetarium.GetUniversalTime() );
+                            constraintAxis = Ctm.ActiveVessel.orbit.Normal( Planetarium.GetUniversalTime() );
                         }
                     }
                     if( Constraint == ConstraintMode.Radial )
                     {
                         if( ReferenceFrame == FrameOfReference.Surface )
                         {
-                            constraintVector = Ctm.ActiveVessel.upAxis; // surface radialIn
+                            constraintAxis = Ctm.ActiveVessel.upAxis; // surface radialIn
                         }
                         else if( ReferenceFrame == FrameOfReference.Orbit )
                         {
-                            constraintVector = Ctm.ActiveVessel.orbit.Radial( Planetarium.GetUniversalTime() );
+                            constraintAxis = Ctm.ActiveVessel.orbit.Radial( Planetarium.GetUniversalTime() );
                         }
                     }
                     /*if( Constraint == ConstraintMode.ThrustVector ) removed because too laggy.
@@ -220,24 +212,24 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                     }*/
                     if( Constraint == ConstraintMode.GravityVector )
                     {
-                        constraintVector = FlightGlobals.getGeeForceAtPosition( Ctm.ActiveVessel.GetWorldPos3D() ).normalized;
+                        constraintAxis = FlightGlobals.getGeeForceAtPosition( Ctm.ActiveVessel.GetWorldPos3D() ).normalized;
                     }
-                    if( Constraint == ConstraintMode.VesselForward )
+                    if( Constraint == ConstraintMode.VesselX )
                     {
-                        constraintVector = Ctm.ActiveVessel.transform.forward;
+                        constraintAxis = Ctm.ActiveVessel.transform.right;
                     }
-                    if( Constraint == ConstraintMode.VesselRight )
+                    if( Constraint == ConstraintMode.VesselY )
                     {
-                        constraintVector = Ctm.ActiveVessel.transform.right;
+                        constraintAxis = Ctm.ActiveVessel.transform.up;
                     }
-                    if( Constraint == ConstraintMode.VesselUp )
+                    if( Constraint == ConstraintMode.VesselZ )
                     {
-                        constraintVector = Ctm.ActiveVessel.transform.up;
+                        constraintAxis = Ctm.ActiveVessel.transform.forward;
                     }
 
-                    if( constraintVector != Vector3.zero ) // keep the component pointing along the constraint vector.
+                    if( constraintAxis != Vector3.zero ) // keep the component pointing along the constraint vector.
                     {
-                        cameraVelocity = Vector3.Project( cameraVelocity, constraintVector.normalized );
+                        cameraVelocity = Vector3.Project( cameraVelocity, constraintAxis.normalized );
                     }
                 }
 
@@ -257,80 +249,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
                 this.Pivot.position += _accumulatedOffset;
             }
-            //mouse panning, moving
-            // Vector3 forwardLevelAxis = (Quaternion.AngleAxis( -90, UpDirection ) * this.Pivot.transform.right).normalized;
-
-
-#warning TODO - this panning and stuff would be a separate controller, playercamera, which could be locked from the playing behaviour, e.g. preventing you from moving a path camera.
-            // setting a path would use its own controls likely. you can also input the numbers by hand into the gui (rotation is eulers), but they are also inputted by moving the camera around
-            // add the velocity direction mode there too.
-            // this user controller would interact with a dedicated user offset gameobject.
-            /*if( Input.GetKey( KeyCode.Mouse1 ) ) // right mouse
-            {
-                // No target - should turn the camera like a tripod.
-                // Has target - should orbit the target.
-                if( Target == null )
-                {
-                    this.Pivot.transform.rotation *= Quaternion.AngleAxis( Input.GetAxis( "Mouse X" ) * 1.7f, Vector3.up );
-                    this.Pivot.transform.rotation *= Quaternion.AngleAxis( -Input.GetAxis( "Mouse Y" ) * 1.7f, Vector3.right );
-                    this.Pivot.transform.rotation = Quaternion.LookRotation( this.Pivot.transform.forward, UpDirection );
-                }
-                else
-                {
-                    Vector3 cachePos = this.Pivot.transform.position;
-
-                    var verticalaxis = this.Pivot.transform.TransformDirection( Vector3.up );
-                    var horizontalaxis = this.Pivot.transform.TransformDirection( Vector3.right );
-                    this.Pivot.transform.RotateAround( Target.transform.position, verticalaxis, Input.GetAxis( "Mouse X" ) * 1.7f );
-                    this.Pivot.transform.RotateAround( Target.transform.position, horizontalaxis, -Input.GetAxis( "Mouse Y" ) * 1.7f );
-                    this.Pivot.transform.rotation = Quaternion.LookRotation( cameraBeh.FlightCamera.transform.forward, UpDirection );
-
-                    ManualOffset += (this.Pivot.transform.position - cachePos); // allow movement (temporary until separate controllers).
-                    this.Pivot.transform.position = cachePos; // stop flickering (sortof).
-                }
-            }*/
-
-            /*if( Input.GetKey( KeyCode.Mouse2 ) ) // middle mouse
-            {
-                ManualOffset += this.Pivot.transform.right * Input.GetAxis( "Mouse X" ) * 2;
-                ManualOffset += forwardLevelAxis * Input.GetAxis( "Mouse Y" ) * 2;
-            }*/
-
-            //ManualOffset += UpDirection * CameraToolsManager.SCROLL_MULTIPLIER * Input.GetAxis( "Mouse ScrollWheel" );
-
-            // autoFov
-            /*if( Target != null && cameraBeh.UseAutoZoom )
-            {
-#warning TODO - change this to use the equation for constant angular size, possibly go through the parts in the vessel to determine its longest axis, or maybe there are bounds.
-
-                float cameraDistance = Vector3.Distance( Target.transform.position, this.Pivot.transform.position );
-
-                float targetFoV = Mathf.Clamp( (7000 / (cameraDistance + 100)) - 14 + cameraBeh.AutoZoomMargin, 2, 60 );
-
-                cameraBeh.ManualFov = targetFoV;
-            }*/
-
-            //FOV
-            /*if( !cameraBeh.UseAutoZoom )
-            {
-                cameraBeh.ZoomFactor = Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 );
-                cameraBeh.ManualFov = 60 / cameraBeh.ZoomFactor;
-
-                if( cameraBeh.CurrentFov != cameraBeh.ManualFov )
-                {
-                    cameraBeh.CurrentFov = Mathf.Lerp( cameraBeh.CurrentFov, cameraBeh.ManualFov, 0.1f );
-                    cameraBeh.FlightCamera.SetFoV( cameraBeh.CurrentFov );
-                }
-            }
-            else
-            {
-                cameraBeh.CurrentFov = Mathf.Lerp( cameraBeh.CurrentFov, cameraBeh.ManualFov, 0.1f );
-                cameraBeh.FlightCamera.SetFoV( cameraBeh.CurrentFov );
-                cameraBeh.ZoomFactor = 60 / cameraBeh.CurrentFov;
-            }*/
-            
         }
-
 
         public override void DrawGui( UILayout UILayout, ref int line )
         {
@@ -367,23 +286,6 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             ReverseDirection = GUI.Toggle( UILayout.GetRectX( line ), ReverseDirection, "Reverse Direction" );
             line++;
             UseInitialVelocity = GUI.Toggle( UILayout.GetRectX( line ), UseInitialVelocity, "Use Init. Velocity" );
-
-            // Draw position buttons.
-            /*
-            string positionText = CameraPosition == null ? "None" : CameraPosition.Value.ToString();
-            GUI.Label( UILayout.GetRectX( line, 1, 11 ), $"Camera Position: {positionText}" );
-            line++;
-
-            positionText = _settingPositionEnabled ? "waiting..." : "Set Position";
-            if( GUI.Button( UILayout.GetRectX( line, 1, 5 ), positionText ) )
-            {
-                _settingPositionEnabled = true;
-                Ctm._wasMouseUp = false;
-            }
-            if( GUI.Button( UILayout.GetRectX( line, 6, 11 ), "Clear Position" ) )
-            {
-                CameraPosition = null;
-            }*/
         }
     }
 }

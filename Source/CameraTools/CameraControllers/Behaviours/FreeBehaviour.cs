@@ -56,6 +56,8 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         public float Drag { get; set; } = 0.95f;
         public float AngularDrag { get; set; } = 0.95f;
 
+        public int ReferenceFrameRelativeIndex = 0; // which behaviour relative to this one is used as a reference frame. 1 = higher, -1 = lower.
+
         bool _isOrbiting;
 
         Vector3 _velocityWS;
