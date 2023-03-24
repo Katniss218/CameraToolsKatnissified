@@ -59,7 +59,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         bool _isOrbiting;
 
         Vector3 _velocityWS;
-        Quaternion _angularVelocityWS;
+        Vector3 _angularVelocityWS;
         float _scrollVelocity;
 
         Vector3 _upDir;
@@ -100,7 +100,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             }
             ApplySmoothLength();
             _velocityWS = Vector3.zero;
-            _angularVelocityWS = Quaternion.identity;
+            _angularVelocityWS = Vector3.zero;
             _scrollVelocity = 0.0f;
             _isOrbiting = false;
         }
@@ -130,28 +130,29 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             }
         }
 
-        Vector3 GetVelocity( Quaternion angularVelocity, Vector3 where )
+        Vector3 GetVelocity( Vector3 angularVelocity, Vector3 where )
         {
-            angularVelocity.ToAngleAxis( out float anglePerSec, out Vector3 axis );
+            float anglePerSec = angularVelocity.magnitude;
+            Vector3 axis = angularVelocity.normalized;
             // dir
             // tangential velocity magnitude per unit time is radius * angular displacement per unit time
             return Vector3.Cross( axis, where.normalized ) * where.magnitude * (anglePerSec * Mathf.Deg2Rad); // might need to be converted to radians.
         }
 
         /// Returns the angular velocity for a circular orbit at a distance from the origin and its tangent velocity.
-        Quaternion GetAngularVelocity( Vector3 velocity, Vector3 where )
+        Vector3 GetAngularVelocity( Vector3 velocity, Vector3 where )
         {
             Vector3 whereDir = where.normalized;
-            Vector3 velTangent = Vector3.ProjectOnPlane( velocity, whereDir );
-            Vector3 axis = Vector3.Cross( velTangent.normalized, whereDir ); // if you flip args, the direction flips.
-                                                                             // if velocity is units per second, the rotation will be in angle of units per second.
+            Vector3 velTangent = Vector3.ProjectOnPlane( velocity, whereDir ).normalized;
+            Vector3 axis = Vector3.Cross( velTangent, whereDir ); // if you flip args, the direction flips.
+                                                                  // if velocity is units per second, the rotation will be in angle of units per second.
 
             // v = r * theta
             // theta * r = v
             // theta = v / r
             float anglePerSec = velocity.magnitude / where.magnitude; // angle = velocity / radius
-            return Quaternion.AngleAxis( (anglePerSec * Mathf.Rad2Deg), axis ); // angle possibly might need to be converted to degrees.
-                                                              // vice versa on the other end.
+            return axis * (anglePerSec * Mathf.Rad2Deg); // angle possibly might need to be converted to degrees.
+                                                         // vice versa on the other end.
         }
 
         public override void FixedUpdate( bool isPlaying )
@@ -176,7 +177,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                             // convert orbital angular velocity to normal velocity.
                             // rotational (angular) velocity remains so that it's not abruptly stopping.
                             this._velocityWS = GetVelocity( this._angularVelocityWS, this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value );
-                            this._angularVelocityWS = Quaternion.identity;
+                            this._angularVelocityWS = Vector3.zero;
                             _isOrbiting = false;
                         }
 
@@ -187,8 +188,8 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                         Debug.Log( "PAN" );
 
                         // First add the rotation in world space, and then rotate that by the leftover rotation.
-                        this._angularVelocityWS = Quaternion.AngleAxis( mouseX * MaxAngularAcceleration, this.Pivot.up ) * this._angularVelocityWS; // Non-commutative
-                        this._angularVelocityWS = Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration, this.Pivot.right ) * this._angularVelocityWS; // Non-commutative
+                        this._angularVelocityWS += (mouseX * MaxAngularAcceleration) * this.Pivot.up;
+                        this._angularVelocityWS += (-mouseY * MaxAngularAcceleration) * this.Pivot.right;
 
                         //_angularVelocityWS.ToAngleAxis( out float a, out Vector3 ax );
                         //this._angularVelocityWS = Quaternion.LookRotation( ax, _upDir );
@@ -207,10 +208,8 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                             _isOrbiting = true;
                         }
                         // orbit.
-
-#warning TODO - alternatively, pitch and yaw is a possibility. Also, rigidbody is a possibility maybe too. Or storing the angular velocity as axis and angular speed.
-                        this._angularVelocityWS = Quaternion.AngleAxis( mouseX * MaxAngularAcceleration, this.Pivot.up ) * this._angularVelocityWS; // Non-commutative
-                        this._angularVelocityWS = Quaternion.AngleAxis( -mouseY * MaxAngularAcceleration, this.Pivot.right ) * this._angularVelocityWS; // Non-commutative
+                        this._angularVelocityWS += (mouseX * MaxAngularAcceleration) * this.Pivot.up;
+                        this._angularVelocityWS += (-mouseY * MaxAngularAcceleration) * this.Pivot.right;
 
                         //_angularVelocityWS.ToAngleAxis( out float a, out Vector3 ax );
                         //this._angularVelocityWS = Quaternion.LookRotation( ax, _upDir );
@@ -224,7 +223,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                         // convert orbital angular velocity to normal velocity.
                         // rotational (angular) velocity remains so that it's not abruptly stopping.
                         this._velocityWS = GetVelocity( this._angularVelocityWS, this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value );
-                        this._angularVelocityWS = Quaternion.identity;
+                        this._angularVelocityWS = Vector3.zero;
                         _isOrbiting = false;
                     }
                 }
@@ -244,7 +243,8 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                     this._velocityWS += sum;
                 }
 
-                _angularVelocityWS.ToAngleAxis( out float angle, out Vector3 axis );
+                float angle = _angularVelocityWS.magnitude;
+                Vector3 axis = _angularVelocityWS.normalized;
 
                 // Apply the accelerations based on avg inputs.
                 if( _isOrbiting )
@@ -253,15 +253,13 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 }
                 else
                 {
-#warning TODO - this is very broken with fast rotations, because when the unmultiplied rotation over frame reaches 180 degrees, the angle and axis flips.
                     this.Pivot.position += this._velocityWS * Time.fixedDeltaTime;
                     this.Pivot.rotation = Quaternion.AngleAxis( angle * Time.fixedDeltaTime, axis ) * this.Pivot.rotation; // Non-commutative
                 }
 
                 _velocityWS *= Drag;
 
-                angle *= AngularDrag;
-                _angularVelocityWS = Quaternion.AngleAxis( angle, axis );
+                _angularVelocityWS *= AngularDrag;
 
                 /*left + right
                 left + middle
