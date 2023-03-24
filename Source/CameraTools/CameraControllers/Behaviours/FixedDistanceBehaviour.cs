@@ -115,9 +115,9 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 // Position = distance along the axis from the target.
                 //  - Positive - target in front of camera.
                 //  - Negative - target behind camera.
-#warning TODO - distance seems to overshoot
 
-                Vector3 posRelativeToTarget = this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value;
+                Vector3 tgt = this.Controller.CameraTargetWorldSpace == null ? this.Pivot.position : this.Controller.CameraTargetWorldSpace.Value;
+                Vector3 posRelativeToTarget = this.Pivot.position - tgt;
 
                 float position = -GetPosition1D( directionToTarget, posRelativeToTarget ); // swap signs because we want distance to be positive behind the ray
                 float desiredPosition = Distance;
@@ -129,7 +129,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
                 Vector3 newPosRelativeToTarget = GetPosition3D( directionToTarget, -newPosition ); // swap signs because the method wants the position to be negative behind the ray.
 
-                this.Pivot.position = newPosRelativeToTarget + this.Controller.CameraTargetWorldSpace.Value;
+                this.Pivot.position = newPosRelativeToTarget + tgt;
             }
         }
 
@@ -177,11 +177,5 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             Speed = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), Speed.ToString() ) );
             line++;
         }
-
-        // This behaviour is supposed to keep its transform at a constant distance from the camera target.
-
-
-        // The axis of offset is determined by the parent's position and the target position.
-        // If parent is null, it offsets along the forward axis.
     }
 }
