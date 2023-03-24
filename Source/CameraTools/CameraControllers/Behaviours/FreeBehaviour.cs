@@ -69,6 +69,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         InputBuffer _scrollWheelBuffer;
         InputBuffer _moveForwardBuffer;
         InputBuffer _moveSidewaysBuffer;
+        InputBuffer _moveVerticalBuffer;
 
         public FreeBehaviour( CameraPlayerController controller ) : base( controller )
         {
@@ -112,6 +113,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             _scrollWheelBuffer = new InputBuffer( this.SmoothLength );
             _moveForwardBuffer = new InputBuffer( this.SmoothLength );
             _moveSidewaysBuffer = new InputBuffer( this.SmoothLength );
+            _moveVerticalBuffer = new InputBuffer( this.SmoothLength );
         }
 
         public override void Update( bool isPlaying )
@@ -125,8 +127,11 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 right += Input.GetKey( KeyCode.RightArrow ) ? 1.0f : 0.0f;
                 float fwd = Input.GetKey( KeyCode.UpArrow ) ? 1.0f : 0.0f;
                 fwd += Input.GetKey( KeyCode.DownArrow ) ? -1.0f : 0.0f;
+                float vert = Input.GetKey( KeyCode.RightShift ) ? 1.0f : 0.0f;
+                vert += Input.GetKey( KeyCode.RightControl ) ? -1.0f : 0.0f;
                 _moveForwardBuffer.Add( fwd );
                 _moveSidewaysBuffer.Add( right );
+                _moveVerticalBuffer.Add( vert );
             }
         }
 
@@ -164,6 +169,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 float mouseScroll = _scrollWheelBuffer.GetAverage();
                 float forward = _moveForwardBuffer.GetAverage();
                 float sideways = _moveSidewaysBuffer.GetAverage();
+                float vert = _moveVerticalBuffer.GetAverage();
                 // ...
                 // If the player starts orbiting and lets go,
                 // then the camera continues moving tangentially with the velocity it had before.
@@ -173,19 +179,12 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                     {
                         if( _isOrbiting )
                         {
-                            Debug.Log( "stop orbit" );
                             // convert orbital angular velocity to normal velocity.
                             // rotational (angular) velocity remains so that it's not abruptly stopping.
                             this._velocityWS = GetVelocity( this._angularVelocityWS, this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value );
                             this._angularVelocityWS = Vector3.zero;
                             _isOrbiting = false;
                         }
-
-                        // x inputaxis, y inputaxis copy from other controller, but add to velocity instead.
-                        // limit to max acceleration.
-                        // how do we limit? degrees per second.
-
-                        Debug.Log( "PAN" );
 
                         // First add the rotation in world space, and then rotate that by the leftover rotation.
                         this._angularVelocityWS += (mouseX * MaxAngularAcceleration) * this.Pivot.up;
@@ -198,10 +197,8 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                     }
                     else
                     {
-                        Debug.Log( "ORBIT" );
                         if( !_isOrbiting && this.Controller.CameraTargetWorldSpace != null ) // start orbiting
                         {
-                            Debug.Log( "start orbit" );
                             // get angular velocity from velocity and distance.
                             this._angularVelocityWS = GetAngularVelocity( this._velocityWS, this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value );
                             this._velocityWS = Vector3.zero;
@@ -219,7 +216,6 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 {
                     if( _isOrbiting )
                     {
-                        Debug.Log( "stop orbit" );
                         // convert orbital angular velocity to normal velocity.
                         // rotational (angular) velocity remains so that it's not abruptly stopping.
                         this._velocityWS = GetVelocity( this._angularVelocityWS, this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value );
@@ -229,14 +225,16 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 }
 
                 if( Input.GetKey( KeyCode.LeftArrow ) || Input.GetKey( KeyCode.RightArrow )
-                 || Input.GetKey( KeyCode.UpArrow ) || Input.GetKey( KeyCode.DownArrow ) )
+                 || Input.GetKey( KeyCode.UpArrow ) || Input.GetKey( KeyCode.DownArrow )
+                 || Input.GetKey( KeyCode.RightShift ) || Input.GetKey( KeyCode.RightControl ) )
                 {
                     const float MOVE_SCALE = 1.0f;
                     // xy movement.
                     Vector3 forwardAcceleration = this.Pivot.forward * forward;
                     Vector3 rightAcceleration = this.Pivot.right * sideways;
+                    Vector3 upAcceleration = this.Pivot.up * vert;
 
-                    Vector3 sum = forwardAcceleration + rightAcceleration;
+                    Vector3 sum = forwardAcceleration + rightAcceleration + upAcceleration;
 
                     sum *= MaxAcceleration * MOVE_SCALE;
 
@@ -260,21 +258,6 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 _velocityWS *= Drag;
 
                 _angularVelocityWS *= AngularDrag;
-
-                /*left + right
-                left + middle
-                middle + right
-                left
-                right
-                middle*/
-
-                // middle - xy movement camera.forward + camera.right
-                // right - orbit
-                // middle + right - pan
-
-                // scroll wheel zooms you in and out.
-                // - as a multiplier to the normal Zoom value.
-
             }
         }
 
@@ -284,7 +267,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
         public override void DrawGui( UILayout UILayout, ref int line )
         {
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Smooth length:" );
+            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Smooth Length:" );
             int oldSmooth = SmoothLength;
             SmoothLength = int.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), SmoothLength.ToString() ) );
             if( SmoothLength <= 0 )
@@ -297,31 +280,27 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             }
             line++;
 
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Scroll sens.:" );
+            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Scroll Sens.:" );
             ScrollSensitivity = GUI.HorizontalSlider( UILayout.GetRectX( line, 7, 11 ), ScrollSensitivity, 0.01f, 10.0f );
             line++;
 
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Scroll sens.:" );
-            ScrollSensitivity = GUI.HorizontalSlider( UILayout.GetRectX( line, 7, 11 ), ScrollSensitivity, 0.01f, 10.0f );
-            line++;
-
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Mouse sens.:" );
+            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Mouse Sens.:" );
             MouseSensitivity = GUI.HorizontalSlider( UILayout.GetRectX( line, 7, 11 ), MouseSensitivity, 0.01f, 10.0f );
             line++;
 
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Keyboard sens.:" );
+            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Keyboard Sens.:" );
             KeyboardSensitivity = GUI.HorizontalSlider( UILayout.GetRectX( line, 7, 11 ), KeyboardSensitivity, 0.01f, 10.0f );
             line++;
 
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Max Acceleration:" );
+            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Max Linear Acc.:" );
             MaxAcceleration = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), MaxAcceleration.ToString() ) );
             line++;
 
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Max Angular Acceleration:" );
+            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Max Angular Acc.:" );
             MaxAngularAcceleration = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), MaxAngularAcceleration.ToString() ) );
             line++;
 
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Drag:" );
+            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Linear Drag:" );
             Drag = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), Drag.ToString() ) );
             line++;
 
