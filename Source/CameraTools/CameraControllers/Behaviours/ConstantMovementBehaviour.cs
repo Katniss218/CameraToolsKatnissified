@@ -14,11 +14,11 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         public enum FrameOfReference
         {
             /// Use current local space of the camera.
-            CameraLocal,
+            Camera,
             /// Use the local space of this.Pivot.
-            SelfLocal,
+            Self,
             /// Use the current local space of the Pivot's parent (local space of itself if root).
-            ParentLocal,
+            Parent,
             /// Use the space of the vessel calculated when the camera is initialized.
             VesselInit,
             /// Use the current vessel space.
@@ -37,7 +37,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
 
         /// The reference frame used to apply rotation.
-        public FrameOfReference ReferenceFrame { get; set; } = FrameOfReference.SelfLocal;
+        public FrameOfReference ReferenceFrame { get; set; } = FrameOfReference.Self;
 
 
         Matrix4x4 _vLocal2World; // transformation space to local.
@@ -57,7 +57,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         /// Calculate the transformation to apply in this frame in local space of this.Pivot.
         (Vector3 offset, Quaternion rot) GetTransformationLocal()
         {
-            if( ReferenceFrame == FrameOfReference.CameraLocal )
+            if( ReferenceFrame == FrameOfReference.Camera )
             {
                 var worldRot = this.Controller.Camera.transform.rotation * RotationRate;
                 var localRot = Quaternion.Inverse( this.Pivot.rotation ) * worldRot;
@@ -65,11 +65,11 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 var localOffset = this.Pivot.InverseTransformPoint( worldOffset );
                 return (localOffset, localRot);
             }
-            if( ReferenceFrame == FrameOfReference.SelfLocal )
+            if( ReferenceFrame == FrameOfReference.Self )
             {
                 return (TranslationRate, RotationRate);
             }
-            if( ReferenceFrame == FrameOfReference.ParentLocal )
+            if( ReferenceFrame == FrameOfReference.Parent )
             {
                 if( this.Pivot.parent == null )
                 {
@@ -138,15 +138,15 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
 
             GUI.Label( UILayout.GetRectX( line, 1, 2 ), "T. rate:" );
-            TranslationRate = new Vector3( float.Parse( GUI.TextField( UILayout.GetRectX( line, 3, 5 ), TranslationRate.x.ToString() ) ), TranslationRate.y, TranslationRate.z );
-            TranslationRate = new Vector3( TranslationRate.x, float.Parse( GUI.TextField( UILayout.GetRectX( line, 6, 8 ), TranslationRate.y.ToString() ) ), TranslationRate.z );
-            TranslationRate = new Vector3( TranslationRate.x, TranslationRate.y, float.Parse( GUI.TextField( UILayout.GetRectX( line, 9, 11 ), TranslationRate.z.ToString() ) ) );
+            TranslationRate = new Vector3( float.Parse( GUI.TextField( UILayout.GetRectX( line, 3, 5 ), TranslationRate.x.ToString( "0.0#########" ) ) ), TranslationRate.y, TranslationRate.z );
+            TranslationRate = new Vector3( TranslationRate.x, float.Parse( GUI.TextField( UILayout.GetRectX( line, 6, 8 ), TranslationRate.y.ToString( "0.0#########" ) ) ), TranslationRate.z );
+            TranslationRate = new Vector3( TranslationRate.x, TranslationRate.y, float.Parse( GUI.TextField( UILayout.GetRectX( line, 9, 11 ), TranslationRate.z.ToString( "0.0#########" ) ) ) );
             line++;
 
             GUI.Label( UILayout.GetRectX( line, 1, 2 ), "R. rate:" );
-            RotationRate = Quaternion.Euler( float.Parse( GUI.TextField( UILayout.GetRectX( line, 3, 5 ), RotationRate.eulerAngles.x.ToString() ) ), RotationRate.eulerAngles.y, RotationRate.eulerAngles.z );
-            RotationRate = Quaternion.Euler( RotationRate.eulerAngles.x, float.Parse( GUI.TextField( UILayout.GetRectX( line, 6, 8 ), RotationRate.eulerAngles.y.ToString() ) ), RotationRate.eulerAngles.z );
-            RotationRate = Quaternion.Euler( RotationRate.eulerAngles.x, RotationRate.eulerAngles.y, float.Parse( GUI.TextField( UILayout.GetRectX( line, 9, 11 ), RotationRate.eulerAngles.z.ToString() ) ) );
+            RotationRate = Quaternion.Euler( float.Parse( GUI.TextField( UILayout.GetRectX( line, 3, 5 ), RotationRate.eulerAngles.x.ToString( "0.0#########" ) ) ), RotationRate.eulerAngles.y, RotationRate.eulerAngles.z );
+            RotationRate = Quaternion.Euler( RotationRate.eulerAngles.x, float.Parse( GUI.TextField( UILayout.GetRectX( line, 6, 8 ), RotationRate.eulerAngles.y.ToString( "0.0#########" ) ) ), RotationRate.eulerAngles.z );
+            RotationRate = Quaternion.Euler( RotationRate.eulerAngles.x, RotationRate.eulerAngles.y, float.Parse( GUI.TextField( UILayout.GetRectX( line, 9, 11 ), RotationRate.eulerAngles.z.ToString( "0.0#########" ) ) ) );
         }
     }
 }

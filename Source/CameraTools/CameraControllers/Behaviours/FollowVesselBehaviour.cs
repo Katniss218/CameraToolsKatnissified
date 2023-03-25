@@ -276,16 +276,17 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             line++;
 
             GUI.Label( UILayout.GetRectX( line, 1, 4 ), "Max Rel. V:" );
-            MaxRelativeVelocity = float.Parse( GUI.TextField( UILayout.GetRectX( line, 5, 11 ), MaxRelativeVelocity.ToString() ) );
+            MaxRelativeVelocity = float.Parse( GUI.TextField( UILayout.GetRectX( line, 5, 11 ), MaxRelativeVelocity.ToString( "0.0#########" ) ) );
             if( MaxRelativeVelocity < 0 )
             {
                 MaxRelativeVelocity = 0;
             }
+            line++;
 
+            ReverseDirection = GUI.Toggle( UILayout.GetRectX( line, 1, 11 ), ReverseDirection, "Reverse Direction" );
             line++;
-            ReverseDirection = GUI.Toggle( UILayout.GetRectX( line ), ReverseDirection, "Reverse Direction" );
-            line++;
-            UseInitialVelocity = GUI.Toggle( UILayout.GetRectX( line ), UseInitialVelocity, "Use Init. Velocity" );
+
+            UseInitialVelocity = GUI.Toggle( UILayout.GetRectX( line, 1, 11 ), UseInitialVelocity, "Use Init. Velocity" );
         }
     }
 }

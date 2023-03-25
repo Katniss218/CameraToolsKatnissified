@@ -161,7 +161,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             line++;
 
             GUI.Label( UILayout.GetRectX( line, 1, 5 ), "Zoom Angular Size:" );
-            ZoomAngularSize = float.Parse( GUI.TextField( UILayout.GetRectX( line, 6, 11 ), ZoomAngularSize.ToString() ) );
+            ZoomAngularSize = float.Parse( GUI.TextField( UILayout.GetRectX( line, 6, 11 ), ZoomAngularSize.ToString( "0.0#########") ) );
             if( ZoomAngularSize < 1 )
             {
                 ZoomAngularSize = 1;

@@ -14,12 +14,12 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         public enum Mode
         {
             /// This mode will keep the pivot exactly at the specified distance.
-            Constant,
+            Instant,
             /// This mode will try to keep the pivot exactly at the specified distance. Maximum speed of travel is defined.
             Velocity
         }
 
-        public Mode _Mode { get; set; }
+        public Mode _Mode { get; set; } = Mode.Instant;
 
         /// The preferred distance from target.
         public float Distance { get; set; } = 100.0f;
@@ -61,7 +61,7 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             // zero => at pivot.
 
             // returns the new position.
-            if( _Mode == Mode.Constant )
+            if( _Mode == Mode.Instant )
             {
                 return desiredPosition;
             }
@@ -148,11 +148,11 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             // button cycleenum. Mode
 
             GUI.Label( UILayout.GetRectX( line, 1, 6 ), "Distance:" );
-            Distance = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), Distance.ToString() ) );
+            Distance = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), Distance.ToString( "0.0#########" ) ) );
             line++;
 
             GUI.Label( UILayout.GetRectX( line, 1, 6 ), "MinDistance:" );
-            if( float.TryParse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), MinDistance.ToString() ), out float minDist ) )
+            if( float.TryParse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), MinDistance == null ? null : MinDistance.Value.ToString( "0.0#########" ) ), out float minDist ) )
             {
                 MinDistance = minDist;
             }
@@ -163,18 +163,18 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             line++;
 
             GUI.Label( UILayout.GetRectX( line, 1, 6 ), "MaxDistance:" );
-            if( float.TryParse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), MaxDistance.ToString() ), out float maxDist ) )
+            if( float.TryParse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), MaxDistance == null ? null : MaxDistance.Value.ToString( "0.0#########" ) ), out float maxDist ) )
             {
                 MaxDistance = maxDist;
             }
             else
             {
-                MinDistance = null;
+                MaxDistance = null;
             }
             line++;
 
             GUI.Label( UILayout.GetRectX( line, 1, 6 ), "Speed:" );
-            Speed = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), Speed.ToString() ) );
+            Speed = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), Speed.ToString( "0.##########" ) ) );
             line++;
         }
     }

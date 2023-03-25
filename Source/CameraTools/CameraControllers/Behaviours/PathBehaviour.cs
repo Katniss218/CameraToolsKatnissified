@@ -26,11 +26,11 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         public CameraPath CurrentPath { get; private set; }
 
         /// If true, applies position using path.
-        public bool UsePosition { get; set; }
+        public bool UsePosition { get; set; } = true;
         /// If true, applies rotation using path.
-        public bool UseRotation { get; set; }
+        public bool UseRotation { get; set; } = true;
         /// If true, applies zoom using path.
-        public bool UseZoom { get; set; }
+        public bool UseZoom { get; set; } = true;
 
 
         List<CameraPath> _availablePaths;
@@ -182,23 +182,18 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 // Pivot "follows" the spline. the lower the constant, the more smooth it feels.
                 // It is a lot like a B-spline in that it's completely inside the spline and doesn't pass through any of the conrol points (except the start and end).
                 // whenever the frame switches to vessel-centric, it fucks itself and goes to space.
-                this.Pivot.localPosition = _pathSpaceL2W.MultiplyPoint( Vector3.Lerp( pivotPositionPathSpace, camTransformPath.position, CurrentPath.LerpRate * Time.fixedDeltaTime ) ); // time deltatime because we're moving the position over time.
-                this.Pivot.localRotation = _pathRootRotation * Quaternion.Slerp( pivotRotationPathSpace, camTransformPath.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
-                Controller.Zoom = Mathf.Lerp( Controller.Zoom, camTransformPath.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
-
-                //zoom
-                //cameraBeh.ZoomFactor = Mathf.Exp( cameraBeh.Zoom ) / Mathf.Exp( 1 );
-                //cameraBeh.ManualFov = 60 / cameraBeh.ZoomFactor;
-
-                //if( cameraBeh.CurrentFov != cameraBeh.ManualFov )
-                //{
-                //   cameraBeh.CurrentFov = Mathf.Lerp( cameraBeh.CurrentFov, cameraBeh.ManualFov, 0.1f );
-                //float fov = 60 / (Mathf.Exp( Controller.Zoom ) / Mathf.Exp( 1 ));
-                //if( Ctm.FlightCamera.FieldOfView != fov )
-                //{
-                //    Ctm.FlightCamera.SetFoV( fov );
-                //}
-                //}
+                if( this.UsePosition )
+                {
+                    this.Pivot.localPosition = _pathSpaceL2W.MultiplyPoint( Vector3.Lerp( pivotPositionPathSpace, camTransformPath.position, CurrentPath.LerpRate * Time.fixedDeltaTime ) ); // time deltatime because we're moving the position over time.
+                }
+                if( this.UseRotation )
+                {
+                    this.Pivot.localRotation = _pathRootRotation * Quaternion.Slerp( pivotRotationPathSpace, camTransformPath.rotation, CurrentPath.LerpRate * Time.fixedDeltaTime );
+                }
+                if( this.UseZoom )
+                {
+                    Controller.Zoom = Mathf.Lerp( Controller.Zoom, camTransformPath.zoom, CurrentPath.LerpRate * Time.fixedDeltaTime );
+                }
             }
         }
 
@@ -236,6 +231,14 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 ReloadPaths();
                 TogglePathList();
             }
+            line++;
+
+            UsePosition = GUI.Toggle( UILayout.GetRectX( line, 1, 11 ), UsePosition, "Use Position" );
+            line++;
+            UseRotation = GUI.Toggle( UILayout.GetRectX( line, 1, 11 ), UseRotation, "Use Rotation" );
+            line++;
+            UseZoom = GUI.Toggle( UILayout.GetRectX( line, 1, 11 ), UseZoom, "Use Zoom" );
+            line++;
         }
 
         public void DrawPathSelectorWindow()

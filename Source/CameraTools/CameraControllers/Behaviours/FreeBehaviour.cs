@@ -1,4 +1,5 @@
 ﻿using CameraToolsKatnissified.UI;
+using CameraToolsKatnissified.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,9 @@ using UnityEngine;
 
 namespace CameraToolsKatnissified.CameraControllers.Behaviours
 {
+    /// <summary>
+    /// A floating point circular buffer.
+    /// </summary>
     public class InputBuffer
     {
         private float[] _values; // circular array, inputs are replaced oldest to latest wraparound.
@@ -38,6 +42,19 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
     public class FreeBehaviour : CameraBehaviour
     {
+        public enum FrameOfReference
+        {
+            Camera,
+            CameraGravUp,
+            Self,
+            SelfGravUp
+        }
+
+        /// <summary>
+        /// Reference frame of the input.
+        /// </summary>
+        public FrameOfReference ReferenceFrame { get; set; } = FrameOfReference.CameraGravUp;
+
         /// How many frames to smooth over. More = smoother input, but less responsive.
         /// >1 - smoothing, ==1 - no smoothing, <=0 - invalid.
         public int SmoothLength { get; set; } = 20;
@@ -56,15 +73,13 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         public float Drag { get; set; } = 0.95f;
         public float AngularDrag { get; set; } = 0.95f;
 
-        public int ReferenceFrameRelativeIndex = 0; // which behaviour relative to this one is used as a reference frame. 1 = higher, -1 = lower.
-
         bool _isOrbiting;
 
         Vector3 _velocityWS;
         Vector3 _angularVelocityWS;
         float _scrollVelocity;
 
-        Vector3 _upDir;
+        Vector3 _gravityUp;
 
         InputBuffer _mouseXBuffer;
         InputBuffer _mouseYBuffer;
@@ -95,11 +110,11 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
         {
             if( FlightCamera.fetch.mode == FlightCamera.Modes.ORBITAL || (FlightCamera.fetch.mode == FlightCamera.Modes.AUTO && FlightCamera.GetAutoModeForVessel( Ctm.ActiveVessel ) == FlightCamera.Modes.ORBITAL) )
             {
-                _upDir = Vector3.up;
+                _gravityUp = Vector3.up;
             }
             else
             {
-                _upDir = -FlightGlobals.getGeeForceAtPosition( Ctm.ActiveVessel.GetWorldPos3D() ).normalized;
+                _gravityUp = -FlightGlobals.getGeeForceAtPosition( Ctm.ActiveVessel.GetWorldPos3D() ).normalized;
             }
             ApplySmoothLength();
             _velocityWS = Vector3.zero;
@@ -162,6 +177,71 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                                                          // vice versa on the other end.
         }
 
+        public Vector3 GetUpDir()
+        {
+            if( ReferenceFrame == FrameOfReference.Camera )
+            {
+                return this.Ctm.FlightCamera.transform.up;
+            }
+            if( ReferenceFrame == FrameOfReference.CameraGravUp )
+            {
+                return _gravityUp;
+            }
+            if( ReferenceFrame == FrameOfReference.Self )
+            {
+                return this.Pivot.up;
+            }
+            if( ReferenceFrame == FrameOfReference.SelfGravUp )
+            {
+                return _gravityUp;
+            }
+            throw new InvalidOperationException( $"Unknown Reference Frame '{ReferenceFrame}'." );
+        }
+
+        public Vector3 GetRightDir()
+        {
+            // for GravUp, project it on the tangent plane.
+            if( ReferenceFrame == FrameOfReference.Camera )
+            {
+                return this.Ctm.FlightCamera.transform.right;
+            }
+            if( ReferenceFrame == FrameOfReference.CameraGravUp )
+            {
+                return Vector3.ProjectOnPlane( this.Ctm.FlightCamera.transform.right, _gravityUp ).normalized;
+            }
+            if( ReferenceFrame == FrameOfReference.Self )
+            {
+                return this.Pivot.right;
+            }
+            if( ReferenceFrame == FrameOfReference.SelfGravUp )
+            {
+                return Vector3.ProjectOnPlane( this.Pivot.right, _gravityUp ).normalized;
+            }
+            throw new InvalidOperationException( $"Unknown Reference Frame '{ReferenceFrame}'." );
+        }
+
+        public Vector3 GetForwardDir()
+        {
+            // for GravUp, project it on the tangent plane.
+            if( ReferenceFrame == FrameOfReference.Camera )
+            {
+                return this.Ctm.FlightCamera.transform.forward;
+            }
+            if( ReferenceFrame == FrameOfReference.CameraGravUp )
+            {
+                return Vector3.ProjectOnPlane( this.Ctm.FlightCamera.transform.forward, _gravityUp ).normalized;
+            }
+            if( ReferenceFrame == FrameOfReference.Self )
+            {
+                return this.Pivot.forward;
+            }
+            if( ReferenceFrame == FrameOfReference.SelfGravUp )
+            {
+                return Vector3.ProjectOnPlane( this.Pivot.forward, _gravityUp ).normalized;
+            }
+            throw new InvalidOperationException( $"Unknown Reference Frame '{ReferenceFrame}'." );
+        }
+
         public override void FixedUpdate( bool isPlaying )
         {
             if( isPlaying )
@@ -189,8 +269,8 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                         }
 
                         // First add the rotation in world space, and then rotate that by the leftover rotation.
-                        this._angularVelocityWS += (mouseX * MaxAngularAcceleration) * this.Pivot.up;
-                        this._angularVelocityWS += (-mouseY * MaxAngularAcceleration) * this.Pivot.right;
+                        this._angularVelocityWS += (mouseX * MaxAngularAcceleration) * this.GetUpDir();
+                        this._angularVelocityWS += (-mouseY * MaxAngularAcceleration) * this.GetRightDir();
 
                         //_angularVelocityWS.ToAngleAxis( out float a, out Vector3 ax );
                         //this._angularVelocityWS = Quaternion.LookRotation( ax, _upDir );
@@ -207,8 +287,8 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                             _isOrbiting = true;
                         }
                         // orbit.
-                        this._angularVelocityWS += (mouseX * MaxAngularAcceleration) * this.Pivot.up;
-                        this._angularVelocityWS += (-mouseY * MaxAngularAcceleration) * this.Pivot.right;
+                        this._angularVelocityWS += (mouseX * MaxAngularAcceleration) * this.GetUpDir();
+                        this._angularVelocityWS += (-mouseY * MaxAngularAcceleration) * this.GetRightDir();
 
                         //_angularVelocityWS.ToAngleAxis( out float a, out Vector3 ax );
                         //this._angularVelocityWS = Quaternion.LookRotation( ax, _upDir );
@@ -218,12 +298,15 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 {
                     if( _isOrbiting )
                     {
-                        // convert orbital angular velocity to normal velocity.
-                        // rotational (angular) velocity remains so that it's not abruptly stopping.
-                        this._velocityWS = GetVelocity( this._angularVelocityWS, this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value );
-                        this._angularVelocityWS = Vector3.zero;
+                        //this._velocityWS = GetVelocity( this._angularVelocityWS, this.Pivot.position - this.Controller.CameraTargetWorldSpace.Value );
+                        //this._angularVelocityWS = Vector3.zero;
                         _isOrbiting = false;
                     }
+                }
+                if( mouseScroll != 0f )
+                {
+                    this._scrollVelocity += mouseScroll * ScrollSensitivity;
+                    this.Controller.Zoom += _scrollVelocity * 0.1f;
                 }
 
                 if( Input.GetKey( KeyCode.LeftArrow ) || Input.GetKey( KeyCode.RightArrow )
@@ -232,9 +315,9 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
                 {
                     const float MOVE_SCALE = 1.0f;
                     // xy movement.
-                    Vector3 forwardAcceleration = this.Pivot.forward * forward;
-                    Vector3 rightAcceleration = this.Pivot.right * sideways;
-                    Vector3 upAcceleration = this.Pivot.up * vert;
+                    Vector3 forwardAcceleration = this.GetForwardDir() * forward;
+                    Vector3 rightAcceleration = this.GetRightDir() * sideways;
+                    Vector3 upAcceleration = this.GetUpDir() * vert;
 
                     Vector3 sum = forwardAcceleration + rightAcceleration + upAcceleration;
 
@@ -269,7 +352,18 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
 
         public override void DrawGui( UILayout UILayout, ref int line )
         {
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Smooth Length:" );
+            GUI.Label( UILayout.GetRectX( line, 1, 9 ), $"Reference: {ReferenceFrame}" );
+            if( GUI.Button( UILayout.GetRect( 10, line ), "<" ) )
+            {
+                ReferenceFrame = Misc.CycleEnum( ReferenceFrame, -1 );
+            }
+            if( GUI.Button( UILayout.GetRect( 11, line ), ">" ) )
+            {
+                ReferenceFrame = Misc.CycleEnum( ReferenceFrame, 1 );
+            }
+            line++;
+
+            GUI.Label( UILayout.GetRectX( line, 1, 6 ), "Smooth Length:" );
             int oldSmooth = SmoothLength;
             SmoothLength = int.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), SmoothLength.ToString() ) );
             if( SmoothLength <= 0 )
@@ -282,32 +376,26 @@ namespace CameraToolsKatnissified.CameraControllers.Behaviours
             }
             line++;
 
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Scroll Sens.:" );
+            GUI.Label( UILayout.GetRectX( line, 1, 6 ), "Scroll Sens.:" );
             ScrollSensitivity = GUI.HorizontalSlider( UILayout.GetRectX( line, 7, 11 ), ScrollSensitivity, 0.01f, 10.0f );
             line++;
 
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Mouse Sens.:" );
+            GUI.Label( UILayout.GetRectX( line, 1, 6 ), "Mouse Sens.:" );
             MouseSensitivity = GUI.HorizontalSlider( UILayout.GetRectX( line, 7, 11 ), MouseSensitivity, 0.01f, 10.0f );
             line++;
 
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Keyboard Sens.:" );
+            GUI.Label( UILayout.GetRectX( line, 1, 6 ), "Keyboard Sens.:" );
             KeyboardSensitivity = GUI.HorizontalSlider( UILayout.GetRectX( line, 7, 11 ), KeyboardSensitivity, 0.01f, 10.0f );
             line++;
 
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Max Linear Acc.:" );
-            MaxAcceleration = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), MaxAcceleration.ToString() ) );
+            GUI.Label( UILayout.GetRectX( line, 1, 5 ), "Accel. (L/A):" );
+            MaxAcceleration = float.Parse( GUI.TextField( UILayout.GetRectX( line, 6, 8 ), MaxAcceleration.ToString( "0.0#########" ) ) );
+            MaxAngularAcceleration = float.Parse( GUI.TextField( UILayout.GetRectX( line, 9, 11 ), MaxAngularAcceleration.ToString( "0.0#########" ) ) );
             line++;
 
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Max Angular Acc.:" );
-            MaxAngularAcceleration = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), MaxAngularAcceleration.ToString() ) );
-            line++;
-
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Linear Drag:" );
-            Drag = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), Drag.ToString() ) );
-            line++;
-
-            GUI.Label( UILayout.GetRectX( line, 0, 6 ), "Angular Drag:" );
-            AngularDrag = float.Parse( GUI.TextField( UILayout.GetRectX( line, 7, 11 ), AngularDrag.ToString() ) );
+            GUI.Label( UILayout.GetRectX( line, 1, 5 ), "Drag (L/A):" );
+            Drag = float.Parse( GUI.TextField( UILayout.GetRectX( line, 6, 8 ), Drag.ToString( "0.0#########" ) ) );
+            AngularDrag = float.Parse( GUI.TextField( UILayout.GetRectX( line, 9, 11 ), AngularDrag.ToString( "0.0#########" ) ) );
             line++;
         }
     }
