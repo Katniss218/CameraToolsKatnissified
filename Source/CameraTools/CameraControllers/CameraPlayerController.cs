@@ -13,7 +13,7 @@ namespace CameraToolsKatnissified.CameraControllers
 
         public Vector3? CameraTargetWorldSpace { get; set; }
 
-        public float ShakeMultiplier { get; set; }
+        public float ShakeMultiplier { get; set; } = 0.1f;
 
         List<Transform> _pivots = new List<Transform>();
 

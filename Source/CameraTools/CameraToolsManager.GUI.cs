@@ -81,14 +81,6 @@ namespace CameraToolsKatnissified
             else if( CurrentController is CameraPlayerController cpc )
             {
 #warning TODO - move this to the behaviour gui?.
-                /*if( UseAutoZoom )
-                {
-                    GUI.Label( UILayout.GetRectX( line, 0, 2 ), "Autozoom" );
-                    AutoZoomMargin = GUI.HorizontalSlider( UILayout.GetRectX( line, 3, 9 ), AutoZoomMargin, 1.0f, 75.0f );
-                    GUI.Label( UILayout.GetRectX( line, 10, 11 ), AutoZoomMargin.ToString( "0.0" ) );
-                }
-                else
-                {*/
                 if( GUI.Button( UILayout.GetRectX( line ), "Path Editor" ) )
                 {
                     //StartEditingPath();
